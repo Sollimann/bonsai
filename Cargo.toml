@@ -1,0 +1,20 @@
+[package]
+name = "b3"
+rust-version = "1.60.0"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kristoffer Solberg Rakstad <kristoffer.solberg@cognite.com>"]
+keywords = ["ai", "behavior", "robotics", "rust", "game", "logic"]
+description = "Behavior tree"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/sollimann/b3.git"
+autotests = false
+
+[lib]
+name = "b3"
+path = "src/lib.rs"
+
+[dependencies]
+serde_derive = "1.0.81"
+serde = "1.0.137"
