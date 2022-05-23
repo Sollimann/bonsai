@@ -1,1 +1,2 @@
+mod behavior;
 mod status;
