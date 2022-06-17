@@ -2,7 +2,7 @@
 ///
 /// This is used for more complex event logic.
 /// Can also be used for game AI.
-#[derive(Clone, serde_derive::Deserialize, serde_derive::Serialize, PartialEq)]
+#[derive(Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub enum Behavior<A> {
     /// Waits an amount of time before continuing.
     ///
