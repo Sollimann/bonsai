@@ -1,5 +1,7 @@
+// use serde_derive::{Deserialize, Serialize};
+
 /// The result of a behavior or action.
-#[derive(Copy, Clone, serde_derive::Deserialize, serde_derive::Serialize, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, serde::Deserialize, serde::Serialize, PartialEq, Eq, Debug)]
 pub enum Status {
     /// The behavior or action succeeded.
     Success,
