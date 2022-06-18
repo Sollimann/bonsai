@@ -1,20 +1,23 @@
-use crate::{ActionArgs, Behavior, State, Status, RUNNING};
+use crate::status::Status::*;
+use crate::{event::UpdateEvent, ActionArgs, Behavior, State, Status, RUNNING};
 
 // `Sequence` and `Select` share same algorithm.
 //
 // `Sequence` fails if any fails and succeeds when all succeeds.
 // `Select` succeeds if any succeeds and fails when all fails.
-pub fn sequence<A, S, F>(
+pub fn sequence<A, S, E, F>(
     select: bool,
     upd: Option<f64>,
     seq: &[Behavior<A>],
     i: &mut usize,
     cursor: &mut Box<State<A, S>>,
+    e: &E,
     f: &mut F,
 ) -> (Status, f64)
 where
     A: Clone,
-    F: FnMut(ActionArgs<A, S>) -> (Status, f64),
+    E: UpdateEvent,
+    F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
 {
     let (status, inv_status) = if select {
         // `Select`
@@ -24,15 +27,19 @@ where
         (Status::Success, Status::Failure)
     };
     let mut remaining_dt = upd.unwrap_or(0.0);
+    let mut remaining_e;
     while *i < seq.len() {
         match cursor.event(
             match upd {
-                Some(_) => Some(remaining_dt),
-                _ => upd,
+                Some(_) => {
+                    remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                    &remaining_e
+                }
+                _ => e,
             },
             f,
         ) {
-            (Status::Running, _) => {
+            (Running, _) => {
                 break;
             }
             (s, new_dt) if s == inv_status => {

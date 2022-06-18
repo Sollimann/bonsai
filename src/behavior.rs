@@ -2,9 +2,9 @@
 ///
 /// This is used for more complex event logic.
 /// Can also be used for game AI.
-#[derive(Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Clone, serde::Deserialize, serde::Serialize, PartialEq, Debug)]
 pub enum Behavior<A> {
-    /// Waits an amount of time before continuing.
+    /// Waits an amount of time before continuing
     ///
     /// f64: Time in seconds
     Wait(f64),
@@ -51,4 +51,53 @@ pub enum Behavior<A> {
     /// Succeeds if all behaviors succeed, but only if succeeding in sequence.
     /// Fails if one behavior fails.
     After(Vec<Behavior<A>>),
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Behavior::{self, Action, Sequence, Wait, WaitForever, WhenAny, While};
+
+    #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+    pub(crate) enum EnemyAction {
+        /// Circles forever around target pos.
+        Circling,
+        /// Waits until player is within distance.
+        PlayerWithinDistance(f64),
+        /// Fly toward player.
+        FlyTowardPlayer,
+        /// Waits until player is far away from target.
+        PlayerFarAwayFromTarget(f64),
+        /// Makes player loose more blood.
+        AttackPlayer(f64),
+    }
+
+    #[test]
+    fn test_create_complex_behavior() {
+        let circling = Action(EnemyAction::Circling);
+        let circle_until_player_within_distance = Sequence(vec![
+            While(Box::new(Wait(5.0)), vec![circling.clone()]),
+            While(
+                Box::new(Action(EnemyAction::PlayerWithinDistance(50.0))),
+                vec![circling.clone()],
+            ),
+        ]);
+        let give_up_or_attack = WhenAny(vec![
+            Action(EnemyAction::PlayerFarAwayFromTarget(100.0)),
+            Sequence(vec![
+                Action(EnemyAction::PlayerWithinDistance(10.0)),
+                Action(EnemyAction::AttackPlayer(0.1)),
+            ]),
+        ]);
+        let attack_attempt = While(Box::new(give_up_or_attack), vec![Action(EnemyAction::FlyTowardPlayer)]);
+        let enemy_behavior = While(
+            Box::new(WaitForever),
+            vec![circle_until_player_within_distance, attack_attempt],
+        );
+
+        let b3_serialized = serde_json::to_string(&enemy_behavior).unwrap();
+
+        let b3_deserialized: Behavior<EnemyAction> = serde_json::from_str(&b3_serialized).unwrap();
+
+        print!("des: {:?}", b3_deserialized);
+    }
 }

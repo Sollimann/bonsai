@@ -1,19 +1,22 @@
-use crate::{ActionArgs, State, Status, RUNNING};
+use crate::status::Status::*;
+use crate::{event::UpdateEvent, ActionArgs, State, Status, RUNNING};
 
 // `WhenAll` and `WhenAny` share same algorithm.
 //
 // `WhenAll` fails if any fails and succeeds when all succeeds.
 // `WhenAny` succeeds if any succeeds and fails when all fails.
 #[rustfmt::skip]
-pub fn when_all<A, S, F>(
+pub fn when_all<A, S, E, F>(
     any: bool,
     upd: Option<f64>,
     cursors: &mut Vec<Option<State<A, S>>>,
+    e: &E,
     f: &mut F,
 ) -> (Status, f64)
 where
     A: Clone,
-    F: FnMut(ActionArgs<A, S>) -> (Status, f64),
+    E: UpdateEvent,
+    F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
 {
     let (status, inv_status) = if any {
         // `WhenAny`
@@ -30,8 +33,8 @@ where
         match *cur {
             None => {}
             Some(ref mut cur) => {
-                match cur.event(upd, f) {
-                    (Status::Running, _) => {
+                match cur.event(e, f) {
+                    (Running, _) => {
                         continue;
                     }
                     (s, new_dt) if s == inv_status => {

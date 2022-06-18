@@ -1,13 +1,18 @@
+use crate::event::UpdateEvent;
 use crate::sequence::sequence;
+use crate::state::State::*;
+use crate::status::Status::*;
 use crate::when_all::when_all;
 use crate::{Behavior, Status};
 // use serde_derive::{Deserialize, Serialize};
 
 /// The action is still running.
-pub const RUNNING: (Status, f64) = (Status::Running, 0.0);
+pub const RUNNING: (Status, f64) = (Running, 0.0);
 
 /// The arguments in the action callback.
-pub struct ActionArgs<'a, A: 'a, S: 'a> {
+pub struct ActionArgs<'a, E: 'a, A: 'a, S: 'a> {
+    /// The event.
+    pub event: &'a E,
     /// The remaining delta time.
     pub dt: f64,
     /// The action running.
@@ -90,64 +95,71 @@ impl<A: Clone, S> State<A, S> {
     ///
     /// Passes event, delta time in seconds, action and state to closure.
     /// The closure should return a status and remaining delta time.
-    pub fn event<F>(&mut self, upd: Option<f64>, f: &mut F) -> (Status, f64)
+    pub fn event<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
-        F: FnMut(ActionArgs<A, S>) -> (Status, f64),
+        E: UpdateEvent,
+        F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
     {
+        let upd = e.update(|args| Some(args.dt)).unwrap_or(None);
         match (upd, self) {
-            (_, &mut State::ActionState(ref action, ref mut state)) => {
+            (_, &mut ActionState(ref action, ref mut state)) => {
                 // Execute action.
                 f(ActionArgs {
+                    event: e,
                     dt: upd.unwrap_or(0.0),
                     action,
                     state,
                 })
             }
-            (_, &mut State::FailState(ref mut cur)) => match cur.event(None, f) {
-                (Status::Running, dt) => (Status::Running, dt),
-                (Status::Failure, dt) => (Status::Success, dt),
-                (Status::Success, dt) => (Status::Failure, dt),
+            (_, &mut FailState(ref mut cur)) => match cur.event(e, f) {
+                (Running, dt) => (Running, dt),
+                (Failure, dt) => (Success, dt),
+                (Success, dt) => (Failure, dt),
             },
-            (_, &mut State::AlwaysSucceedState(ref mut cur)) => match cur.event(None, f) {
-                (Status::Running, dt) => (Status::Running, dt),
-                (_, dt) => (Status::Success, dt),
+            (_, &mut AlwaysSucceedState(ref mut cur)) => match cur.event(e, f) {
+                (Running, dt) => (Running, dt),
+                (_, dt) => (Success, dt),
             },
-            (Some(dt), &mut State::WaitState(wait_t, ref mut t)) => {
+            (Some(dt), &mut WaitState(wait_t, ref mut t)) => {
                 if *t + dt >= wait_t {
                     let remaining_dt = *t + dt - wait_t;
                     *t = wait_t;
-                    (Status::Success, remaining_dt)
+                    (Success, remaining_dt)
                 } else {
                     *t += dt;
                     RUNNING
                 }
             }
-            (_, &mut State::IfState(ref success, ref failure, ref mut status, ref mut state)) => {
+            (_, &mut IfState(ref success, ref failure, ref mut status, ref mut state)) => {
                 let mut remaining_dt = upd.unwrap_or(0.0);
+                let remaining_e;
                 // Run in a loop to evaluate success or failure with
                 // remaining delta time after condition.
                 loop {
                     *status = match *status {
-                        Status::Running => match state.event(upd, f) {
-                            (Status::Running, dt) => {
-                                return (Status::Running, dt);
+                        Running => match state.event(e, f) {
+                            (Running, dt) => {
+                                return (Running, dt);
                             }
-                            (Status::Success, dt) => {
+                            (Success, dt) => {
                                 **state = State::new((**success).clone());
                                 remaining_dt = dt;
-                                Status::Success
+                                Success
                             }
-                            (Status::Failure, dt) => {
+                            (Failure, dt) => {
                                 **state = State::new((**failure).clone());
                                 remaining_dt = dt;
-                                Status::Failure
+                                Failure
                             }
                         },
                         _ => {
                             return state.event(
                                 match upd {
-                                    Some(_) => Some(remaining_dt),
-                                    _ => upd,
+                                    Some(_) => {
+                                        remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                                        &remaining_e
+                                    }
+                                    _ => e,
                                 },
                                 f,
                             );
@@ -155,33 +167,37 @@ impl<A: Clone, S> State<A, S> {
                     }
                 }
             }
-            (_, &mut State::SelectState(ref seq, ref mut i, ref mut cursor)) => {
+            (_, &mut SelectState(ref seq, ref mut i, ref mut cursor)) => {
                 let select = true;
-                sequence(select, upd, seq, i, cursor, f)
+                sequence(select, upd, seq, i, cursor, e, f)
             }
-            (_, &mut State::SequenceState(ref seq, ref mut i, ref mut cursor)) => {
+            (_, &mut SequenceState(ref seq, ref mut i, ref mut cursor)) => {
                 let select = false;
-                sequence(select, upd, seq, i, cursor, f)
+                sequence(select, upd, seq, i, cursor, e, f)
             }
-            (_, &mut State::WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
+            (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
                 // If the event terminates, do not execute the loop.
-                match ev_cursor.event(None, f) {
-                    (Status::Running, _) => {}
+                match ev_cursor.event(e, f) {
+                    (Running, _) => {}
                     x => return x,
                 };
                 let cur = cursor;
                 let mut remaining_dt = upd.unwrap_or(0.0);
+                let mut remaining_e;
                 loop {
                     match cur.event(
                         match upd {
-                            Some(_) => Some(remaining_dt),
-                            _ => upd,
+                            Some(_) => {
+                                remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                                &remaining_e
+                            }
+                            _ => e,
                         },
                         f,
                     ) {
-                        (Status::Failure, x) => return (Status::Failure, x),
-                        (Status::Running, _) => break,
-                        (Status::Success, new_dt) => {
+                        (Failure, x) => return (Failure, x),
+                        (Running, _) => break,
+                        (Success, new_dt) => {
                             remaining_dt = match upd {
                                 // Change update event with remaining delta time.
                                 Some(_) => new_dt,
@@ -202,23 +218,23 @@ impl<A: Clone, S> State<A, S> {
                 }
                 RUNNING
             }
-            (_, &mut State::WhenAllState(ref mut cursors)) => {
+            (_, &mut WhenAllState(ref mut cursors)) => {
                 let any = false;
-                when_all(any, upd, cursors, f)
+                when_all(any, upd, cursors, e, f)
             }
-            (_, &mut State::WhenAnyState(ref mut cursors)) => {
+            (_, &mut WhenAnyState(ref mut cursors)) => {
                 let any = true;
-                when_all(any, upd, cursors, f)
+                when_all(any, upd, cursors, e, f)
             }
-            (_, &mut State::AfterState(ref mut i, ref mut cursors)) => {
+            (_, &mut AfterState(ref mut i, ref mut cursors)) => {
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
                 for j in *i..cursors.len() {
-                    match cursors[j].event(upd, f) {
-                        (Status::Running, _) => {
+                    match cursors[j].event(e, f) {
+                        (Running, _) => {
                             min_dt = 0.0;
                         }
-                        (Status::Success, new_dt) => {
+                        (Success, new_dt) => {
                             // Remaining delta time must be less to succeed.
                             if *i == j && new_dt < min_dt {
                                 *i += 1;
@@ -226,16 +242,16 @@ impl<A: Clone, S> State<A, S> {
                             } else {
                                 // Return least delta time because
                                 // that is when failure is detected.
-                                return (Status::Failure, min_dt.min(new_dt));
+                                return (Failure, min_dt.min(new_dt));
                             }
                         }
-                        (Status::Failure, new_dt) => {
-                            return (Status::Failure, new_dt);
+                        (Failure, new_dt) => {
+                            return (Failure, new_dt);
                         }
                     };
                 }
                 if *i == cursors.len() {
-                    (Status::Success, min_dt)
+                    (Success, min_dt)
                 } else {
                     RUNNING
                 }
