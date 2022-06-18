@@ -1,10 +1,3 @@
-use std::{any::Any, sync::Arc};
-
-/// The type of time stamp.
-///
-/// Measured in milliseconds since initialization of window.
-pub type TimeStamp = u32;
-
 /// Used to identify events arguments provided by traits.
 ///
 /// Use format `<api>/<event>` to avoid naming collision.
@@ -23,8 +16,6 @@ pub struct UpdateArgs {
 pub enum Loop {
     /// Update the state of the application.
     Update(UpdateArgs),
-    // Do background tasks that can be done incrementally.
-    // Idle(IdleArgs),
 }
 
 impl From<UpdateArgs> for Event {
@@ -40,16 +31,6 @@ pub enum Event {
     ///
     /// Events that commonly used by event loops.
     Loop(Loop),
-    /// Custom event.
-    ///
-    /// When comparing two custom events for equality,
-    /// they always return `false`.
-    ///
-    /// When comparing partial order of two custom events,
-    /// the event ids are checked and if they are equal it returns `None`.
-    ///
-    /// Time stamp is ignored both when comparing custom events for equality and order.
-    Custom(EventId, Arc<dyn Any + Send + Sync>, Option<TimeStamp>),
 }
 
 /// When the application state should be updated.
@@ -81,7 +62,6 @@ impl UpdateEvent for Event {
     {
         match *self {
             Event::Loop(Loop::Update(ref args)) => Some(f(args)),
-            _ => None,
         }
     }
 }
@@ -91,7 +71,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_input_update() {
+    fn test_update_args() {
         use Event;
         use UpdateArgs;
 
