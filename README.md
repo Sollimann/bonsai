@@ -42,6 +42,23 @@ guarantee that every node is visited exactly once, the ticks traverse the tree i
 * _Streamlined logic._ BT's have _one-to-many_ relations between nodes, while FSM's have many-to-many relations.
 * _Modular and reasuable components._ In BTs you can create macros of behaviors that can easily be put together to create more complex logic. Conversely, with the FSMs, many of the states are typically tied to that specific context.
 
+## How to use a Behavior tree?
+
+An AI behavior tree is a very generic way of organizing interactive logic.
+It has built-in semantics for processes that signals `Running`, `Success` or
+`Failure`.
+
+For example, if you have a state `A` and a state `B`:
+
+- Move from state `A` to state `B` if `A` succeeds: `Sequence([A, B])`
+- Try `A` first and then try `B` if `A` fails: `Select([A, B])`
+- Do `B` repeatedly while `A` runs: `While(A, [B])`
+- Do `A`, `B` forever: `While(WaitForever, [A, B])`
+- Wait for both `A` and `B` to complete: `WhenAll([A, B])`
+- Wait for either `A` or `B` to complete: `WhenAny([A, B])`
+
+See the `Behavior` enum for more information.
+
 ### Kanban
 
 Link to project Kanban board
