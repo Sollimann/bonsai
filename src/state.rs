@@ -3,7 +3,7 @@ use crate::sequence::sequence;
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::when_all::when_all;
-use crate::{Behavior, Status};
+use crate::{Behavior, Event, Status, UpdateArgs};
 // use serde_derive::{Deserialize, Serialize};
 
 /// The action is still running.
@@ -86,6 +86,20 @@ impl<A: Clone, S> State<A, S> {
             Behavior::WhenAny(all) => State::WhenAnyState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::After(seq) => State::AfterState(0, seq.into_iter().map(State::new).collect()),
         }
+    }
+
+    /// A signal called "tick" is sent to the root
+    /// of the tree and propagates through the tree
+    /// until it reaches a leaf / Action node.
+    ///
+    /// A TreeNode that receives a tick signal executes it's callback.
+    /// This callback must return either SUCCESS, FAILURE or RUNNING
+    pub fn tick<F>(&mut self, dt: f64, mut block: F) -> ()
+    where
+        F: FnMut(ActionArgs<'_, Event, A, S>) -> (Status, f64),
+    {
+        let e: Event = UpdateArgs { dt }.into();
+        self.event(&e, &mut block);
     }
 
     /// Updates the cursor that tracks an event.
@@ -258,5 +272,45 @@ impl<A: Clone, S> State<A, S> {
             }
             _ => RUNNING,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Behavior::{Action, Sequence};
+
+    /// Some test actions.
+    #[derive(Clone)]
+    #[allow(dead_code)]
+    pub enum TestActions {
+        /// Increment accumulator.
+        Inc,
+        /// Decrement accumulator.
+        Dec,
+    }
+
+    use crate::state::tests::TestActions::{Dec, Inc};
+
+    #[test]
+    fn test_bt_tick() {
+        let seq = Sequence(vec![Action(Inc), Action(Dec), Action(Inc)]);
+        let mut state = State::new(seq);
+
+        let mut acc: u32 = 0;
+
+        let f = &mut |args: ActionArgs<Event, TestActions, ()>| match &*args.action {
+            Inc => {
+                acc += 1;
+                (Success, args.dt)
+            }
+            Dec => {
+                acc -= 1;
+                (Success, args.dt)
+            }
+        };
+
+        state.tick(0.0, f);
+        assert_eq!(acc, 1);
     }
 }

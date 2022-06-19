@@ -3,7 +3,7 @@ Rust implementation of behavior trees.
 
 
 
-# Kanban
+### Kanban
 
 Link to project Kanban board
 [link](https://github.com/Sollimann/b3/projects/1)
