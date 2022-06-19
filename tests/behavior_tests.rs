@@ -1,8 +1,6 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan};
-use b3::{
-    Action,
-    Behavior::{AlwaysSucceed, If},
-    Event, Failure, Sequence, State, Success, UpdateArgs, Wait, WaitForever, WhenAll, While,
+use bonsai::{
+    Action, Behavior::If, Event, Failure, Sequence, State, Success, UpdateArgs, Wait, WaitForever, WhenAll, While,
 };
 
 /// Some test actions.

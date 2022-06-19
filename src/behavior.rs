@@ -94,10 +94,10 @@ mod tests {
             vec![circle_until_player_within_distance, attack_attempt],
         );
 
-        let b3_serialized = serde_json::to_string(&enemy_behavior).unwrap();
+        let bt_serialized = serde_json::to_string(&enemy_behavior).unwrap();
 
-        let b3_deserialized: Behavior<EnemyAction> = serde_json::from_str(&b3_serialized).unwrap();
+        let bt_deserialized: Behavior<EnemyAction> = serde_json::from_str(&bt_serialized).unwrap();
 
-        print!("des: {:?}", b3_deserialized);
+        print!("des: {:?}", bt_deserialized);
     }
 }

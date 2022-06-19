@@ -5,14 +5,14 @@ description = "Behavior tree"
 edition = "2021"
 keywords = ["ai", "behavior", "robotics", "rust", "game", "logic"]
 license = "MIT"
-name = "b3"
+name = "bonsai"
 readme = "README.md"
-repository = "https://github.com/sollimann/b3.git"
+repository = "https://github.com/sollimann/bonsai.git"
 rust-version = "1.60.0"
 version = "0.1.0"
 
 [lib]
-name = "b3"
+name = "bonsai"
 path = "src/lib.rs"
 
 [dependencies]

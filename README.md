@@ -1,4 +1,4 @@
-# b3
+# Bonsai Behavior Trees
 Rust implementation of behavior trees.
 
 
