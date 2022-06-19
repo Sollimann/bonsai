@@ -36,11 +36,11 @@ guarantee that every node is visited exactly once, the ticks traverse the tree i
 * Use BT's when failures can occur and your system would need repeated attempts to complete a task.
 * Use BT's when you need parallell semantics. It means that multiple processes can happen at the same time and the logic can be constructed around how these processes runs or terminate.
 
-### Pros of Behavior Treess:
+#### BT vs FSM:
+
 * _BT's has a predictable and intuitive structure._ In comparison _Finite State Machines_ (FSM) can easily become unmanageable as the logic grows.
 * _Streamlined logic._ BT's have _one-to-many_ relations between nodes, while FSM's have many-to-many relations.
-* _Modular and reasuable components._ In BTs you can create macros of behaviors that can easily be put together to create more complex logic.
-* 
+* _Modular and reasuable components._ In BTs you can create macros of behaviors that can easily be put together to create more complex logic. Conversely, with the FSMs, many of the states are typically tied to that specific context.
 
 ### Kanban
 
