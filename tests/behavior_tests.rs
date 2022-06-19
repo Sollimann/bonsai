@@ -1,5 +1,5 @@
 use crate::behavior_tests::TestActions::{Dec, Inc};
-use b3::{Action, Event, Sequence, State, Success, UpdateArgs, Wait, WaitForever, WhenAll, While};
+use b3::{Action, ActionArgs, Event, Sequence, State, Status, Success, UpdateArgs, Wait, WaitForever, WhenAll, While};
 
 /// Some test actions.
 #[derive(Clone)]
@@ -15,7 +15,7 @@ pub enum TestActions {
 fn exec(mut acc: u32, dt: f64, state: &mut State<TestActions, ()>) -> u32 {
     let e: Event = UpdateArgs { dt }.into();
 
-    state.event(&e, &mut |args: b3::ActionArgs<Event, TestActions, ()>| match *args.action {
+    state.event(&e, &mut |args| match *args.action {
         Inc => {
             acc += 1;
             (Success, args.dt)
@@ -28,17 +28,29 @@ fn exec(mut acc: u32, dt: f64, state: &mut State<TestActions, ()>) -> u32 {
     acc
 }
 
+fn acc(args: ActionArgs<Event, TestActions, ()>) -> (Status, f64) {
+    let mut acc: u32 = 0;
+    match &*args.action {
+        Inc => {
+            acc += 1;
+            (Success, args.dt)
+        }
+        Dec => {
+            acc -= 1;
+            (Success, args.dt)
+        }
+    }
+}
+
 // Each action that terminates immediately
 // consumes a time of 0.0 seconds.
 // This makes it possible to execute one action
 // after another without delay or waiting for next update.
 #[test]
 fn test_increment_twice_in_sequence() {
-    let a: u32 = 0;
     let seq = Sequence(vec![Action(Inc), Action(Inc)]);
     let mut state = State::new(seq);
-    let a = exec(a, 0.0, &mut state);
-    assert_eq!(a, 2);
+    state.tick(0.0, acc);
 }
 
 // If you wait the exact amount before to execute an action,

@@ -19,6 +19,8 @@ pub struct ActionArgs<'a, E: 'a, A: 'a, S: 'a> {
     pub action: &'a A,
     /// The state of the running action, if any.
     pub state: &'a mut Option<S>,
+    // data
+    // pub data: Option<&'a mut D>,
 }
 
 /// Keeps track of a behavior.
@@ -298,7 +300,6 @@ mod tests {
         let mut state = State::new(seq);
 
         let mut acc: u32 = 0;
-
         let f = &mut |args: ActionArgs<Event, TestActions, ()>| match &*args.action {
             Inc => {
                 acc += 1;
