@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="https://github.com/Sollimann/bonsai/blob/main/resources/gifs/bonsai.gif">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif">
 </p>
 
 
