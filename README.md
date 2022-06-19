@@ -1,5 +1,13 @@
 <h1 align="center">Bonsai</h1>
 
+<p align="center">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" width="350">
+</p>
+
+<p align="center">
+    <em>Rust implementation of Behavior Trees</em>
+</p>
+
 <!-- [![Build Status](https://github.com/Sollimann/CleanIt/workflows/rust-ci/badge.svg)](https://github.com/Sollimann/CleanIt/actions) -->
 <!-- [![codecov](https://codecov.io/gh/Sollimann/CleanIt/branch/main/graph/badge.svg?token=EY3JRZN71M)](https://codecov.io/gh/Sollimann/CleanIt) -->
 <!-- [![version](https://img.shields.io/badge/version-1.0.0-blue)](https://GitHub.com/Sollimann/CleanIt/releases/) -->
@@ -10,13 +18,6 @@
 ![ViewCount](https://views.whatilearened.today/views/github/Sollimann/bonsai.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-<p align="center">
-    <em>Rust implementation of Behavior Trees</em>
-</p>
-
-<p align="center">
-  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" width="400">
-</p>
 
 
 ### Kanban
