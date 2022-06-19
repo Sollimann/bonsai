@@ -18,6 +18,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
+
 ## What is a Behavior Tree?
 
 A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how certain _behavior's_ can occur, and the order in which they would execute. BTs are a very efficient way of creating complex systems that are both modular and reactive. These properties are crucial in many applications, which has led to the spread of BT from computer game programming to many branches of AI and Robotics.
@@ -52,6 +53,7 @@ For example, if you have a state `A` and a state `B`:
 
 - Move from state `A` to state `B` if `A` succeeds: `Sequence([A, B])`
 - Try `A` first and then try `B` if `A` fails: `Select([A, B])`
+- If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
 - Do `B` repeatedly while `A` runs: `While(A, [B])`
 - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 - Wait for both `A` and `B` to complete: `WhenAll([A, B])`
