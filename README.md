@@ -1,4 +1,4 @@
-<h1 align="center" style="font-family:Papyrus; font-size:4em;">Bonsai</h1>
+<h1 align="center" style="font-family:Papyrus; font-size:4em;"> :japan: Bonsai :japan: </h1> :japan:
 <p align="center">
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" width="350">
 </p>
