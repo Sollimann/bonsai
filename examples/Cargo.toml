@@ -8,11 +8,9 @@ rust-version = "1.60.0"
 version = "0.1.0"
 
 [dependencies]
-find_folder = "0.3.0"
-piston2d-sprite = "0.66.0"
-piston_window = "0.123.0"
+bonsai = { path = "../bonsai" }
 
 [[example]]
 crate-type = ["bin"]
-name = "sprite"
-path = "src/sprite.rs"
+name = "3d"
+path = "src/3d.rs"
