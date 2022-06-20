@@ -33,7 +33,7 @@ guarantee that every node is visited exactly once, the ticks traverse the tree i
 ## When to use a Behavior Tree?
 
 * Use BT's to manage complexity when system control logic grows.
-* Use BT's if priority ordering of conditions and actions matter. 
+* Use BT's if priority ordering of conditions and actions matter.
 * Use BT's when failures can occur and your system would need repeated attempts to complete a task.
 * Use BT's when you need parallell semantics. It means that multiple processes can happen at the same time and the logic can be constructed around how these processes runs or terminate.
 
@@ -65,3 +65,5 @@ See the `Behavior` enum for more information.
 
 Link to project Kanban board
 [link](https://github.com/Sollimann/b3/projects/1)
+
+[Development Guide](DEVELOPMENT.md)

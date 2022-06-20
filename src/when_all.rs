@@ -9,7 +9,7 @@ use crate::{event::UpdateEvent, ActionArgs, State, Status, RUNNING};
 pub fn when_all<A, S, E, F>(
     any: bool,
     upd: Option<f64>,
-    cursors: &mut Vec<Option<State<A, S>>>,
+    cursors: &mut [Option<State<A, S>>],
     e: &E,
     f: &mut F,
 ) -> (Status, f64)

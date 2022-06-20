@@ -78,7 +78,7 @@ mod tests {
             While(Box::new(Wait(5.0)), vec![circling.clone()]),
             While(
                 Box::new(Action(EnemyAction::PlayerWithinDistance(50.0))),
-                vec![circling.clone()],
+                vec![circling],
             ),
         ]);
         let give_up_or_attack = WhenAny(vec![
