@@ -9,6 +9,8 @@ version = "0.1.0"
 
 [dependencies]
 bonsai = { path = "../bonsai" }
+kiss3d = "0.34.0"
+nalgebra = "0.30"
 
 [[example]]
 crate-type = ["bin"]
