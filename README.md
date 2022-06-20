@@ -7,7 +7,7 @@
     <em>Rust implementation of Behavior Trees</em>
 </p>
 
-<!-- [![Build Status](https://github.com/Sollimann/CleanIt/workflows/rust-ci/badge.svg)](https://github.com/Sollimann/CleanIt/actions) -->
+[![Build Status](https://github.com/Sollimann/bonsai/workflows/rust-ci/badge.svg)](https://github.com/Sollimann/bonsai/actions)
 <!-- [![codecov](https://codecov.io/gh/Sollimann/CleanIt/branch/main/graph/badge.svg?token=EY3JRZN71M)](https://codecov.io/gh/Sollimann/CleanIt) -->
 <!-- [![version](https://img.shields.io/badge/version-1.0.0-blue)](https://GitHub.com/Sollimann/CleanIt/releases/) -->
 [![minimum rustc 1.60](https://img.shields.io/badge/rustc-1.60+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
