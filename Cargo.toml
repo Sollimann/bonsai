@@ -1,24 +1,2 @@
-[package]
-authors = ["Kristoffer Solberg Rakstad <kristoffer.solberg@cognite.com>"]
-autotests = false
-description = "Behavior tree"
-edition = "2021"
-keywords = ["ai", "behavior", "robotics", "rust", "game", "logic"]
-license = "MIT"
-name = "bonsai"
-readme = "README.md"
-repository = "https://github.com/sollimann/bonsai.git"
-rust-version = "1.60.0"
-version = "0.1.0"
-
-[lib]
-name = "bonsai"
-path = "src/lib.rs"
-
-[dependencies]
-serde = { version = "1.0.137", features = ["derive"] }
-serde_json = "1.0.81"
-
-
-[[test]]
-name = "tests"
+[workspace]
+members = ["bonsai", "examples"]
