@@ -96,7 +96,7 @@ impl<A: Clone, S> State<A, S> {
     ///
     /// A TreeNode that receives a tick signal executes it's callback.
     /// This callback must return either SUCCESS, FAILURE or RUNNING
-    pub fn tick<F>(&mut self, dt: f64, mut block: F) -> ()
+    pub fn tick<F>(&mut self, dt: f64, mut block: F)
     where
         F: FnMut(ActionArgs<'_, Event, A, S>) -> (Status, f64),
     {
@@ -245,8 +245,8 @@ impl<A: Clone, S> State<A, S> {
             (_, &mut AfterState(ref mut i, ref mut cursors)) => {
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
-                for j in *i..cursors.len() {
-                    match cursors[j].event(e, f) {
+                for (j, item) in cursors.iter_mut().enumerate().skip(*i) {
+                    match item.event(e, f) {
                         (Running, _) => {
                             min_dt = 0.0;
                         }
