@@ -1,5 +1,6 @@
 use crate::status::Status::*;
 use crate::{event::UpdateEvent, ActionArgs, Behavior, State, Status, RUNNING};
+use std::fmt::Debug;
 
 // `Sequence` and `Select` share same algorithm.
 //
@@ -18,6 +19,8 @@ where
     A: Clone,
     E: UpdateEvent,
     F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
+    A: Debug,
+    S: Debug,
 {
     let (status, inv_status) = if select {
         // `Select`

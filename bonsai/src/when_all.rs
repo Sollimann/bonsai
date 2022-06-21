@@ -1,5 +1,6 @@
 use crate::status::Status::*;
 use crate::{event::UpdateEvent, ActionArgs, State, Status, RUNNING};
+use std::fmt::Debug;
 
 // `WhenAll` and `WhenAny` share same algorithm.
 //
@@ -17,6 +18,8 @@ where
     A: Clone,
     E: UpdateEvent,
     F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
+    A: Debug,
+    S: Debug,
 {
     let (status, inv_status) = if any {
         // `WhenAny`

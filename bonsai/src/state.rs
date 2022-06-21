@@ -3,7 +3,8 @@ use crate::sequence::sequence;
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::when_all::when_all;
-use crate::{Behavior, Event, Status, UpdateArgs};
+use crate::{Behavior, Status};
+use std::fmt::Debug;
 // use serde_derive::{Deserialize, Serialize};
 
 /// The action is still running.
@@ -24,7 +25,7 @@ pub struct ActionArgs<'a, E: 'a, A: 'a, S: 'a> {
 }
 
 /// Keeps track of a behavior.
-#[derive(Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq)]
 pub enum State<A, S> {
     /// Executes an action.
     ActionState(A, Option<S>),
@@ -90,20 +91,6 @@ impl<A: Clone, S> State<A, S> {
         }
     }
 
-    /// A signal called "tick" is sent to the root
-    /// of the tree and propagates through the tree
-    /// until it reaches a leaf / Action node.
-    ///
-    /// A TreeNode that receives a tick signal executes it's callback.
-    /// This callback must return either SUCCESS, FAILURE or RUNNING
-    pub fn tick<F>(&mut self, dt: f64, mut block: F)
-    where
-        F: FnMut(ActionArgs<'_, Event, A, S>) -> (Status, f64),
-    {
-        let e: Event = UpdateArgs { dt }.into();
-        self.event(&e, &mut block);
-    }
-
     /// Updates the cursor that tracks an event.
     ///
     /// The action need to return status and remaining delta time.
@@ -115,11 +102,15 @@ impl<A: Clone, S> State<A, S> {
     where
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
+        A: Debug,
+        S: Debug,
     {
         let upd = e.update(|args| Some(args.dt)).unwrap_or(None);
+
+        // double match statements
         match (upd, self) {
             (_, &mut ActionState(ref action, ref mut state)) => {
-                // Execute action.
+                println!("In ActionState: {:?}", action);
                 f(ActionArgs {
                     event: e,
                     dt: upd.unwrap_or(0.0),
@@ -127,16 +118,23 @@ impl<A: Clone, S> State<A, S> {
                     state,
                 })
             }
-            (_, &mut FailState(ref mut cur)) => match cur.event(e, f) {
-                (Running, dt) => (Running, dt),
-                (Failure, dt) => (Success, dt),
-                (Success, dt) => (Failure, dt),
-            },
-            (_, &mut AlwaysSucceedState(ref mut cur)) => match cur.event(e, f) {
-                (Running, dt) => (Running, dt),
-                (_, dt) => (Success, dt),
-            },
+            (_, &mut FailState(ref mut cur)) => {
+                println!("In FailState: {:?}", cur);
+                match cur.event(e, f) {
+                    (Running, dt) => (Running, dt),
+                    (Failure, dt) => (Success, dt),
+                    (Success, dt) => (Failure, dt),
+                }
+            }
+            (_, &mut AlwaysSucceedState(ref mut cur)) => {
+                println!("In AlwaysSucceedState: {:?}", cur);
+                match cur.event(e, f) {
+                    (Running, dt) => (Running, dt),
+                    (_, dt) => (Success, dt),
+                }
+            }
             (Some(dt), &mut WaitState(wait_t, ref mut t)) => {
+                println!("In WaitState: {}", wait_t);
                 if *t + dt >= wait_t {
                     let remaining_dt = *t + dt - wait_t;
                     *t = wait_t;
@@ -147,6 +145,7 @@ impl<A: Clone, S> State<A, S> {
                 }
             }
             (_, &mut IfState(ref success, ref failure, ref mut status, ref mut state)) => {
+                println!("In IfState: {:?}", success);
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let remaining_e;
                 // Run in a loop to evaluate success or failure with
@@ -184,14 +183,17 @@ impl<A: Clone, S> State<A, S> {
                 }
             }
             (_, &mut SelectState(ref seq, ref mut i, ref mut cursor)) => {
+                println!("In SelectState: {:?}", seq);
                 let select = true;
                 sequence(select, upd, seq, i, cursor, e, f)
             }
             (_, &mut SequenceState(ref seq, ref mut i, ref mut cursor)) => {
+                println!("In SequenceState: {:?}", seq);
                 let select = false;
                 sequence(select, upd, seq, i, cursor, e, f)
             }
             (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
+                println!("In WhileState: {:?}", ev_cursor);
                 // If the event terminates, do not execute the loop.
                 match ev_cursor.event(e, f) {
                     (Running, _) => {}
@@ -235,14 +237,17 @@ impl<A: Clone, S> State<A, S> {
                 RUNNING
             }
             (_, &mut WhenAllState(ref mut cursors)) => {
+                println!("In WhenAllState: {:?}", cursors);
                 let any = false;
                 when_all(any, upd, cursors, e, f)
             }
             (_, &mut WhenAnyState(ref mut cursors)) => {
+                println!("In WhenAnyState: {:?}", cursors);
                 let any = true;
                 when_all(any, upd, cursors, e, f)
             }
             (_, &mut AfterState(ref mut i, ref mut cursors)) => {
+                println!("In AfterState: {}", i);
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
                 for (j, item) in cursors.iter_mut().enumerate().skip(*i) {
@@ -274,44 +279,5 @@ impl<A: Clone, S> State<A, S> {
             }
             _ => RUNNING,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::Behavior::{Action, Sequence};
-
-    /// Some test actions.
-    #[derive(Clone)]
-    #[allow(dead_code)]
-    pub enum TestActions {
-        /// Increment accumulator.
-        Inc,
-        /// Decrement accumulator.
-        Dec,
-    }
-
-    use crate::state::tests::TestActions::{Dec, Inc};
-
-    #[test]
-    fn test_bt_tick() {
-        let seq = Sequence(vec![Action(Inc), Action(Dec), Action(Inc)]);
-        let mut state = State::new(seq);
-
-        let mut acc: u32 = 0;
-        let f = &mut |args: ActionArgs<Event, TestActions, ()>| match &*args.action {
-            Inc => {
-                acc += 1;
-                (Success, args.dt)
-            }
-            Dec => {
-                acc -= 1;
-                (Success, args.dt)
-            }
-        };
-
-        state.tick(0.0, f);
-        assert_eq!(acc, 1);
     }
 }

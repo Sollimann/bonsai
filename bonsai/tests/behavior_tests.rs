@@ -4,7 +4,7 @@ use bonsai::{
 };
 
 /// Some test actions.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub enum TestActions {
     /// Increment accumulator.
