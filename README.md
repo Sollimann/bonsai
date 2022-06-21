@@ -25,8 +25,7 @@ A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how 
 
 Behavior tree fundamentals:
 
-1. **Behavior Trees are trees (duh):** They start at a root node and are designed to be traversed in a specific order until a terminal state is reached (success or failure). The system would run an update from the root called a _tick_. To
-guarantee that every node is visited exactly once, the ticks traverse the tree in a depth first traverse.
+1. **Behavior Trees are trees (duh):** They start at a root node and are designed to be traversed in a specific order until a terminal state is reached (success or failure). The system would run an update from the root called a _tick_. Each execution tick the tree is traversed from the root in depth-first traverse. In Depth-first traverse, you go as deep as possible down one path before backing up and trying a different one. Depth-first search is like walking through a maze. You explore one path, hit a dead end, and go back and try a different one.
 2. **Leaf nodes are executable behaviors:** Each leaf will do something, whether it’s a simple check or a complex action, and will output a status (success, failure, or running). In other words, leaf nodes are where you connect a BT to the lower-level code for your specific application.
 3. **Internal nodes control tree traversal:** The internal (non-leaf) nodes of the tree will accept the resulting status of their children and apply their own rules to dictate which node should be expanded next.
 
