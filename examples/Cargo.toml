@@ -10,9 +10,15 @@ version = "0.1.0"
 [dependencies]
 bonsai = { path = "../bonsai" }
 kiss3d = "0.34.0"
-nalgebra = "0.30"
+nalgebra = { version = "0.30", features = ["rand"] }
+rand = "0.8"
 
 [[example]]
 crate-type = ["bin"]
 name = "3d"
 path = "src/3d.rs"
+
+[[example]]
+crate-type = ["bin"]
+name = "pointcloud"
+path = "src/pointcloud.rs"
