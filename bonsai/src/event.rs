@@ -76,17 +76,20 @@ pub struct Timer {
 }
 
 impl Timer {
+    /// Initialize monotonic clock
     pub fn init_time() -> Timer {
         let init = Instant::now();
         Timer { start: init, now: init }
     }
 
+    /// Compute duration since timer started
     pub fn duration_since_start(&self) -> f64 {
         let new_now: Instant = Instant::now();
         let duration = new_now.duration_since(self.start);
         duration.as_secs_f64()
     }
 
+    /// Compute time difference last invocation of `get_dt()` function
     pub fn get_dt(&mut self) -> f64 {
         let new_now: Instant = Instant::now();
         let duration = new_now.duration_since(self.now);
