@@ -8,5 +8,10 @@ pub enum Status {
     /// The behavior or action failed.
     Failure,
     /// The behavior or action is still running.
+    ///
+    /// 'Running' is usually returned by nodes that has long-
+    /// running operations (e.g NavigatetoGoal, CountToHundred) and nodes
+    /// that has operations that are everlasting (e.g ComputePI, AvoidObstacles)
+    /// with no clear definition of an end-state
     Running,
 }
