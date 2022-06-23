@@ -96,6 +96,11 @@ impl<A: Clone, S> State<A, S> {
     ///
     /// Passes event, delta time in seconds, action and state to closure.
     /// The closure should return a status and remaining delta time.
+    ///
+    /// return: (Status, f64)
+    /// function returns the result of the tree traversal, and how long
+    /// it actually took to complete the traversal and propagate the
+    /// results back up to the root node
     pub fn event<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,

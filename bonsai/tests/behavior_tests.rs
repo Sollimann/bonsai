@@ -19,7 +19,7 @@ pub enum TestActions {
 fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions, ()>) -> i32 {
     let e: Event = UpdateArgs { dt }.into();
 
-    state.event(&e, &mut |args| match *args.action {
+    let (s, t) = state.event(&e, &mut |args| match *args.action {
         Inc => {
             acc += 1;
             (Success, args.dt)
@@ -36,6 +36,7 @@ fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions, ()>) -> i32 {
             }
         }
     });
+    println!("status: {:?}, time: {}", s, t);
     acc
 }
 
@@ -215,7 +216,7 @@ fn when_all_if() {
     a = tick(a, 8.0, &mut state);
     assert_eq!(a, 10);
 
-    // sample state after 10 seconds
+    // // sample state after 10 seconds
     a = tick(a, 2.0, &mut state);
     assert_eq!(a, 12);
 }
