@@ -36,7 +36,7 @@ pub enum Animation {
     ChangeColor(f64, Option<Scalar>, Option<Scalar>, Option<Scalar>),
 }
 
-// A test state machine that can increment and decrement.
+/// bl bla
 fn tick(c: &mut SceneNode, timer: &mut Timer, state: &mut State<Animation, ()>) {
     // let t = timer.duration_since_start();
     let dt = timer.get_dt();

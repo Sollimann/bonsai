@@ -6,6 +6,10 @@
 pub struct EventId(pub &'static str);
 
 /// Update arguments, such as delta time in seconds.
+/// To move the behavior tree forward in time it must be ticked on each iteration of the
+/// game/application loop.
+///
+/// dt: states how much forward in time we should move the behavior tree
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, serde::Deserialize, serde::Serialize)]
 pub struct UpdateArgs {
     /// Delta time in seconds.

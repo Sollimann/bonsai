@@ -7,7 +7,7 @@ use crate::{Behavior, Status};
 use std::fmt::Debug;
 // use serde_derive::{Deserialize, Serialize};
 
-/// The action is still running.
+/// The action is still running. So, there is
 pub const RUNNING: (Status, f64) = (Running, 0.0);
 
 /// The arguments in the action callback.
@@ -20,8 +20,6 @@ pub struct ActionArgs<'a, E: 'a, A: 'a, S: 'a> {
     pub action: &'a A,
     /// The state of the running action, if any.
     pub state: &'a mut Option<S>,
-    // data
-    // pub data: Option<&'a mut D>,
 }
 
 /// Keeps track of a behavior.
