@@ -1,14 +1,16 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 use bonsai::Behavior::{Sequence, Wait, WaitForever, While};
 use bonsai::Status::Running;
-use bonsai::Timer;
 use bonsai::{Action, RUNNING};
 use bonsai::{Event, State, Status::Failure, Status::Success, UpdateArgs};
+use bonsai::{Timer, BT};
 use kiss3d::window::Window;
 use kiss3d::{light::Light, scene::SceneNode};
 use na::{Translation3, UnitQuaternion, Vector3};
 use nalgebra as na;
 use rand::{random, Rng};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -18,7 +20,7 @@ pub type Scalar = f32;
 /// Animations supported by Sprite
 #[derive(Clone, Debug, PartialEq)]
 pub enum Animation {
-    LessThanFifty,
+    ComplexCondition(u32),
     /// x, y
     ///
     /// Move to specified position, relatively
@@ -44,24 +46,35 @@ pub enum Animation {
 /// , where you update and monitor the task on a tick-basis.
 ///
 /// The ticks to execute for as long as the specified time 'dt'.
-fn tick(c: &mut SceneNode, timer: &mut Timer, state: &mut State<Animation>) {
+fn tick(c: &mut SceneNode, timer: &mut Timer, bt: &mut BT<Animation, String, u32>) {
     // let t = timer.duration_since_start();
     let dt = timer.get_dt();
     let e: Event = UpdateArgs { dt }.into();
 
-    #[rustfmt::skip]
-    state.event(&e,&mut |args: bonsai::ActionArgs<Event, Animation>|
-        match *args.action {
-            Animation::LessThanFifty => {
-                // update counter in blackboard
-                // let bb = args.state.as_mut().unwrap();
-                // let count = *bb.0.entry("count".to_string())
-                //     .and_modify(|count| *count += 1)
-                //     .or_insert(0);
+    // get data from blackboard
+    let inc = *bt.get_blackboard().get_db().get("count").unwrap();
 
-                if 50 < 100 {
+    // update state of behaviosuccessr tree
+    #[rustfmt::skip]
+    bt.state.event(&e,&mut |args: bonsai::ActionArgs<Event, Animation>|
+        match *args.action {
+            // this is just some random complex conditional
+            // node to
+            Animation::ComplexCondition(v) => {
+                println!("inc {}", inc);
+                if inc < v {
+                    println!("inc < {}", v);
+                    (Success, args.dt)
+                }
+                else if inc > 250 && inc < 350 {
+                    println!("350 > inc > 250");
+                    RUNNING
+                }
+                else if inc > 200 {
+                    println!("inc > 200");
                     (Success, args.dt)
                 } else {
+                    println!("failure");
                     (Failure, args.dt)
                 }
             }
@@ -97,11 +110,18 @@ fn tick(c: &mut SceneNode, timer: &mut Timer, state: &mut State<Animation>) {
         },
     );
 
-    // c
+    // update blackboard
+    let bb = bt.get_blackboard();
+    let count = bb
+        .get_db()
+        .entry("count".to_string())
+        .and_modify(|count| *count += 1)
+        .or_insert(0)
+        .to_owned();
 }
 
 fn main() {
-    use crate::Animation::{ChangeColor, LessThanFifty, MoveBy, RotateBy};
+    use crate::Animation::{ChangeColor, ComplexCondition, MoveBy, RotateBy};
     let mut window = Window::new("Kiss3d: cube");
     let mut c = window.add_cube(0.5, 0.5, 0.5);
 
@@ -140,16 +160,20 @@ fn main() {
         Box::new(WaitForever),
         vec![
             Action(ChangeColor(None, None, None)),
-            Action(LessThanFifty),
+            // if ComplexCondition action succeeds, sequence will proceed
+            // else if it fails, the sequence will restart from beginning
+            Action(ComplexCondition(100)),
             Action(RotateBy(0.054)),
             Wait(0.2),
         ],
     );
 
-    let mut state = State::new(seq2);
+    let mut h: HashMap<String, u32> = HashMap::new();
+    h.insert("count".to_string(), 1);
+    let mut bt = BT::new(seq2, h);
 
     while window.render() {
         sleep(Duration::new(0, 0.1e+9 as u32));
-        tick(&mut c, &mut timer, &mut state);
+        tick(&mut c, &mut timer, &mut bt);
     }
 }
