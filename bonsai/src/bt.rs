@@ -4,17 +4,33 @@ use std::fmt::Debug;
 
 use crate::{Behavior, State};
 
-pub struct BT<A, B, C> {
-    /// constructed behavior tree
-    pub bt: State<A>,
-    /// blackboard
-    pub bb: HashMap<B, C>,
+#[derive(Clone, Debug)]
+pub struct BlackBoard<K, V>(HashMap<K, V>);
+
+impl<K, V> BlackBoard<K, V> {
+    pub fn get(&mut self) -> &mut HashMap<K, V> {
+        &mut self.0
+    }
 }
 
-impl<A: Clone, B: Debug, C: Debug> BT<A, B, C> {
-    pub fn new(behavior: Behavior<A>, blackboard: HashMap<B, C>) -> Self {
+pub struct BT<A, K, V> {
+    /// constructed behavior tree
+    pub state: State<A>,
+    /// blackboard
+    bb: BlackBoard<K, V>,
+}
+
+impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
+    pub fn new(behavior: Behavior<A>, blackboard: HashMap<K, V>) -> Self {
         let bt = State::new(behavior);
-        Self { bt, bb: blackboard }
+        Self {
+            state: bt,
+            bb: BlackBoard(blackboard),
+        }
+    }
+
+    pub fn get_blackboard(&mut self) -> &mut HashMap<K, V> {
+        self.bb.get()
     }
 }
 
