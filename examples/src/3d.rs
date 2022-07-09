@@ -58,20 +58,22 @@ fn tick(c: &mut SceneNode, timer: &mut Timer, bt: &mut BT<Animation, String, u32
     #[rustfmt::skip]
     bt.state.event(&e,&mut |args: bonsai::ActionArgs<Event, Animation>|
         match *args.action {
-            // this is just some random complex conditional
-            // node to
+            // this is just some random complex conditional statements
             Animation::ComplexCondition(v) => {
                 println!("inc {}", inc);
                 if inc < v {
                     println!("inc < {}", v);
+                    println!("success");
                     (Success, args.dt)
                 }
                 else if inc > 250 && inc < 350 {
                     println!("350 > inc > 250");
+                    println!("running");
                     RUNNING
                 }
                 else if inc > 200 {
                     println!("inc > 200");
+                    println!("success");
                     (Success, args.dt)
                 } else {
                     println!("failure");
