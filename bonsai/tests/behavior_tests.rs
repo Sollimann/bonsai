@@ -16,7 +16,7 @@ pub enum TestActions {
 }
 
 // A test state machine that can increment and decrement.
-fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions, ()>) -> i32 {
+fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> i32 {
     let e: Event = UpdateArgs { dt }.into();
 
     let (s, t) = state.event(&e, &mut |args| match *args.action {
@@ -41,7 +41,7 @@ fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions, ()>) -> i32 {
 }
 
 // A test state machine that can increment and decrement.
-fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut State<TestActions, ()>) {
+fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut State<TestActions>) {
     let e: Event = UpdateArgs { dt }.into();
     state.event(&e, &mut |args| match *args.action {
         Inc => {

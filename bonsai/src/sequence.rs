@@ -6,21 +6,20 @@ use std::fmt::Debug;
 //
 // `Sequence` fails if any fails and succeeds when all succeeds.
 // `Select` succeeds if any succeeds and fails when all fails.
-pub fn sequence<A, S, E, F>(
+pub fn sequence<A, E, F>(
     select: bool,
     upd: Option<f64>,
     seq: &[Behavior<A>],
     i: &mut usize,
-    cursor: &mut Box<State<A, S>>,
+    cursor: &mut Box<State<A>>,
     e: &E,
     f: &mut F,
 ) -> (Status, f64)
 where
     A: Clone,
     E: UpdateEvent,
-    F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
+    F: FnMut(ActionArgs<E, A>) -> (Status, f64),
     A: Debug,
-    S: Debug,
 {
     let (status, inv_status) = if select {
         // `Select`

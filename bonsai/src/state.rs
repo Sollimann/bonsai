@@ -11,26 +11,24 @@ use std::fmt::Debug;
 pub const RUNNING: (Status, f64) = (Running, 0.0);
 
 /// The arguments in the action callback.
-pub struct ActionArgs<'a, E: 'a, A: 'a, S: 'a> {
+pub struct ActionArgs<'a, E: 'a, A: 'a> {
     /// The event.
     pub event: &'a E,
     /// The remaining delta time.
     pub dt: f64,
     /// The action running.
     pub action: &'a A,
-    /// The state of the running action, if any.
-    pub state: &'a mut Option<S>,
 }
 
 /// Keeps track of a behavior.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq)]
-pub enum State<A, S> {
+pub enum State<A> {
     /// Executes an action.
-    ActionState(A, Option<S>),
+    ActionState(A),
     /// Converts `Success` into `Failure` and vice versa.
-    FailState(Box<State<A, S>>),
+    FailState(Box<State<A>>),
     /// Ignores failures and always return `Success`.
-    AlwaysSucceedState(Box<State<A, S>>),
+    AlwaysSucceedState(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
     ///
     /// f64: Total time in seconds to wait
@@ -43,26 +41,26 @@ pub enum State<A, S> {
     /// If status is `Running`, then it evaluates the condition.
     /// If status is `Success`, then it evaluates the success behavior.
     /// If status is `Failure`, then it evaluates the failure behavior.
-    IfState(Box<Behavior<A>>, Box<Behavior<A>>, Status, Box<State<A, S>>),
+    IfState(Box<Behavior<A>>, Box<Behavior<A>>, Status, Box<State<A>>),
     /// Keeps track of a `Select` behavior.
-    SelectState(Vec<Behavior<A>>, usize, Box<State<A, S>>),
+    SelectState(Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of an `Sequence` behavior.
-    SequenceState(Vec<Behavior<A>>, usize, Box<State<A, S>>),
+    SequenceState(Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `While` behavior.
-    WhileState(Box<State<A, S>>, Vec<Behavior<A>>, usize, Box<State<A, S>>),
+    WhileState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `WhenAll` behavior.
-    WhenAllState(Vec<Option<State<A, S>>>),
+    WhenAllState(Vec<Option<State<A>>>),
     /// Keeps track of a `WhenAny` behavior.
-    WhenAnyState(Vec<Option<State<A, S>>>),
+    WhenAnyState(Vec<Option<State<A>>>),
     /// Keeps track of an `After` behavior.
-    AfterState(usize, Vec<State<A, S>>),
+    AfterState(usize, Vec<State<A>>),
 }
 
-impl<A: Clone, S> State<A, S> {
+impl<A: Clone> State<A> {
     /// Creates a state from a behavior.
     pub fn new(behavior: Behavior<A>) -> Self {
         match behavior {
-            Behavior::Action(action) => State::ActionState(action, None),
+            Behavior::Action(action) => State::ActionState(action),
             Behavior::Fail(ev) => State::FailState(Box::new(State::new(*ev))),
             Behavior::AlwaysSucceed(ev) => State::AlwaysSucceedState(Box::new(State::new(*ev))),
             Behavior::Wait(dt) => State::WaitState(dt, 0.0),
@@ -104,21 +102,19 @@ impl<A: Clone, S> State<A, S> {
     pub fn event<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
-        F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
+        F: FnMut(ActionArgs<E, A>) -> (Status, f64),
         A: Debug,
-        S: Debug,
     {
         let upd = e.update(|args| Some(args.dt)).unwrap_or(None);
 
         // double match statements
         match (upd, self) {
-            (_, &mut ActionState(ref action, ref mut state)) => {
+            (_, &mut ActionState(ref action)) => {
                 println!("In ActionState: {:?}", action);
                 f(ActionArgs {
                     event: e,
                     dt: upd.unwrap_or(0.0),
                     action,
-                    state,
                 })
             }
             (_, &mut FailState(ref mut cur)) => {

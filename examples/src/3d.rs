@@ -37,11 +37,6 @@ pub enum Animation {
     ChangeColor(Option<Scalar>, Option<Scalar>, Option<Scalar>),
 }
 
-use std::collections::HashMap;
-
-#[derive(Clone, Debug)]
-struct Blackboard(HashMap<String, u32>);
-
 /// This method ticks the behavior tree for a given duration 'dt' to move the
 /// behavior tree forward in time. Note that a tick - basically a depth-first traversal
 /// - of the tree is intended to return instantly, so it is important that the action
@@ -49,13 +44,13 @@ struct Blackboard(HashMap<String, u32>);
 /// , where you update and monitor the task on a tick-basis.
 ///
 /// The ticks to execute for as long as the specified time 'dt'.
-fn tick(c: &mut SceneNode, timer: &mut Timer, state: &mut State<Animation, ()>) {
+fn tick(c: &mut SceneNode, timer: &mut Timer, state: &mut State<Animation>) {
     // let t = timer.duration_since_start();
     let dt = timer.get_dt();
     let e: Event = UpdateArgs { dt }.into();
 
     #[rustfmt::skip]
-    state.event(&e,&mut |args: bonsai::ActionArgs<Event, Animation, ()>|
+    state.event(&e,&mut |args: bonsai::ActionArgs<Event, Animation>|
         match *args.action {
             Animation::LessThanFifty => {
                 // update counter in blackboard
