@@ -1,6 +1,12 @@
 // use serde_derive::{Deserialize, Serialize};
 
 /// The result of a behavior or action.
+///
+/// A tree node that receives a tick signal executes it's callback. The callback
+/// must return either:
+/// * Success
+/// * Failure or
+/// * RUNNING, if the action is asynchronous and it needs more time to complete
 #[derive(Copy, Clone, serde::Deserialize, serde::Serialize, PartialEq, Eq, Debug)]
 pub enum Status {
     /// The behavior or action succeeded.
