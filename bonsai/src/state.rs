@@ -278,6 +278,7 @@ impl<A: Clone> State<A> {
                     RUNNING
                 }
             }
+            // WaitForeverState, WaitState
             _ => RUNNING,
         }
     }

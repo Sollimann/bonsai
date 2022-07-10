@@ -6,7 +6,7 @@
 /// must return either:
 /// * Success
 /// * Failure or
-/// * RUNNING, if the action is asynchronous and it needs more time to complete
+/// * Running, if the action is asynchronous and it needs more time to complete
 #[derive(Copy, Clone, serde::Deserialize, serde::Serialize, PartialEq, Eq, Debug)]
 pub enum Status {
     /// The behavior or action succeeded.
