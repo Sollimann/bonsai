@@ -1,6 +1,6 @@
 <h1 align="center" style="font-family:Papyrus; font-size:4em;"> Bonsai 盆栽 </h1>
 <p align="center">
-  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" rotate="180" width="350" ">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" width="350" ">
 </p>
 
 <p align="center">
@@ -22,6 +22,10 @@
 ## What is a Behavior Tree?
 
 A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how certain _behavior's_ can occur, and the order in which they would execute. BTs are a very efficient way of creating complex systems that are both modular and reactive. These properties are crucial in many applications, which has led to the spread of BT from computer game programming to many branches of AI and Robotics.
+
+<p align="center">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/npc_bt.png" width="400" ">
+</p>
 
 ## Contents
 
