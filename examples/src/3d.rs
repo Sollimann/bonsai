@@ -1,19 +1,17 @@
-#![allow(dead_code, unused_variables, unused_imports)]
-use bonsai::Behavior::{self, Fail, If, Sequence, Wait, WaitForever, WhenAny, While};
-use bonsai::Status::{self, Running};
+use bonsai::Behavior::{Fail, If, Wait, WhenAny, While};
+use bonsai::Status::{self};
 use bonsai::{Action, RUNNING};
-use bonsai::{Event, State, Status::Failure, Status::Success, UpdateArgs};
+use bonsai::{Event, Status::Failure, Status::Success, UpdateArgs};
 use bonsai::{Timer, BT};
-use kiss3d::event::{EventManager, Events};
+use kiss3d::event::EventManager;
 use kiss3d::text::Font;
-use kiss3d::window::{self, Window};
+use kiss3d::window::Window;
 use kiss3d::{light::Light, scene::SceneNode};
 use na::{Point2, Point3, Translation3, UnitQuaternion, Vector3};
 use nalgebra as na;
-use rand::{random, Rng};
+use rand::Rng;
 use serde_json::{Number, Value};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -47,11 +45,6 @@ pub enum Animation {
     WriteText(f64),
     /// r, g, b
     ChangeColor(Option<Scalar>, Option<Scalar>, Option<Scalar>),
-}
-
-struct MousePos {
-    pub x: f64,
-    pub y: f64,
 }
 
 fn mouse_pos(x: f64, y: f64) -> serde_json::Map<String, Value> {
@@ -113,7 +106,7 @@ fn tick(
             Animation::MouseCallback => {
                 let mut status = RUNNING;
                 for event in events.iter() {
-                    let x = match event.value {
+                    match event.value {
                         kiss3d::event::WindowEvent::MouseButton(button, kiss3d::event::Action::Press, modif) => {
                             let txt = format!("mouse press event on {:?} with {:?}", button, modif);
                             write_to_screen(txt, w);
@@ -173,7 +166,7 @@ fn tick(
                 let sx: f32 = sx.unwrap_or_else(|| rng.gen_range(0.0..0.5));
                 let sy: f32 = sy.unwrap_or_else(|| rng.gen_range(0.0..0.5));
                 let sz: f32 = sz.unwrap_or_else(|| rng.gen_range(0.0..0.5));
-                c.set_local_scale(sz, sy, sz);
+                c.set_local_scale(sx, sy, sz);
                 (Success, dt)
             }
             Animation::WriteText(time) => {
@@ -205,7 +198,7 @@ fn tick(
     let db = bt.get_blackboard().get_db();
 
     // update count
-    let count = db
+    let _count = db
         .entry("count".to_string())
         .and_modify(|value| {
             let mut count: u64 = value.as_u64().unwrap();
@@ -216,7 +209,7 @@ fn tick(
         .to_owned();
 
     // update last pos
-    let count = db
+    let _last_pos = db
         .entry("last_pos".to_string())
         .and_modify(|value| {
             *value = serde_json::Value::Object(last_pos);
@@ -234,8 +227,6 @@ fn main() {
 
     c.set_color(1.0, 0.0, 0.0);
     window.set_light(Light::StickToCamera);
-
-    let rot = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), 0.014);
 
     let mut timer = Timer::init_time();
 
@@ -272,11 +263,7 @@ fn main() {
     // only run animation bt for 20.0 secs
     let behavior = WhenAny(vec![Wait(20.0), behavior]);
 
-    let mut blackboard: HashMap<String, serde_json::Value> = HashMap::new();
-    blackboard.insert(
-        "count".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(0_u32)),
-    );
+    let blackboard: HashMap<String, serde_json::Value> = HashMap::new();
     let bt_serialized = serde_json::to_string_pretty(&behavior).unwrap();
     println!("creating bt: \n {} \n", bt_serialized);
     let mut bt = BT::new(behavior, blackboard);
