@@ -14,7 +14,9 @@ pub const RUNNING: (Status, f64) = (Running, 0.0);
 pub struct ActionArgs<'a, E: 'a, A: 'a> {
     /// The event.
     pub event: &'a E,
-    /// The remaining delta time.
+    /// The remaining delta time. When one action terminates,
+    /// it can consume some of dt and the remaining is passed
+    /// onto the next action.
     pub dt: f64,
     /// The action running.
     pub action: &'a A,
