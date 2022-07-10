@@ -35,7 +35,7 @@ where
         match *cur {
             None => {}
             Some(ref mut cur) => {
-                match cur.event(e, f) {
+                match cur.tick(e, f) {
                     (Running, _) => {
                         continue;
                     }

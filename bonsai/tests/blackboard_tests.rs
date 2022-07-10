@@ -19,7 +19,7 @@ pub enum TestActions {
 fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, String, i32>) -> i32 {
     let e: Event = UpdateArgs { dt }.into();
 
-    let (_s, _t) = bt.state.event(&e, &mut |args| match *args.action {
+    let (_s, _t) = bt.state.tick(&e, &mut |args| match *args.action {
         Inc => {
             acc += 1;
             (Success, args.dt)

@@ -19,7 +19,7 @@ pub enum TestActions {
 fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> i32 {
     let e: Event = UpdateArgs { dt }.into();
 
-    let (_s, _t) = state.event(&e, &mut |args| match *args.action {
+    let (_s, _t) = state.tick(&e, &mut |args| match *args.action {
         Inc => {
             acc += 1;
             (Success, args.dt)
@@ -42,7 +42,7 @@ fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> i32 {
 // A test state machine that can increment and decrement.
 fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut State<TestActions>) {
     let e: Event = UpdateArgs { dt }.into();
-    state.event(&e, &mut |args| match *args.action {
+    state.tick(&e, &mut |args| match *args.action {
         Inc => {
             *acc += 1;
             (Success, args.dt)
@@ -115,7 +115,7 @@ fn wait_half_sec() {
     assert_eq!(a, 1);
 }
 
-// A sequence of one event is like a bare event.
+// A sequence of one tick is like a bare tick.
 #[test]
 fn sequence_of_one_event() {
     let a: i32 = 0;
@@ -125,7 +125,7 @@ fn sequence_of_one_event() {
     assert_eq!(a, 1);
 }
 
-// A sequence of wait events is the same as one wait event.
+// A sequence of wait events is the same as one wait tick.
 #[test]
 fn wait_two_waits() {
     let a: i32 = 0;

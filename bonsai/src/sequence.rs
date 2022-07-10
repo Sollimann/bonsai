@@ -31,7 +31,7 @@ where
     let mut remaining_dt = upd.unwrap_or(0.0);
     let mut remaining_e;
     while *i < seq.len() {
-        match cursor.event(
+        match cursor.tick(
             match upd {
                 Some(_) => {
                     remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();

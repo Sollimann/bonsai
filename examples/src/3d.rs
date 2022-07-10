@@ -56,7 +56,7 @@ fn tick(c: &mut SceneNode, timer: &mut Timer, bt: &mut BT<Animation, String, u32
 
     // update state of behaviosuccessr tree
     #[rustfmt::skip]
-    bt.state.event(&e,&mut |args: bonsai::ActionArgs<Event, Animation>|
+    bt.state.tick(&e,&mut |args: bonsai::ActionArgs<Event, Animation>|
         match *args.action {
             // this is just some random complex conditional statements
             Animation::ComplexCondition(v) => {

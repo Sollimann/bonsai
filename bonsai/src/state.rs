@@ -101,7 +101,7 @@ impl<A: Clone> State<A> {
     /// function returns the result of the tree traversal, and how long
     /// it actually took to complete the traversal and propagate the
     /// results back up to the root node
-    pub fn event<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
+    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A>) -> (Status, f64),
@@ -121,7 +121,7 @@ impl<A: Clone> State<A> {
             }
             (_, &mut FailState(ref mut cur)) => {
                 println!("In FailState: {:?}", cur);
-                match cur.event(e, f) {
+                match cur.tick(e, f) {
                     (Running, dt) => (Running, dt),
                     (Failure, dt) => (Success, dt),
                     (Success, dt) => (Failure, dt),
@@ -129,7 +129,7 @@ impl<A: Clone> State<A> {
             }
             (_, &mut AlwaysSucceedState(ref mut cur)) => {
                 println!("In AlwaysSucceedState: {:?}", cur);
-                match cur.event(e, f) {
+                match cur.tick(e, f) {
                     (Running, dt) => (Running, dt),
                     (_, dt) => (Success, dt),
                 }
@@ -153,7 +153,7 @@ impl<A: Clone> State<A> {
                 // remaining delta time after condition.
                 loop {
                     *status = match *status {
-                        Running => match state.event(e, f) {
+                        Running => match state.tick(e, f) {
                             (Running, dt) => {
                                 return (Running, dt);
                             }
@@ -169,7 +169,7 @@ impl<A: Clone> State<A> {
                             }
                         },
                         _ => {
-                            return state.event(
+                            return state.tick(
                                 match upd {
                                     Some(_) => {
                                         remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
@@ -196,7 +196,7 @@ impl<A: Clone> State<A> {
             (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
                 println!("In WhileState: {:?}", ev_cursor);
                 // If the event terminates, do not execute the loop.
-                match ev_cursor.event(e, f) {
+                match ev_cursor.tick(e, f) {
                     (Running, _) => {}
                     x => return x,
                 };
@@ -204,7 +204,7 @@ impl<A: Clone> State<A> {
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let mut remaining_e;
                 loop {
-                    match cur.event(
+                    match cur.tick(
                         match upd {
                             Some(_) => {
                                 remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
@@ -252,7 +252,7 @@ impl<A: Clone> State<A> {
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
                 for (j, item) in cursors.iter_mut().enumerate().skip(*i) {
-                    match item.event(e, f) {
+                    match item.tick(e, f) {
                         (Running, _) => {
                             min_dt = 0.0;
                         }
