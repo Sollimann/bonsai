@@ -1,14 +1,14 @@
+<h1 align="left" style="font-family:Papyrus; font-size:4em;"> Contents </h1>
 
-# Concepts
-
-- [Concepts](#concepts)
-  - [Fundamentals](#fundamentals)
-    - [What is a Behavior Tree?](#what-is-a-behavior-tree)
-    - [When to use a Behavior Tree?](#when-to-use-a-behavior-tree)
-      - [BT vs FSM:](#bt-vs-fsm)
-    - [How to use a Behavior tree?](#how-to-use-a-behavior-tree)
-  - [Types of Nodes](#types-of-nodes)
-  - [Understand Asynchrous Nodes, Concurrency and Parallelism](#understand-asynchrous-nodes-concurrency-and-parallelism)
+- [Fundamentals](#fundamentals)
+  - [What is a Behavior Tree?](#what-is-a-behavior-tree)
+  - [When to use a Behavior Tree?](#when-to-use-a-behavior-tree)
+    - [BT vs FSM:](#bt-vs-fsm)
+  - [How to use a Behavior tree?](#how-to-use-a-behavior-tree)
+- [Types of Nodes](#types-of-nodes)
+- [Understand Asynchrous Nodes, Concurrency and Parallelism](#understand-asynchrous-nodes-concurrency-and-parallelism)
+  - [Concurrency vs Parallelism](#concurrency-vs-parallelism)
+  - [Asynchronous vs Synchronous](#asynchronous-vs-synchronous)
 
 ## Fundamentals
 
@@ -66,4 +66,29 @@ bla bla
 
 ## Understand Asynchrous Nodes, Concurrency and Parallelism
 
-bla bla
+When designing reactive Behavior Trees, it is important to understand 2 main concepts:
+
+- what we mean by **"Asynchronous"** Actions VS **"Synchronous"** ones.
+- The difference between **Concurrency** and **Parallelism** in general and in the context of behavior trees.
+
+### Concurrency vs Parallelism
+
+If you Google those words, you will read many good articles about this topic.
+
+```markdown
+**Concurrency** is when two or more tasks can start, run, and complete in overlapping time periods. It doesn't necessarily mean they'll ever both be running at the same instant.
+
+**Parallelism** is when tasks literally run at the same time in different  threads, e.g., on a multicore processor.
+```
+
+### Asynchronous vs Synchronous
+
+In general, an Asynchronous Action (or TreeNode) is simply one that:
+
+- May return RUNNING instead of SUCCESS or FAILURE, when ticked.
+- Can be stopped as fast as possible when the method `halt()` (to be implemented by the developer) is invoked.
+
+When your Tree ends up executing an Asynchronous action that returns running, that RUNNING state is usually propagated backbard and the entire Tree is itself in the RUNNING state.
+
+In the example below, "ActionE" is asynchronous and RUNNING; when
+a node is RUNNING, usually its parent returns RUNNING too.
