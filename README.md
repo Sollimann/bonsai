@@ -1,6 +1,6 @@
-<h1 align="center" style="font-family:Papyrus; font-size:4em;"> Bonsai :flower_playing_cards: </h1>
+<h1 align="center" style="font-family:Papyrus; font-size:4em;"> Bonsai 盆栽 </h1>
 <p align="center">
-  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" width="350" style="transform:rotate(90deg);">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" rotate="180" width="350" ">
 </p>
 
 <p align="center">
@@ -23,47 +23,8 @@
 
 A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how certain _behavior's_ can occur, and the order in which they would execute. BTs are a very efficient way of creating complex systems that are both modular and reactive. These properties are crucial in many applications, which has led to the spread of BT from computer game programming to many branches of AI and Robotics.
 
-Behavior tree fundamentals:
+## Contents
 
-1. **Behavior Trees are trees (duh):** They start at a root node and are designed to be traversed in a specific order until a terminal state is reached (success or failure). The system would run an update from the root called a _tick_. To
-guarantee that every node is visited exactly once, the ticks traverse the tree in a depth first traverse.
-2. **Leaf nodes are executable behaviors:** Each leaf will do something, whether it’s a simple check or a complex action, and will output a status (success, failure, or running). In other words, leaf nodes are where you connect a BT to the lower-level code for your specific application.
-3. **Internal nodes control tree traversal:** The internal (non-leaf) nodes of the tree will accept the resulting status of their children and apply their own rules to dictate which node should be expanded next.
-
-## When to use a Behavior Tree?
-
-* Use BT's to manage complexity when system control logic grows.
-* Use BT's if priority ordering of conditions and actions matter.
-* Use BT's when failures can occur and your system would need repeated attempts to complete a task.
-* Use BT's when you need parallell semantics. It means that multiple processes can happen at the same time and the logic can be constructed around how these processes runs or terminate.
-
-#### BT vs FSM:
-
-* _BT's has a predictable and intuitive structure._ In comparison _Finite State Machines_ (FSM) can easily become unmanageable as the logic grows.
-* _Streamlined logic._ BT's have _one-to-many_ relations between nodes, while FSM's have many-to-many relations.
-* _Modular and reasuable components._ In BTs you can create macros of behaviors that can easily be put together to create more complex logic. Conversely, with the FSMs, many of the states are typically tied to that specific context.
-
-## How to use a Behavior tree?
-
-An AI behavior tree is a very generic way of organizing interactive logic.
-It has built-in semantics for processes that signals `Running`, `Success` or
-`Failure`.
-
-For example, if you have a state `A` and a state `B`:
-
-- Move from state `A` to state `B` if `A` succeeds: `Sequence([A, B])`
-- Try `A` first and then try `B` if `A` fails: `Select([A, B])`
-- If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
-- Do `B` repeatedly while `A` runs: `While(A, [B])`
-- Do `A`, `B` forever: `While(WaitForever, [A, B])`
-- Wait for both `A` and `B` to complete: `WhenAll([A, B])`
-- Wait for either `A` or `B` to complete: `WhenAny([A, B])`
-
-See the `Behavior` enum for more information.
-
-### Kanban
-
-Link to project Kanban board
-[link](https://github.com/Sollimann/b3/projects/1)
-
-[Development Guide](DEVELOPMENT.md)
+* [Concepts](docs/concepts/README.md)
+* [Development Guide](DEVELOPMENT.md)
+* [Kanban Board](https://github.com/Sollimann/b3/projects/1)

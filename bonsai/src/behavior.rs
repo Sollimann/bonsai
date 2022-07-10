@@ -94,10 +94,60 @@ mod tests {
             vec![circle_until_player_within_distance, attack_attempt],
         );
 
-        let bt_serialized = serde_json::to_string(&enemy_behavior).unwrap();
+        let bt_serialized = serde_json::to_string_pretty(&enemy_behavior).unwrap();
+        let _bt_deserialized: Behavior<EnemyAction> = serde_json::from_str(&bt_serialized).unwrap();
+    }
 
-        let bt_deserialized: Behavior<EnemyAction> = serde_json::from_str(&bt_serialized).unwrap();
+    #[test]
+    fn test_deserialize_behavior() {
+        let bt_json = r#"
+            {
+                "While": ["WaitForever", [{
+                    "Sequence": [{
+                        "While": [{
+                                "Wait": 5.0
+                            },
+                            [{
+                                "Action": "Circling"
+                            }]
+                        ]
+                    }, {
+                        "While": [{
+                                "Action": {
+                                    "PlayerWithinDistance": 50.0
+                                }
+                            },
+                            [{
+                                "Action": "Circling"
+                            }]
+                        ]
+                    }]
+                }, {
+                    "While": [{
+                            "WhenAny": [{
+                                "Action": {
+                                    "PlayerFarAwayFromTarget": 100.0
+                                }
+                            }, {
+                                "Sequence": [{
+                                    "Action": {
+                                        "PlayerWithinDistance": 10.0
+                                    }
+                                }, {
+                                    "Action": {
+                                        "AttackPlayer": 0.1
+                                    }
+                                }]
+                            }]
+                        },
+                        [{
+                            "Action": "FlyTowardPlayer"
+                        }]
+                    ]
+                }]]
+            }
+        "#;
 
-        print!("des: {:?}", bt_deserialized);
+        let _bt_deserialized: Behavior<EnemyAction> = serde_json::from_str(bt_json).unwrap();
     }
 }

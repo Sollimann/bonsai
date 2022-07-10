@@ -3,35 +3,34 @@ use crate::sequence::sequence;
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::when_all::when_all;
-use crate::{Behavior, Event, Status, UpdateArgs};
+use crate::{Behavior, Status};
+use std::fmt::Debug;
 // use serde_derive::{Deserialize, Serialize};
 
-/// The action is still running.
+/// The action is still running. So, there is
 pub const RUNNING: (Status, f64) = (Running, 0.0);
 
 /// The arguments in the action callback.
-pub struct ActionArgs<'a, E: 'a, A: 'a, S: 'a> {
+pub struct ActionArgs<'a, E: 'a, A: 'a> {
     /// The event.
     pub event: &'a E,
-    /// The remaining delta time.
+    /// The remaining delta time. When one action terminates,
+    /// it can consume some of dt and the remaining is passed
+    /// onto the next action.
     pub dt: f64,
     /// The action running.
     pub action: &'a A,
-    /// The state of the running action, if any.
-    pub state: &'a mut Option<S>,
-    // data
-    // pub data: Option<&'a mut D>,
 }
 
 /// Keeps track of a behavior.
-#[derive(Clone, serde::Deserialize, serde::Serialize, PartialEq)]
-pub enum State<A, S> {
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq)]
+pub enum State<A> {
     /// Executes an action.
-    ActionState(A, Option<S>),
+    ActionState(A),
     /// Converts `Success` into `Failure` and vice versa.
-    FailState(Box<State<A, S>>),
+    FailState(Box<State<A>>),
     /// Ignores failures and always return `Success`.
-    AlwaysSucceedState(Box<State<A, S>>),
+    AlwaysSucceedState(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
     ///
     /// f64: Total time in seconds to wait
@@ -44,26 +43,26 @@ pub enum State<A, S> {
     /// If status is `Running`, then it evaluates the condition.
     /// If status is `Success`, then it evaluates the success behavior.
     /// If status is `Failure`, then it evaluates the failure behavior.
-    IfState(Box<Behavior<A>>, Box<Behavior<A>>, Status, Box<State<A, S>>),
+    IfState(Box<Behavior<A>>, Box<Behavior<A>>, Status, Box<State<A>>),
     /// Keeps track of a `Select` behavior.
-    SelectState(Vec<Behavior<A>>, usize, Box<State<A, S>>),
+    SelectState(Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of an `Sequence` behavior.
-    SequenceState(Vec<Behavior<A>>, usize, Box<State<A, S>>),
+    SequenceState(Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `While` behavior.
-    WhileState(Box<State<A, S>>, Vec<Behavior<A>>, usize, Box<State<A, S>>),
+    WhileState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `WhenAll` behavior.
-    WhenAllState(Vec<Option<State<A, S>>>),
+    WhenAllState(Vec<Option<State<A>>>),
     /// Keeps track of a `WhenAny` behavior.
-    WhenAnyState(Vec<Option<State<A, S>>>),
+    WhenAnyState(Vec<Option<State<A>>>),
     /// Keeps track of an `After` behavior.
-    AfterState(usize, Vec<State<A, S>>),
+    AfterState(usize, Vec<State<A>>),
 }
 
-impl<A: Clone, S> State<A, S> {
+impl<A: Clone> State<A> {
     /// Creates a state from a behavior.
     pub fn new(behavior: Behavior<A>) -> Self {
         match behavior {
-            Behavior::Action(action) => State::ActionState(action, None),
+            Behavior::Action(action) => State::ActionState(action),
             Behavior::Fail(ev) => State::FailState(Box::new(State::new(*ev))),
             Behavior::AlwaysSucceed(ev) => State::AlwaysSucceedState(Box::new(State::new(*ev))),
             Behavior::Wait(dt) => State::WaitState(dt, 0.0),
@@ -90,20 +89,6 @@ impl<A: Clone, S> State<A, S> {
         }
     }
 
-    /// A signal called "tick" is sent to the root
-    /// of the tree and propagates through the tree
-    /// until it reaches a leaf / Action node.
-    ///
-    /// A TreeNode that receives a tick signal executes it's callback.
-    /// This callback must return either SUCCESS, FAILURE or RUNNING
-    pub fn tick<F>(&mut self, dt: f64, mut block: F)
-    where
-        F: FnMut(ActionArgs<'_, Event, A, S>) -> (Status, f64),
-    {
-        let e: Event = UpdateArgs { dt }.into();
-        self.event(&e, &mut block);
-    }
-
     /// Updates the cursor that tracks an event.
     ///
     /// The action need to return status and remaining delta time.
@@ -111,32 +96,46 @@ impl<A: Clone, S> State<A, S> {
     ///
     /// Passes event, delta time in seconds, action and state to closure.
     /// The closure should return a status and remaining delta time.
-    pub fn event<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
+    ///
+    /// return: (Status, f64)
+    /// function returns the result of the tree traversal, and how long
+    /// it actually took to complete the traversal and propagate the
+    /// results back up to the root node
+    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
-        F: FnMut(ActionArgs<E, A, S>) -> (Status, f64),
+        F: FnMut(ActionArgs<E, A>) -> (Status, f64),
+        A: Debug,
     {
         let upd = e.update(|args| Some(args.dt)).unwrap_or(None);
+
+        // double match statements
         match (upd, self) {
-            (_, &mut ActionState(ref action, ref mut state)) => {
-                // Execute action.
+            (_, &mut ActionState(ref action)) => {
+                println!("In ActionState: {:?}", action);
                 f(ActionArgs {
                     event: e,
                     dt: upd.unwrap_or(0.0),
                     action,
-                    state,
                 })
             }
-            (_, &mut FailState(ref mut cur)) => match cur.event(e, f) {
-                (Running, dt) => (Running, dt),
-                (Failure, dt) => (Success, dt),
-                (Success, dt) => (Failure, dt),
-            },
-            (_, &mut AlwaysSucceedState(ref mut cur)) => match cur.event(e, f) {
-                (Running, dt) => (Running, dt),
-                (_, dt) => (Success, dt),
-            },
+            (_, &mut FailState(ref mut cur)) => {
+                println!("In FailState: {:?}", cur);
+                match cur.tick(e, f) {
+                    (Running, dt) => (Running, dt),
+                    (Failure, dt) => (Success, dt),
+                    (Success, dt) => (Failure, dt),
+                }
+            }
+            (_, &mut AlwaysSucceedState(ref mut cur)) => {
+                println!("In AlwaysSucceedState: {:?}", cur);
+                match cur.tick(e, f) {
+                    (Running, dt) => (Running, dt),
+                    (_, dt) => (Success, dt),
+                }
+            }
             (Some(dt), &mut WaitState(wait_t, ref mut t)) => {
+                println!("In WaitState: {}", wait_t);
                 if *t + dt >= wait_t {
                     let remaining_dt = *t + dt - wait_t;
                     *t = wait_t;
@@ -147,13 +146,14 @@ impl<A: Clone, S> State<A, S> {
                 }
             }
             (_, &mut IfState(ref success, ref failure, ref mut status, ref mut state)) => {
+                println!("In IfState: {:?}", success);
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let remaining_e;
                 // Run in a loop to evaluate success or failure with
                 // remaining delta time after condition.
                 loop {
                     *status = match *status {
-                        Running => match state.event(e, f) {
+                        Running => match state.tick(e, f) {
                             (Running, dt) => {
                                 return (Running, dt);
                             }
@@ -169,7 +169,7 @@ impl<A: Clone, S> State<A, S> {
                             }
                         },
                         _ => {
-                            return state.event(
+                            return state.tick(
                                 match upd {
                                     Some(_) => {
                                         remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
@@ -184,16 +184,19 @@ impl<A: Clone, S> State<A, S> {
                 }
             }
             (_, &mut SelectState(ref seq, ref mut i, ref mut cursor)) => {
+                println!("In SelectState: {:?}", seq);
                 let select = true;
                 sequence(select, upd, seq, i, cursor, e, f)
             }
             (_, &mut SequenceState(ref seq, ref mut i, ref mut cursor)) => {
+                println!("In SequenceState: {:?}", seq);
                 let select = false;
                 sequence(select, upd, seq, i, cursor, e, f)
             }
             (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
+                println!("In WhileState: {:?}", ev_cursor);
                 // If the event terminates, do not execute the loop.
-                match ev_cursor.event(e, f) {
+                match ev_cursor.tick(e, f) {
                     (Running, _) => {}
                     x => return x,
                 };
@@ -201,7 +204,7 @@ impl<A: Clone, S> State<A, S> {
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let mut remaining_e;
                 loop {
-                    match cur.event(
+                    match cur.tick(
                         match upd {
                             Some(_) => {
                                 remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
@@ -235,18 +238,21 @@ impl<A: Clone, S> State<A, S> {
                 RUNNING
             }
             (_, &mut WhenAllState(ref mut cursors)) => {
+                println!("In WhenAllState: {:?}", cursors);
                 let any = false;
                 when_all(any, upd, cursors, e, f)
             }
             (_, &mut WhenAnyState(ref mut cursors)) => {
+                println!("In WhenAnyState: {:?}", cursors);
                 let any = true;
                 when_all(any, upd, cursors, e, f)
             }
             (_, &mut AfterState(ref mut i, ref mut cursors)) => {
+                println!("In AfterState: {}", i);
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
                 for (j, item) in cursors.iter_mut().enumerate().skip(*i) {
-                    match item.event(e, f) {
+                    match item.tick(e, f) {
                         (Running, _) => {
                             min_dt = 0.0;
                         }
@@ -272,46 +278,8 @@ impl<A: Clone, S> State<A, S> {
                     RUNNING
                 }
             }
+            // WaitForeverState, WaitState
             _ => RUNNING,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::Behavior::{Action, Sequence};
-
-    /// Some test actions.
-    #[derive(Clone)]
-    #[allow(dead_code)]
-    pub enum TestActions {
-        /// Increment accumulator.
-        Inc,
-        /// Decrement accumulator.
-        Dec,
-    }
-
-    use crate::state::tests::TestActions::{Dec, Inc};
-
-    #[test]
-    fn test_bt_tick() {
-        let seq = Sequence(vec![Action(Inc), Action(Dec), Action(Inc)]);
-        let mut state = State::new(seq);
-
-        let mut acc: u32 = 0;
-        let f = &mut |args: ActionArgs<Event, TestActions, ()>| match &*args.action {
-            Inc => {
-                acc += 1;
-                (Success, args.dt)
-            }
-            Dec => {
-                acc -= 1;
-                (Success, args.dt)
-            }
-        };
-
-        state.tick(0.0, f);
-        assert_eq!(acc, 1);
     }
 }

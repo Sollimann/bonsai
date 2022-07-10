@@ -4,7 +4,7 @@ use bonsai::{
 };
 
 /// Some test actions.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub enum TestActions {
     /// Increment accumulator.
@@ -16,10 +16,10 @@ pub enum TestActions {
 }
 
 // A test state machine that can increment and decrement.
-fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions, ()>) -> i32 {
+fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> i32 {
     let e: Event = UpdateArgs { dt }.into();
 
-    state.event(&e, &mut |args| match *args.action {
+    let (_s, _t) = state.tick(&e, &mut |args| match *args.action {
         Inc => {
             acc += 1;
             (Success, args.dt)
@@ -40,9 +40,9 @@ fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions, ()>) -> i32 {
 }
 
 // A test state machine that can increment and decrement.
-fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut State<TestActions, ()>) {
+fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut State<TestActions>) {
     let e: Event = UpdateArgs { dt }.into();
-    state.event(&e, &mut |args| match *args.action {
+    state.tick(&e, &mut |args| match *args.action {
         Inc => {
             *acc += 1;
             (Success, args.dt)
@@ -115,7 +115,7 @@ fn wait_half_sec() {
     assert_eq!(a, 1);
 }
 
-// A sequence of one event is like a bare event.
+// A sequence of one tick is like a bare tick.
 #[test]
 fn sequence_of_one_event() {
     let a: i32 = 0;
@@ -125,7 +125,7 @@ fn sequence_of_one_event() {
     assert_eq!(a, 1);
 }
 
-// A sequence of wait events is the same as one wait event.
+// A sequence of wait events is the same as one wait tick.
 #[test]
 fn wait_two_waits() {
     let a: i32 = 0;
@@ -215,7 +215,7 @@ fn when_all_if() {
     a = tick(a, 8.0, &mut state);
     assert_eq!(a, 10);
 
-    // sample state after 10 seconds
+    // // sample state after 10 seconds
     a = tick(a, 2.0, &mut state);
     assert_eq!(a, 12);
 }
