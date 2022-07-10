@@ -1,6 +1,6 @@
 <h1 align="center" style="font-family:Papyrus; font-size:4em;"> Bonsai 盆栽 </h1>
 <p align="center">
-  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" width="350" style="transform:rotate(90deg);">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/bonsai.gif" rotate="180" width="350" ">
 </p>
 
 <p align="center">
