@@ -162,8 +162,9 @@ fn main() {
         Box::new(WaitForever),
         vec![
             Action(ChangeColor(None, None, None)),
-            // if ComplexCondition action succeeds, sequence will proceed
-            // else if it fails, the sequence will restart from beginning
+            // if ComplexCondition action `succeeds`, sequence will proceed
+            // if it returns `running`, sequence will restart from beginning
+            // if `fails`, the sequence will restart from beginning
             Action(ComplexCondition(100)),
             Action(RotateBy(0.054)),
             Wait(0.2),
