@@ -1,11 +1,18 @@
 
 # Concepts
 
+- [Concepts](#concepts)
+  - [Fundamentals](#fundamentals)
+    - [What is a Behavior Tree?](#what-is-a-behavior-tree)
+    - [When to use a Behavior Tree?](#when-to-use-a-behavior-tree)
+      - [BT vs FSM:](#bt-vs-fsm)
+    - [How to use a Behavior tree?](#how-to-use-a-behavior-tree)
+  - [Types of Nodes](#types-of-nodes)
+  - [Understand Asynchrous Nodes, Concurrency and Parallelism](#understand-asynchrous-nodes-concurrency-and-parallelism)
 
+## Fundamentals
 
-# Fundamentals
-
-## What is a Behavior Tree?
+### What is a Behavior Tree?
 
 A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how certain _behavior's_ can occur, and the order in which they would execute. BTs are a very efficient way of creating complex systems that are both modular and reactive. These properties are crucial in many applications, which has led to the spread of BT from computer game programming to many branches of AI and Robotics.
 
@@ -20,7 +27,7 @@ another) if a higher-priority task requires the same resources.
 6. **Behavior Trees can have parallell semantics:** This library has parallel semantics for AI behavior trees. It means that multiple processes can happen at the same time and the logic can be constructed around how these processes runs or terminate. A property of BT's with parallel semantics is that you can control termination conditions externally, as opposed to most programming languages where termination condition is controlled internally.
 
 
-## When to use a Behavior Tree?
+### When to use a Behavior Tree?
 
 * Use BT's to manage complexity when system control logic grows.
 * Use BT's if priority ordering of conditions and actions matter.
@@ -33,7 +40,7 @@ another) if a higher-priority task requires the same resources.
 * _Streamlined logic._ BT's have _one-to-many_ relations between nodes, while FSM's have many-to-many relations.
 * _Modular and reasuable components._ In BTs you can create macros of behaviors that can easily be put together to create more complex logic. Conversely, with the FSMs, many of the states are typically tied to that specific context.
 
-## How to use a Behavior tree?
+### How to use a Behavior tree?
 
 An AI behavior tree is a very generic way of organizing interactive logic.
 It has built-in semantics for processes that signals `Running`, `Success` or
@@ -50,3 +57,13 @@ For example, if you have a state `A` and a state `B`:
 - Wait for either `A` or `B` to complete: `WhenAny([A, B])`
 
 See the `Behavior` enum for more information.
+
+
+## Types of Nodes
+
+bla bla
+
+
+## Understand Asynchrous Nodes, Concurrency and Parallelism
+
+bla bla
