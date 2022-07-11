@@ -17,6 +17,11 @@
 ![ViewCount](https://views.whatilearened.today/views/github/Sollimann/bonsai.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Contents
+
+* [Concepts](docs/concepts/README.md)
+* [Development Guide](DEVELOPMENT.md)
+* [Kanban Board](https://github.com/Sollimann/b3/projects/1)
 
 ## What is a Behavior Tree?
 
@@ -148,7 +153,6 @@ fn main() {
     let run_and_shot = While(Box::new(run_for_five_secs), vec![Action(BlindFire(50))]);
     let run_cover = Sequence(vec![run_and_shot, cover]);
 
-
     let player_close = Select(vec![Action(MeleeAttack(1.0, 100)), Action(FireWeapon(50))]);
     let under_attack_behavior = Select(vec![run_cover, player_close]);
 
@@ -168,9 +172,3 @@ fn main() {
     }
 }
 ```
-
-## Contents
-
-* [Concepts](docs/concepts/README.md)
-* [Development Guide](DEVELOPMENT.md)
-* [Kanban Board](https://github.com/Sollimann/b3/projects/1)
