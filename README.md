@@ -47,7 +47,7 @@ See the `Behavior` enum for more information.
 
 ## Example of use
 
-This is a enemy NPC (non-player-character) behavior mock-up which decides if the AI should shoot will running for nearby cover, rush in to attack the player up close or stand its ground while firing at the player.
+This is a enemy NPC (non-player-character) behavior mock-up which decides if the AI should shoot while running for nearby cover, rush in to attack the player up close or stand its ground while firing at the player.
 
 #### Tree vizualization
 <p align="center">
