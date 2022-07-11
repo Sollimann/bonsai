@@ -19,3 +19,8 @@ serde_json = "1.0.81"
 crate-type = ["bin"]
 name = "3d"
 path = "src/3d.rs"
+
+[[example]]
+crate-type = ["bin"]
+name = "boids"
+path = "src/boids_swarm.rs"

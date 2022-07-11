@@ -71,7 +71,7 @@ fn write_to_screen(txt: String, w: &mut Window) {
 /// , where you update and monitor the task on a tick-basis.
 ///
 /// The ticks to execute for as long as the specified time 'dt'.
-fn tick(
+fn game_tick(
     c: &mut SceneNode,
     w: &mut Window,
     mut events: EventManager,
@@ -272,6 +272,6 @@ fn main() {
         let events = window.events();
 
         sleep(Duration::new(0, 0.1e+9 as u32));
-        tick(&mut c, &mut window, events, &mut timer, &mut bt);
+        game_tick(&mut c, &mut window, events, &mut timer, &mut bt);
     }
 }
