@@ -3,7 +3,7 @@ authors = ["Kristoffer Solberg Rakstad <kristoffer.solberg@cognite.com>"]
 autotests = false
 categories = ["ai"]
 description = "Behavior tree"
-documentation = "https://docs.rs/bonsai-bt"
+# documentation = "https://docs.rs/bonsai-bt"
 edition = "2021"
 homepage = "https://github.com/sollimann/bonsai.git"
 keywords = ["ai", "behavior", "tree", "robotics", "game"]
@@ -12,7 +12,7 @@ name = "bonsai-bt"
 readme = "../README.md"
 repository = "https://github.com/sollimann/bonsai.git"
 rust-version = "1.60.0"
-version = "0.2.0"
+version = "0.3.0"
 
 [lib]
 name = "bonsai_bt"
