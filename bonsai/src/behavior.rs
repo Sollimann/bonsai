@@ -11,6 +11,14 @@ pub enum Behavior<A> {
     /// Wait forever.
     WaitForever,
     /// A high level description of an action.
+    ///
+    /// An Action can either be "condition" which does not
+    /// alter the system and returns either `Success` or `Failure`
+    /// - e.g IsDoorOpen? IsNetworkDown?
+    ///
+    /// Or it can be an "act" that can alter the system
+    /// and returns either `Success`, `Failure` or `Running`
+    /// - e.g OpenDoor, NetworkShutdown
     Action(A),
     /// Converts `Success` into `Failure` and vice versa.
     Invert(Box<Behavior<A>>),

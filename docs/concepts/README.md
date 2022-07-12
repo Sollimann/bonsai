@@ -56,6 +56,7 @@ For example, if you have a state `A` and a state `B`:
 - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 - Wait for both `A` and `B` to complete: `WhenAll([A, B])`
 - Wait for either `A` or `B` to complete: `WhenAny([A, B])`
+- Wait for either `A` or `B` to complete: `WhenAny([A, B])`
 
 See the `Behavior` enum for more information.
 
