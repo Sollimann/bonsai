@@ -1,9 +1,19 @@
 [package]
 authors = ["Kristoffer Solberg Rakstad <kristoffer.solberg@cognite.com>"]
 autotests = false
+categories = ["ai"]
 description = "Behavior tree"
 edition = "2021"
-keywords = ["ai", "behavior", "robotics", "rust", "game", "logic"]
+keywords = [
+    "ai",
+    "behavior",
+    "tree",
+    "robotics",
+    "agent",
+    "rust",
+    "game",
+    "logic",
+]
 license = "MIT"
 name = "bonsai"
 readme = "README.md"
