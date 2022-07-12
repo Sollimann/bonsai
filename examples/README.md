@@ -2,14 +2,23 @@
 
 `cargo build --package examples`
 
-## 3d
+## Boids flocking
 
-`cargo run --bin 3d`
+Constructing boids flocking behavior by copying the same behavior tree across many agents.
+Each agent follows the following rules:
 
-bla bla
+1. Fly towards the center of the swarm
+2. Avoid other agents and predators (predator being the mouse cursor)
+3. Match the velocity of other agents
 
-## boids swarm
 
 `cargo run --bin boids`
 
-bla bla
+
+## 3d
+
+This is basically a really chaotic 3d animation intended to show how you can create a reactive and
+responsive animations including behaviors such as shape-shifting, color changes, mouse callback, object
+rotation and translation and timers.
+
+`cargo run --bin 3d`
