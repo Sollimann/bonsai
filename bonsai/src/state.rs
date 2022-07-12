@@ -28,7 +28,7 @@ pub enum State<A> {
     /// Executes an action.
     ActionState(A),
     /// Converts `Success` into `Failure` and vice versa.
-    FailState(Box<State<A>>),
+    InvertState(Box<State<A>>),
     /// Ignores failures and always return `Success`.
     AlwaysSucceedState(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
@@ -63,7 +63,7 @@ impl<A: Clone> State<A> {
     pub fn new(behavior: Behavior<A>) -> Self {
         match behavior {
             Behavior::Action(action) => State::ActionState(action),
-            Behavior::Fail(ev) => State::FailState(Box::new(State::new(*ev))),
+            Behavior::Invert(ev) => State::InvertState(Box::new(State::new(*ev))),
             Behavior::AlwaysSucceed(ev) => State::AlwaysSucceedState(Box::new(State::new(*ev))),
             Behavior::Wait(dt) => State::WaitState(dt, 0.0),
             Behavior::WaitForever => State::WaitForeverState,
@@ -119,8 +119,8 @@ impl<A: Clone> State<A> {
                     action,
                 })
             }
-            (_, &mut FailState(ref mut cur)) => {
-                // println!("In FailState: {:?}", cur);
+            (_, &mut InvertState(ref mut cur)) => {
+                // println!("In InvertState: {:?}", cur);
                 match cur.tick(e, f) {
                     (Running, dt) => (Running, dt),
                     (Failure, dt) => (Success, dt),

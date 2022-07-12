@@ -1,5 +1,5 @@
 pub use behavior::Behavior::{
-    self, Action, After, AlwaysSucceed, Fail, If, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
+    self, Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
 };
 
 pub use bt::BT;

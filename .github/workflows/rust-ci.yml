@@ -10,6 +10,11 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  install-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libudev
+        run: sudo apt-get update && sudo apt-get install libudev-dev pkg-config
   pre-commit:
     runs-on: ubuntu-latest
     steps:
