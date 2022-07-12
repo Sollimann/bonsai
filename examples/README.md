@@ -14,6 +14,9 @@ Each agent follows the following rules:
 
 `cargo run --bin boids`
 
+<p align="center">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/boids.png" width="700" ">
+</p>
 
 ## 3d
 
@@ -22,3 +25,7 @@ responsive animations including behaviors such as shape-shifting, color changes,
 rotation and translation and timers.
 
 `cargo run --bin 3d`
+
+<p align="center">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/3d.png" width="700" ">
+</p>
