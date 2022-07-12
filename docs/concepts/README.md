@@ -63,7 +63,7 @@ See the `Behavior` enum for more information.
 
 ## Types of Nodes
 
-bla bla
+TODO
 
 
 ## Understand Asynchrous Nodes, Concurrency and Parallelism
@@ -77,11 +77,9 @@ When designing reactive Behavior Trees, it is important to understand 2 main con
 
 If you Google those words, you will read many good articles about this topic.
 
-```markdown
-**Concurrency** is when two or more tasks can start, run, and complete in overlapping time periods. It doesn't necessarily mean they'll ever both be running at the same instant.
+* **Concurrency** is when two or more tasks can start, run, and complete in overlapping time periods. It doesn't necessarily mean they'll ever both be running at the same instant.
 
-**Parallelism** is when tasks literally run at the same time in different  threads, e.g., on a multicore processor.
-```
+* **Parallelism** is when tasks literally run at the same time in different  threads, e.g., on a multicore processor.
 
 ### Asynchronous vs Synchronous
 
