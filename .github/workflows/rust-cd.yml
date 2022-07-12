@@ -1,7 +1,10 @@
-name: rust-ci
+name: rust-cd
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,3 +30,10 @@ jobs:
       run: cargo build --examples
     - name: Run tests
       run: cargo test --verbose
+    - name: Push to codecov.io
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      run: |
+        cargo install cargo-tarpaulin
+        cargo tarpaulin --out Xml
+        bash <(curl -s https://codecov.io/bash) -X gcov -t $CODECOV_TOKEN
