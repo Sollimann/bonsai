@@ -4,7 +4,7 @@ use crate::blackboard_tests::TestActions::{Dec, Inc};
 use bonsai_bt::{Action, Event, Sequence, Success, UpdateArgs, Wait, BT};
 
 /// Some test actions.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub enum TestActions {
     /// Increment accumulator.
     Inc,

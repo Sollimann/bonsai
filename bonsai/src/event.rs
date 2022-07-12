@@ -66,6 +66,9 @@ impl UpdateEvent for Event {
 
 use std::time::Instant;
 
+/// A monotonic clock/timer that can be used to keep track
+/// of the time increments (delta time) between tick/tree traversals
+/// and the total duration since the behavior tree was first invoked/traversed
 #[derive(Debug, Clone)]
 pub struct Timer {
     start: Instant,
