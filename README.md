@@ -26,6 +26,7 @@
 * [Examples](examples/README.md)
 * [Development Guide](DEVELOPMENT.md)
 * [Kanban Board](https://github.com/Sollimann/b3/projects/1)
+* [Honorable Mentions](#similar-crates)
 
 ## Using Bonsai
 Bonsai is available on crates.io. The recommended way to use it is to add a line into your Cargo.toml such as:
@@ -186,3 +187,12 @@ fn main() {
     }
 }
 ```
+
+## Similar Crates
+
+Bonsai is inspired by many other crates out there, here's a few worth mentioning:
+
+* [ai_behavior](https://github.com/PistonDevelopers/ai_behavior) (bonsai is a continuation of this crate)
+* [aspen](https://gitlab.com/neachdainn/aspen)
+* [behavior-tree](https://github.com/darthdeus/behavior-tree)
+* [stackbt](https://github.com/eaglgenes101/stackbt)
