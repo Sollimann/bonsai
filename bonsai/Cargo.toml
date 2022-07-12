@@ -3,7 +3,9 @@ authors = ["Kristoffer Solberg Rakstad <kristoffer.solberg@cognite.com>"]
 autotests = false
 categories = ["ai"]
 description = "Behavior tree"
+documentation = "https://docs.rs/bonsai-bt"
 edition = "2021"
+homepage = "https://github.com/sollimann/bonsai.git"
 keywords = [
     "ai",
     "behavior",
