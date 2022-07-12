@@ -1,8 +1,4 @@
-use bonsai::{
-    Event,
-    Status::{Running, Success},
-    UpdateArgs, BT,
-};
+use bonsai::{Event, Status::Success, UpdateArgs, BT, RUNNING};
 use ggez::mint;
 
 //algorithm stuff
@@ -83,8 +79,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                 }
                 boid.dx += move_x * avoid_factor;
                 boid.dy += move_y * avoid_factor;
-                // (Success, args.dt)
-                (Running, 0.0)
+                RUNNING
             },
             Action::FlyTowardsCenter => {
                 let centering_factor = 0.05; // adjust velocity by this %
@@ -106,8 +101,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                     boid.dy += (center_y - boid.y) * centering_factor;
                 }
 
-                // (Success, args.dt)
-                (Running, 0.0)
+                RUNNING
             },
             Action::MatchVelocity => {
                 let matching_factor = 0.1;
@@ -128,7 +122,6 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                     boid.dx += (avg_dx - boid.dx) * matching_factor;
                     boid.dy += (avg_dy - boid.dy) * matching_factor;
                 }
-                // (Running, 0.0)
                 (Success, args.dt)
             },
             Action::LimitSpeed => {
@@ -172,8 +165,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                     boid.dx += (boid.x - cursor.x) * 1.0;
                     boid.dy += (boid.y - cursor.y) * 1.0;
                 }
-                // (Success, args.dt)
-                (Running, 0.0)
+                RUNNING
             },
         }
 
