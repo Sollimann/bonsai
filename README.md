@@ -25,6 +25,14 @@
 * [Development Guide](DEVELOPMENT.md)
 * [Kanban Board](https://github.com/Sollimann/b3/projects/1)
 
+## Using Bonsai
+Bonsai is available on crates.io. The recommended way to use it is to add a line into your Cargo.toml such as:
+
+```toml
+[dependencies]
+bonsai-bt = "0.1.0"
+```
+
 ## What is a Behavior Tree?
 
 A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how certain _behavior's_ can occur, and the order in which they would execute. BTs are a very efficient way of creating complex systems that are both modular and reactive. These properties are crucial in many applications, which has led to the spread of BT from computer game programming to many branches of AI and Robotics.
