@@ -28,7 +28,7 @@ pub enum State<A> {
     /// Executes an action.
     ActionState(A),
     /// Converts `Success` into `Failure` and vice versa.
-    FailState(Box<State<A>>),
+    InvertState(Box<State<A>>),
     /// Ignores failures and always return `Success`.
     AlwaysSucceedState(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
@@ -63,7 +63,7 @@ impl<A: Clone> State<A> {
     pub fn new(behavior: Behavior<A>) -> Self {
         match behavior {
             Behavior::Action(action) => State::ActionState(action),
-            Behavior::Fail(ev) => State::FailState(Box::new(State::new(*ev))),
+            Behavior::Invert(ev) => State::InvertState(Box::new(State::new(*ev))),
             Behavior::AlwaysSucceed(ev) => State::AlwaysSucceedState(Box::new(State::new(*ev))),
             Behavior::Wait(dt) => State::WaitState(dt, 0.0),
             Behavior::WaitForever => State::WaitForeverState,
@@ -112,15 +112,15 @@ impl<A: Clone> State<A> {
         // double match statements
         match (upd, self) {
             (_, &mut ActionState(ref action)) => {
-                println!("In ActionState: {:?}", action);
+                // println!("In ActionState: {:?}", action);
                 f(ActionArgs {
                     event: e,
                     dt: upd.unwrap_or(0.0),
                     action,
                 })
             }
-            (_, &mut FailState(ref mut cur)) => {
-                println!("In FailState: {:?}", cur);
+            (_, &mut InvertState(ref mut cur)) => {
+                // println!("In InvertState: {:?}", cur);
                 match cur.tick(e, f) {
                     (Running, dt) => (Running, dt),
                     (Failure, dt) => (Success, dt),
@@ -128,14 +128,14 @@ impl<A: Clone> State<A> {
                 }
             }
             (_, &mut AlwaysSucceedState(ref mut cur)) => {
-                println!("In AlwaysSucceedState: {:?}", cur);
+                // println!("In AlwaysSucceedState: {:?}", cur);
                 match cur.tick(e, f) {
                     (Running, dt) => (Running, dt),
                     (_, dt) => (Success, dt),
                 }
             }
             (Some(dt), &mut WaitState(wait_t, ref mut t)) => {
-                println!("In WaitState: {}", wait_t);
+                // println!("In WaitState: {}", wait_t);
                 if *t + dt >= wait_t {
                     let remaining_dt = *t + dt - wait_t;
                     *t = wait_t;
@@ -146,7 +146,7 @@ impl<A: Clone> State<A> {
                 }
             }
             (_, &mut IfState(ref success, ref failure, ref mut status, ref mut state)) => {
-                println!("In IfState: {:?}", success);
+                // println!("In IfState: {:?}", success);
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let remaining_e;
                 // Run in a loop to evaluate success or failure with
@@ -184,17 +184,17 @@ impl<A: Clone> State<A> {
                 }
             }
             (_, &mut SelectState(ref seq, ref mut i, ref mut cursor)) => {
-                println!("In SelectState: {:?}", seq);
+                // println!("In SelectState: {:?}", seq);
                 let select = true;
                 sequence(select, upd, seq, i, cursor, e, f)
             }
             (_, &mut SequenceState(ref seq, ref mut i, ref mut cursor)) => {
-                println!("In SequenceState: {:?}", seq);
+                // println!("In SequenceState: {:?}", seq);
                 let select = false;
                 sequence(select, upd, seq, i, cursor, e, f)
             }
             (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
-                println!("In WhileState: {:?}", ev_cursor);
+                // println!("In WhileState: {:?}", ev_cursor);
                 // If the event terminates, do not execute the loop.
                 match ev_cursor.tick(e, f) {
                     (Running, _) => {}
@@ -238,17 +238,17 @@ impl<A: Clone> State<A> {
                 RUNNING
             }
             (_, &mut WhenAllState(ref mut cursors)) => {
-                println!("In WhenAllState: {:?}", cursors);
+                // println!("In WhenAllState: {:?}", cursors);
                 let any = false;
                 when_all(any, upd, cursors, e, f)
             }
             (_, &mut WhenAnyState(ref mut cursors)) => {
-                println!("In WhenAnyState: {:?}", cursors);
+                // println!("In WhenAnyState: {:?}", cursors);
                 let any = true;
                 when_all(any, upd, cursors, e, f)
             }
             (_, &mut AfterState(ref mut i, ref mut cursors)) => {
-                println!("In AfterState: {}", i);
+                // println!("In AfterState: {}", i);
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
                 for (j, item) in cursors.iter_mut().enumerate().skip(*i) {

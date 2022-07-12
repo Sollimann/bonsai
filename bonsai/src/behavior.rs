@@ -13,7 +13,7 @@ pub enum Behavior<A> {
     /// A high level description of an action.
     Action(A),
     /// Converts `Success` into `Failure` and vice versa.
-    Fail(Box<Behavior<A>>),
+    Invert(Box<Behavior<A>>),
     /// Ignores failures and returns `Success`.
     AlwaysSucceed(Box<Behavior<A>>),
     /// Runs behaviors one by one until a behavior succeeds.

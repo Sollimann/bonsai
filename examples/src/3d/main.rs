@@ -1,4 +1,4 @@
-use bonsai::Behavior::{Fail, If, Wait, WhenAny, While};
+use bonsai::Behavior::{If, Invert, Wait, WhenAny, While};
 use bonsai::Status::{self};
 use bonsai::{Action, RUNNING};
 use bonsai::{Event, Status::Failure, Status::Success, UpdateArgs};
@@ -251,7 +251,7 @@ fn main() {
                 // if ComplexCondition action `succeeds`, sequence will proceed
                 // if it returns `running`, sequence will restart from beginning
                 // if `fails`, the sequence will restart from beginning
-                Box::new(Fail(Box::new(Action(LongerThan(5.0))))),
+                Box::new(Invert(Box::new(Action(LongerThan(5.0))))),
                 // if success
                 Box::new(Action(ScaleBy(None, None, None))),
                 // if failure

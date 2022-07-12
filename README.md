@@ -20,6 +20,7 @@
 ## Contents
 
 * [Concepts](docs/concepts/README.md)
+* [Examples](examples/README.md)
 * [Development Guide](DEVELOPMENT.md)
 * [Kanban Board](https://github.com/Sollimann/b3/projects/1)
 
@@ -51,7 +52,7 @@ This is a enemy NPC (non-player-character) behavior mock-up which decides if the
 
 #### Tree vizualization
 <p align="center">
-  <img src="https://github.com/Sollimann/bonsai/blob/readme-example/docs/resources/images/npc_bt.png" width="700" ">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/npc_bt.png" width="700" ">
 </p>
 
 #### Implementation

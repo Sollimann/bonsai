@@ -13,6 +13,7 @@ impl<K, V> BlackBoard<K, V> {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct BT<A, K, V> {
     /// constructed behavior tree
     pub state: State<A>,

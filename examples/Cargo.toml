@@ -4,23 +4,23 @@ description = "Behavior tree examples"
 edition = "2021"
 name = "examples"
 repository = "https://github.com/sollimann/bonsai.git"
-rust-version = "1.60.0"
+rust-version = "1.56.0"
 version = "0.1.0"
 
 [dependencies]
 bonsai = { path = "../bonsai" }
+ggez = "0.7.0"
+glam = "0.20.2"
 kiss3d = "0.34.0"
 nalgebra = { version = "0.30", features = ["rand"] }
 rand = "0.8"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
 
-[[example]]
-crate-type = ["bin"]
+[[bin]]
 name = "3d"
-path = "src/3d.rs"
+path = "src/3d/main.rs"
 
-[[example]]
-crate-type = ["bin"]
+[[bin]]
 name = "boids"
-path = "src/boids_swarm.rs"
+path = "src/boids/main.rs"
