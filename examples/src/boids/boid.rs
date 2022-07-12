@@ -79,6 +79,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                 }
                 boid.dx += move_x * avoid_factor;
                 boid.dy += move_y * avoid_factor;
+
                 RUNNING
             },
             Action::FlyTowardsCenter => {
@@ -130,7 +131,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                     boid.dx = (boid.dx / speed) * SPEED_LIMIT;
                     boid.dy = (boid.dy / speed) * SPEED_LIMIT;
                 }
-                // (Running, 0.0)
+
                 (Success, args.dt)
             },
             Action::KeepWithinBounds => {
@@ -165,6 +166,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                     boid.dx += (boid.x - cursor.x) * 1.0;
                     boid.dy += (boid.y - cursor.y) * 1.0;
                 }
+
                 RUNNING
             },
         }
