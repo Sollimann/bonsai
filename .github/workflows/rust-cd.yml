@@ -2,9 +2,7 @@ name: rust-cd
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [ main ] # run only when merging to main
 
 env:
   CARGO_TERM_COLOR: always
