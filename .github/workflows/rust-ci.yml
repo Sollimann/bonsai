@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install libudev
-        run: sudo apt-get update && sudo apt-get install libudev-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install libudev-dev pkg-config librust-alsa-sys-dev
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
       - uses: pre-commit/action@v2.0.3
@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install libudev
-      run: sudo apt-get update && sudo apt-get install libudev-dev pkg-config
+      run: sudo apt-get update && sudo apt-get install libudev-dev pkg-config librust-alsa-sys-dev
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --verbose
