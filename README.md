@@ -19,7 +19,7 @@
 
 ## Contents
 
-* [5min intro to behavior trees](https://www.youtube.com/watch?v=KeShMInMjro)
+* [Quick intro to Behavior Trees](https://www.youtube.com/watch?v=KeShMInMjro)
 * [Concepts](docs/concepts/README.md)
 * [Examples](examples/README.md)
 * [Development Guide](DEVELOPMENT.md)
