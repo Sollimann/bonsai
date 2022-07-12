@@ -8,7 +8,7 @@ rust-version = "1.56.0"
 version = "0.1.0"
 
 [dependencies]
-bonsai = { path = "../bonsai" }
+bonsai-bt = { path = "../bonsai", version = "0.1.0" }
 ggez = "0.7.0"
 glam = "0.20.2"
 kiss3d = "0.34.0"

@@ -70,7 +70,7 @@ This is a enemy NPC (non-player-character) behavior mock-up which decides if the
 ```rust
 use std::{collections::HashMap, thread::sleep, time::Duration};
 
-use bonsai::{
+use bonsai_bt::{
     Behavior::{Action, Select, Sequence},
     Event, Status, Running, Timer, UpdateArgs, BT,
 };
@@ -104,27 +104,27 @@ fn game_tick(timer: &mut Timer, bt: &mut BT<EnemyNPC, String, serde_json::Value>
     let e: Event = UpdateArgs { dt }.into();
 
     #[rustfmt::skip]
-    bt.state.tick(&e,&mut |args: bonsai::ActionArgs<Event, EnemyNPC>| {
+    bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, EnemyNPC>| {
         match *args.action {
             EnemyNPC::Run => {
               Enemy::run_away_from_player(); // you must implement these methods
-              (bonsai::Running, 0.0)
+              (bonsai_bt::Running, 0.0)
             },
             EnemyNPC::GetInCover => {
               let in_cover: Bool = Enemy::get_in_cover();
               if in_cover {
-                (bonsai::Success, dt)
+                (bonsai_bt::Success, dt)
               } else {
-                (bonsai::Running, 0.0)
+                (bonsai_bt::Running, 0.0)
               }
             },
             EnemyNPC::BlindFire(damage) => {
               let has_ammo: Bool = Enemy::has_ammo();
               if has_ammo {
                 Enemy::shoot_in_direction();
-                (bonsai::Success, dt)
+                (bonsai_bt::Success, dt)
               } else {
-                (bonsai::Failure, dt)
+                (bonsai_bt::Failure, dt)
               }
             },
             EnemyNPC::MeleeAttack(dist, damage) => {
@@ -134,18 +134,18 @@ fn game_tick(timer: &mut Timer, bt: &mut BT<EnemyNPC, String, serde_json::Value>
               if len(diff) < dist {
                   let &mut player_health = Player::get_health();
                   *player_health = Player::decrease_health(damage);
-                  (bonsai::Success, dt)
+                  (bonsai_bt::Success, dt)
               } else {
-                  (bonsai::Failure, dt)
+                  (bonsai_bt::Failure, dt)
               }
             },
             EnemyNPC::FireWeapon(damage) => {
               let has_ammo: Bool = Enemy::has_ammo();
               if has_ammo {
                 Enemy::shoot_at_player();
-                (bonsai::Success, dt)
+                (bonsai_bt::Success, dt)
               } else {
-                (bonsai::Failure, dt)
+                (bonsai_bt::Failure, dt)
               }
             },
         }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::blackboard_tests::TestActions::{Dec, Inc, LessThan};
-use bonsai::{Action, Event, Failure, Sequence, Success, UpdateArgs, Wait, BT};
+use bonsai_bt::{Action, Event, Failure, Sequence, Success, UpdateArgs, Wait, BT};
 
 /// Some test actions.
 #[derive(Clone, Debug)]

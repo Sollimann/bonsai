@@ -8,14 +8,14 @@ edition = "2021"
 homepage = "https://github.com/sollimann/bonsai.git"
 keywords = ["ai", "behavior", "tree", "robotics", "game"]
 license = "MIT"
-name = "bonsai"
+name = "bonsai-bt"
 readme = "../README.md"
 repository = "https://github.com/sollimann/bonsai.git"
 rust-version = "1.60.0"
 version = "0.1.0"
 
 [lib]
-name = "bonsai"
+name = "bonsai_bt"
 path = "src/lib.rs"
 
 [dependencies]

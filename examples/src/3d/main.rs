@@ -1,8 +1,8 @@
-use bonsai::Behavior::{If, Invert, Wait, WhenAny, While};
-use bonsai::Status::{self};
-use bonsai::{Action, RUNNING};
-use bonsai::{Event, Status::Failure, Status::Success, UpdateArgs};
-use bonsai::{Timer, BT};
+use bonsai_bt::Behavior::{If, Invert, Wait, WhenAny, While};
+use bonsai_bt::Status::{self};
+use bonsai_bt::{Action, RUNNING};
+use bonsai_bt::{Event, Status::Failure, Status::Success, UpdateArgs};
+use bonsai_bt::{Timer, BT};
 use kiss3d::event::EventManager;
 use kiss3d::text::Font;
 use kiss3d::window::Window;
@@ -94,7 +94,7 @@ fn game_tick(
     let mut last_pos = mouse_pos(0.0, 0.0);
     // update state of behaviosuccessr tree
     #[rustfmt::skip]
-    bt.state.tick(&e,&mut |args: bonsai::ActionArgs<Event, Animation>|
+    bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, Animation>|
         match *args.action {
             Animation::LongerThan(dur) => {
                 if t > dur {
