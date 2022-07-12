@@ -7,10 +7,12 @@
     <em>Rust implementation of Behavior Trees</em>
 </p>
 
-<!-- [![codecov](https://codecov.io/gh/Sollimann/CleanIt/branch/main/graph/badge.svg?token=EY3JRZN71M)](https://codecov.io/gh/Sollimann/CleanIt) -->
 <!-- [![version](https://img.shields.io/badge/version-1.0.0-blue)](https://GitHub.com/Sollimann/CleanIt/releases/) -->
-[![Build Status](https://github.com/Sollimann/bonsai/workflows/rust-ci/badge.svg)](https://github.com/Sollimann/bonsai/actions)
-[![minimum rustc 1.60](https://img.shields.io/badge/rustc-1.60+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
+[![codecov](https://codecov.io/gh/Sollimann/bonsai/branch/main/graph/badge.svg?token=JX8JBPWORV)](https://codecov.io/gh/Sollimann/bonsai)
+[![Build Status](https://github.com/Sollimann/bonsai/workflows/rust-cd/badge.svg)](https://github.com/Sollimann/bonsai/actions)
+[![Bonsai crate](https://img.shields.io/crates/v/bonsai-bt.svg)](https://crates.io/crates/bonsai-bt)
+[![minimum rustc 1.56](https://img.shields.io/badge/rustc-1.56+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
+[![Docs](https://docs.rs/bonsai-bt/badge.svg)](https://docs.rs/bonsai-bt)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Sollimann/bonsai/graphs/commit-activity)
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/Sollimann/bonsai.svg)](https://GitHub.com/Sollimann/bonsai/pulls)
 [![GitHub pull-requests closed](https://img.shields.io/github/issues-pr-closed/Sollimann/bonsai.svg)](https://GitHub.com/Sollimann/bonsai/pulls)
@@ -19,10 +21,20 @@
 
 ## Contents
 
+* [Quick intro to Behavior Trees](https://www.youtube.com/watch?v=KeShMInMjro)
 * [Concepts](docs/concepts/README.md)
 * [Examples](examples/README.md)
 * [Development Guide](DEVELOPMENT.md)
 * [Kanban Board](https://github.com/Sollimann/b3/projects/1)
+* [Honorable Mentions](#similar-crates)
+
+## Using Bonsai
+Bonsai is available on crates.io. The recommended way to use it is to add a line into your Cargo.toml such as:
+
+```toml
+[dependencies]
+bonsai-bt = "*"
+```
 
 ## What is a Behavior Tree?
 
@@ -39,9 +51,11 @@ For example, if you have a state `A` and a state `B`:
 - Move from state `A` to state `B` if `A` succeeds: `Sequence([A, B])`
 - Try `A` first and then try `B` if `A` fails: `Select([A, B])`
 - If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
+- If `A` succeeds, return failure (and vice-versa): `Invert(A)`
 - Do `B` repeatedly while `A` runs: `While(A, [B])`
 - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 - Wait for both `A` and `B` to complete: `WhenAll([A, B])`
+- Wait for either `A` or `B` to complete: `WhenAny([A, B])`
 - Wait for either `A` or `B` to complete: `WhenAny([A, B])`
 
 See the `Behavior` enum for more information.
@@ -59,7 +73,7 @@ This is a enemy NPC (non-player-character) behavior mock-up which decides if the
 ```rust
 use std::{collections::HashMap, thread::sleep, time::Duration};
 
-use bonsai::{
+use bonsai_bt::{
     Behavior::{Action, Select, Sequence},
     Event, Status, Running, Timer, UpdateArgs, BT,
 };
@@ -86,34 +100,34 @@ enum EnemyNPC {
 use game::{Enemy, Player}; // fictive game imports
 
 fn game_tick(timer: &mut Timer, bt: &mut BT<EnemyNPC, String, serde_json::Value>) {
-    // time since last invovation of bt
+    // how much time should the bt advance into the future
     let dt = timer.get_dt();
 
     // proceed to next iteration in event loop
     let e: Event = UpdateArgs { dt }.into();
 
     #[rustfmt::skip]
-    bt.state.tick(&e,&mut |args: bonsai::ActionArgs<Event, EnemyNPC>| {
+    bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, EnemyNPC>| {
         match *args.action {
             EnemyNPC::Run => {
               Enemy::run_away_from_player(); // you must implement these methods
-              (bonsai::Running, 0.0)
+              (bonsai_bt::Running, 0.0)
             },
             EnemyNPC::GetInCover => {
               let in_cover: Bool = Enemy::get_in_cover();
               if in_cover {
-                (bonsai::Success, dt)
+                (bonsai_bt::Success, dt)
               } else {
-                (bonsai::Running, 0.0)
+                (bonsai_bt::Running, 0.0)
               }
             },
             EnemyNPC::BlindFire(damage) => {
               let has_ammo: Bool = Enemy::has_ammo();
               if has_ammo {
                 Enemy::shoot_in_direction();
-                (bonsai::Success, dt)
+                (bonsai_bt::Success, dt)
               } else {
-                (bonsai::Failure, dt)
+                (bonsai_bt::Failure, dt)
               }
             },
             EnemyNPC::MeleeAttack(dist, damage) => {
@@ -123,18 +137,18 @@ fn game_tick(timer: &mut Timer, bt: &mut BT<EnemyNPC, String, serde_json::Value>
               if len(diff) < dist {
                   let &mut player_health = Player::get_health();
                   *player_health = Player::decrease_health(damage);
-                  (bonsai::Success, dt)
+                  (bonsai_bt::Success, dt)
               } else {
-                  (bonsai::Failure, dt)
+                  (bonsai_bt::Failure, dt)
               }
             },
             EnemyNPC::FireWeapon(damage) => {
               let has_ammo: Bool = Enemy::has_ammo();
               if has_ammo {
                 Enemy::shoot_at_player();
-                (bonsai::Success, dt)
+                (bonsai_bt::Success, dt)
               } else {
-                (bonsai::Failure, dt)
+                (bonsai_bt::Failure, dt)
               }
             },
         }
@@ -173,3 +187,12 @@ fn main() {
     }
 }
 ```
+
+## Similar Crates
+
+Bonsai is inspired by many other crates out there, here's a few worth mentioning:
+
+* [ai_behavior](https://github.com/PistonDevelopers/ai_behavior) (bonsai is a continuation of this crate)
+* [aspen](https://gitlab.com/neachdainn/aspen)
+* [behavior-tree](https://github.com/darthdeus/behavior-tree)
+* [stackbt](https://github.com/eaglgenes101/stackbt)

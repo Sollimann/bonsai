@@ -1,18 +1,15 @@
 use std::collections::HashMap;
 
-use crate::blackboard_tests::TestActions::{Dec, Inc, LessThan};
-use bonsai::{Action, Event, Failure, Sequence, Success, UpdateArgs, Wait, BT};
+use crate::blackboard_tests::TestActions::{Dec, Inc};
+use bonsai_bt::{Action, Event, Sequence, Success, UpdateArgs, Wait, BT};
 
 /// Some test actions.
-#[derive(Clone, Debug)]
-#[allow(dead_code)]
+#[derive(Clone, Debug, Copy)]
 pub enum TestActions {
     /// Increment accumulator.
     Inc,
     /// Decrement accumulator.
     Dec,
-    ///, Check if less than
-    LessThan(i32),
 }
 
 // A test state machine that can increment and decrement.
@@ -27,13 +24,6 @@ fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, String, i32>) -> i32 {
         Dec => {
             acc -= 1;
             (Success, args.dt)
-        }
-        LessThan(v) => {
-            if acc < v {
-                (Success, args.dt)
-            } else {
-                (Failure, args.dt)
-            }
         }
     });
 
@@ -50,7 +40,14 @@ fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, String, i32>) -> i32 {
 #[test]
 fn test_crate_bt() {
     let a: i32 = 0;
-    let seq = Sequence(vec![Wait(1.0), Action(Inc), Wait(1.0), Action(Inc)]);
+    let seq = Sequence(vec![
+        Wait(1.0),
+        Action(Inc),
+        Wait(1.0),
+        Action(Inc),
+        Wait(0.5),
+        Action(Dec),
+    ]);
 
     let h: HashMap<String, i32> = HashMap::new();
     let mut bt = BT::new(seq, h);
@@ -62,8 +59,10 @@ fn test_crate_bt() {
     assert_eq!(a, 1);
     let a = tick(a, 0.5, &mut bt);
     assert_eq!(a, 2);
+    let a = tick(a, 0.5, &mut bt);
+    assert_eq!(a, 1);
 
     let bb = bt.get_blackboard();
     let count = bb.get_db().get("count").unwrap();
-    assert_eq!(*count, 2);
+    assert_eq!(*count, 1);
 }

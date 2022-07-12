@@ -1,7 +1,7 @@
 mod boid;
 
 use boid::{game_tick, Action};
-use bonsai::BT;
+use bonsai_bt::BT;
 use ggez::{conf, event, graphics, input, timer, Context, ContextBuilder, GameResult};
 
 //window stuff
@@ -161,7 +161,7 @@ impl event::EventHandler for GameState {
 }
 
 fn main() {
-    use bonsai::{Action, WhenAll, While};
+    use bonsai_bt::{Action, WhenAll, While};
     use std::collections::HashMap;
     let (mut ctx, events_loop) = ContextBuilder::new("Boids", "Daniel Eisen")
         .window_mode(conf::WindowMode::default().dimensions(WIDTH, HEIGHT))

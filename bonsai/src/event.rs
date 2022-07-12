@@ -1,10 +1,3 @@
-#![allow(dead_code, unused_variables)]
-/// Used to identify events arguments provided by traits.
-///
-/// Use format `<api>/<event>` to avoid naming collision.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-pub struct EventId(pub &'static str);
-
 /// Update arguments, such as delta time in seconds.
 /// To move the behavior tree forward in time it must be ticked on each iteration of the
 /// game/application loop.
@@ -73,6 +66,9 @@ impl UpdateEvent for Event {
 
 use std::time::Instant;
 
+/// A monotonic clock/timer that can be used to keep track
+/// of the time increments (delta time) between tick/tree traversals
+/// and the total duration since the behavior tree was first invoked/traversed
 #[derive(Debug, Clone)]
 pub struct Timer {
     start: Instant,
