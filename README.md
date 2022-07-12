@@ -39,9 +39,11 @@ For example, if you have a state `A` and a state `B`:
 - Move from state `A` to state `B` if `A` succeeds: `Sequence([A, B])`
 - Try `A` first and then try `B` if `A` fails: `Select([A, B])`
 - If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
+- If `A` succeeds, return failure (and vice-versa): `Invert(A)`
 - Do `B` repeatedly while `A` runs: `While(A, [B])`
 - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 - Wait for both `A` and `B` to complete: `WhenAll([A, B])`
+- Wait for either `A` or `B` to complete: `WhenAny([A, B])`
 - Wait for either `A` or `B` to complete: `WhenAny([A, B])`
 
 See the `Behavior` enum for more information.
