@@ -30,7 +30,7 @@ Bonsai is available on crates.io. The recommended way to use it is to add a line
 
 ```toml
 [dependencies]
-bonsai-bt = "0.1.0"
+bonsai-bt = "*"
 ```
 
 ## What is a Behavior Tree?
@@ -182,5 +182,85 @@ fn main() {
         // tick the bt
         game_tick(&mut timer, &mut bt);
     }
+}
+```
+
+
+```rust
+use bonsai_bt::{Event, Success, UpdateArgs, BT};
+
+/// Some test actions.
+#[derive(Clone, Debug)]
+pub enum Actions {
+    /// Increment accumulator.
+    Inc,
+    /// Decrement accumulator.
+    Dec,
+}
+
+// A test state machine that can increment and decrement.
+fn tick(mut acc: i32, dt: f64, bt: &mut BT<Actions, String, i32>) -> i32 {
+    let e: Event = UpdateArgs { dt }.into();
+
+    let (_status, _dt) = bt.state.tick(&e, &mut |args| match *args.action {
+        Inc => {
+            acc += 1;
+            (Success, args.dt)
+        }
+        Dec => {
+            acc -= 1;
+            (Success, args.dt)
+        }
+    });
+
+    // update counter in blackboard
+    let bb = bt.get_blackboard();
+
+    bb.get_db()
+        .entry("count".to_string())
+        .and_modify(|count| *count = acc)
+        .or_insert(0)
+        .to_owned()
+
+    acc
+}
+
+fn main() {
+    use std::collections::HashMap;
+    use bonsai_bt::{Action, Sequence, Wait};
+
+    // create the behavior
+    let behavior = Sequence(vec![
+        Wait(1.0),
+        Action(Inc),
+        Wait(1.0),
+        Action(Inc),
+        Wait(0.5),
+        Action(Dec),
+    ]);
+
+
+    // you have to initialize a blackboard even though you're
+    // not necessarily using it for storage
+    let mut blackboard: HashMap<String, f32> = HashMap::new();
+
+    // instantiate the bt
+    let mut bt = BT::new(behavior, blackboard);
+
+    let a: i32 = 0;
+    let a = tick(a, 0.5, &mut bt); // have bt advance 0.5 seconds into the future
+    assert_eq!(a, 0);
+    let a = tick(a, 0.5, &mut bt); // have bt advance another 0.5 seconds into the future
+    assert_eq!(a, 1);
+    let a = tick(a, 0.5, &mut bt);
+    assert_eq!(a, 1);
+    let a = tick(a, 0.5, &mut bt);
+    assert_eq!(a, 2);
+    let a = tick(a, 0.5, &mut bt);
+    assert_eq!(a, 1);
+
+    let bb = bt.get_blackboard();
+    let count = bb.get_db().get("count").unwrap();
+    assert_eq!(*count, 1);
 }
 ```

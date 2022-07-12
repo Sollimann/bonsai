@@ -5,7 +5,6 @@ use bonsai_bt::{
 
 /// Some test actions.
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub enum TestActions {
     /// Increment accumulator.
     Inc,

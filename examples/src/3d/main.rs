@@ -81,7 +81,7 @@ fn game_tick(
     // timer since bt was first invoked
     let t = timer.duration_since_start();
 
-    // time since last invovation of bt
+    // have bt advance dt seconds into the future
     let dt = timer.get_dt();
 
     // proceed to next iteration in event loop
