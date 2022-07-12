@@ -6,16 +6,7 @@ description = "Behavior tree"
 documentation = "https://docs.rs/bonsai-bt"
 edition = "2021"
 homepage = "https://github.com/sollimann/bonsai.git"
-keywords = [
-    "ai",
-    "behavior",
-    "tree",
-    "robotics",
-    "agent",
-    "rust",
-    "game",
-    "logic",
-]
+keywords = ["ai", "behavior", "tree", "robotics", "game"]
 license = "MIT"
 name = "bonsai"
 readme = "../README.md"
