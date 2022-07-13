@@ -66,7 +66,7 @@ This is a enemy NPC (non-player-character) behavior mock-up which decides if the
 
 #### Tree vizualization
 <p align="center">
-  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/npc_bt.png" width="700" ">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/npc_bt.png" width="800" ">
 </p>
 
 #### Implementation
