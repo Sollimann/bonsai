@@ -21,9 +21,9 @@
 //! - If `A` succeeds, return failure (and vice-versa): `Invert(A)`
 //! - Do `B` repeatedly while `A` runs: `While(A, [B])`
 //! - Do `A`, `B` forever: `While(WaitForever, [A, B])`
-//! - Wait for both `A` and `B` to complete: `WhenAll([A, B])`
-//! - Wait for either `A` or `B` to complete: `WhenAny([A, B])`
-//! - Wait for either `A` or `B` to complete: `WhenAny([A, B])`
+//! - Run `A` and `B` in parallell and wait for both to succeed: `WhenAll([A, B])`
+//! - Run `A` and `B` in parallell and wait for any to succeed: `WhenAny([A, B])`
+//! - Run `A` and `B` in parallell, but `A` has to succeed before `B`: `After([A, B])`
 
 //! See the `Behavior` enum for more information.
 
