@@ -14,6 +14,10 @@ Each agent follows the following rules:
 
 `cargo run --bin boids`
 
+*PS!* if for some how you're unable to build and run the example, it is most likely because you're lacking some dependencies. Try installing the following dependencies:
+
+`sudo apt-get update && sudo apt-get install libudev-dev pkg-config librust-alsa-sys-dev`
+
 <p align="center">
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/boids.png" width="700" ">
 </p>
