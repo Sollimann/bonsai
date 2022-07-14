@@ -165,8 +165,8 @@ fn main() {
     let run = Action(Run);
     let cover = Action(GetInCover);
     let run_for_five_secs = While(Box::new(Wait(5.0)), vec![run]);
-    let run_and_shot = While(Box::new(run_for_five_secs), vec![Action(BlindFire(50))]);
-    let run_cover = Sequence(vec![run_and_shot, cover]);
+    let run_and_shoot = While(Box::new(run_for_five_secs), vec![Action(BlindFire(50))]);
+    let run_cover = Sequence(vec![run_and_shoot, cover]);
 
     let player_close = Select(vec![Action(MeleeAttack(1.0, 100)), Action(FireWeapon(50))]);
     let under_attack_behavior = Select(vec![run_cover, player_close]);
