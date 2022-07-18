@@ -137,9 +137,9 @@ impl<A: Clone> State<A> {
             (Some(dt), &mut WaitState(wait_t, ref mut t)) => {
                 // println!("In WaitState: {}", wait_t);
                 if *t + dt >= wait_t {
-                    let remaining_dt = *t + dt - wait_t;
+                    let time_overdue = *t + dt - wait_t;
                     *t = wait_t;
-                    (Success, remaining_dt)
+                    (Success, time_overdue)
                 } else {
                     *t += dt;
                     RUNNING

@@ -5,7 +5,7 @@ use bonsai_bt::{
 
 /// Some test actions.
 #[derive(Clone, Debug)]
-pub enum TestActions {
+enum TestActions {
     /// Increment accumulator.
     Inc,
     /// Decrement accumulator.
@@ -18,7 +18,7 @@ pub enum TestActions {
 fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> i32 {
     let e: Event = UpdateArgs { dt }.into();
 
-    let (_s, _t) = state.tick(&e, &mut |args| match *args.action {
+    let (s, t) = state.tick(&e, &mut |args| match *args.action {
         Inc => {
             acc += 1;
             (Success, args.dt)
@@ -35,6 +35,8 @@ fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> i32 {
             }
         }
     });
+    println!("status: {:?} dt: {}", s, t);
+
     acc
 }
 
@@ -217,4 +219,15 @@ fn when_all_if() {
     // // sample state after 10 seconds
     a = tick(a, 2.0, &mut state);
     assert_eq!(a, 12);
+}
+
+#[test]
+fn test_alter_wait_time() {
+    let a: i32 = 0;
+    let rep = While(Box::new(Wait(50.0)), vec![Wait(0.5), Action(Inc), Wait(0.5)]);
+    let mut state = State::new(rep);
+
+    // sample after 10 seconds
+    let a = tick(a, 10.0, &mut state);
+    assert_eq!(a, 10);
 }
