@@ -29,8 +29,11 @@
 
 //! ## Example of use
 
-//! This is a enemy NPC (non-player-character) behavior mock-up which decides if the AI should shoot while running for nearby cover, rush in to attack the player up close or stand its ground while firing at the player.
-
+//! This is a simple example with two possible Actions: Increment a number, Decrement a number. We
+//! construct a BT where we increment a number twice, one second apart. Then wait 0.5 seconds before we
+//! then decrement the same number again. Additionally we use a Blackboard to store/persist the immediate
+//! state of the number accessed by the key `count`.
+//!
 //! ```rust
 //! use bonsai_bt::{Event, Success, UpdateArgs, BT};
 //!
