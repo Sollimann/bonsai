@@ -1,6 +1,10 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan};
 use bonsai_bt::{
-    Action, Behavior::If, Event, Failure, Sequence, State, Success, UpdateArgs, Wait, WaitForever, WhenAll, While,
+    Action,
+    Behavior::{If, Invert, Select},
+    Event, Failure, Sequence, State,
+    Status::Running,
+    Success, UpdateArgs, Wait, WaitForever, WhenAll, While,
 };
 
 /// Some test actions.
@@ -15,9 +19,9 @@ enum TestActions {
 }
 
 // A test state machine that can increment and decrement.
-fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> i32 {
+fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> (i32, bonsai_bt::Status, f64) {
     let e: Event = UpdateArgs { dt }.into();
-
+    println!("acc {}", acc);
     let (s, t) = state.tick(&e, &mut |args| match *args.action {
         Inc => {
             acc += 1;
@@ -28,16 +32,19 @@ fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> i32 {
             (Success, args.dt)
         }
         LessThan(v) => {
+            println!("inside less than with acc: {}", acc);
             if acc < v {
+                println!("success {}<{}", acc, v);
                 (Success, args.dt)
             } else {
+                println!("failure {}>={}", acc, v);
                 (Failure, args.dt)
             }
         }
     });
     println!("status: {:?} dt: {}", s, t);
 
-    acc
+    (acc, s, t)
 }
 
 // A test state machine that can increment and decrement.
@@ -99,7 +106,7 @@ fn wait_sec() {
     let a: i32 = 0;
     let seq = Sequence(vec![Wait(1.0), Action(Inc)]);
     let mut state = State::new(seq);
-    let a = tick(a, 1.0, &mut state);
+    let (a, _, _) = tick(a, 1.0, &mut state);
     assert_eq!(a, 1);
 }
 
@@ -110,9 +117,9 @@ fn wait_half_sec() {
     let a: i32 = 0;
     let seq = Sequence(vec![Wait(1.0), Action(Inc)]);
     let mut state = State::new(seq);
-    let a = tick(a, 0.5, &mut state);
+    let (a, _, _) = tick(a, 0.5, &mut state);
     assert_eq!(a, 0);
-    let a = tick(a, 0.5, &mut state);
+    let (a, _, _) = tick(a, 0.5, &mut state);
     assert_eq!(a, 1);
 }
 
@@ -122,7 +129,7 @@ fn sequence_of_one_event() {
     let a: i32 = 0;
     let seq = Sequence(vec![Action(Inc)]);
     let mut state = State::new(seq);
-    let a = tick(a, 1.0, &mut state);
+    let (a, _, _) = tick(a, 1.0, &mut state);
     assert_eq!(a, 1);
 }
 
@@ -132,7 +139,7 @@ fn wait_two_waits() {
     let a: i32 = 0;
     let seq = Sequence(vec![Wait(0.5), Wait(0.5), Action(Inc)]);
     let mut state = State::new(seq);
-    let a = tick(a, 1.0, &mut state);
+    let (a, _, _) = tick(a, 1.0, &mut state);
     assert_eq!(a, 1);
 }
 
@@ -144,7 +151,7 @@ fn loop_ten_times() {
     let mut state = State::new(rep);
 
     // sample after 10 seconds
-    let a = tick(a, 10.0, &mut state);
+    let (a, _, _) = tick(a, 10.0, &mut state);
     assert_eq!(a, 10);
 }
 
@@ -157,9 +164,9 @@ fn when_all_wait() {
         Action(Inc),
     ]);
     let mut state = State::new(all);
-    let a = tick(a, 0.5, &mut state);
+    let (a, _, _) = tick(a, 0.5, &mut state);
     assert_eq!(a, 0);
-    let a = tick(a, 0.5, &mut state);
+    let (a, _, _) = tick(a, 0.5, &mut state);
     assert_eq!(a, 1);
 }
 
@@ -172,7 +179,7 @@ fn while_wait_sequence() {
     );
     let mut state = State::new(w);
     for _ in 0..100 {
-        a = tick(a, 0.1, &mut state);
+        (a, _, _) = tick(a, 0.1, &mut state);
     }
     // The last increment is never executed, because there is not enough time.
     assert_eq!(a, 19);
@@ -183,25 +190,25 @@ fn while_wait_forever_sequence() {
     let mut a: i32 = 0;
     let w = While(Box::new(WaitForever), vec![Sequence(vec![Action(Inc), Wait(1.0)])]);
     let mut state = State::new(w);
-    a = tick(a, 1.001, &mut state);
+    (a, _, _) = tick(a, 1.001, &mut state);
     assert_eq!(a, 2);
 }
 
 #[test]
 fn if_less_than() {
-    let mut a: i32 = 0;
+    let a: i32 = 0;
     let inc = Sequence(vec![Action(Inc), Action(Inc)]);
     let dec = Sequence(vec![Action(Dec), Action(Dec)]);
     let _if = If(Box::new(Action(LessThan(0))), Box::new(inc), Box::new(dec));
     let mut state = State::new(_if);
 
-    a = tick(a, 0.0, &mut state);
+    let (a, _, _) = tick(a, 0.0, &mut state);
     assert_eq!(a, -2);
 }
 
 #[test]
 fn when_all_if() {
-    let mut a: i32 = 0;
+    let a: i32 = 0;
     let inc = Sequence(vec![Action(Inc), Action(Inc)]);
     let dec = Sequence(vec![Action(Dec), Action(Dec)]);
     let _if = If(Box::new(Action(LessThan(1))), Box::new(inc), Box::new(dec));
@@ -213,11 +220,11 @@ fn when_all_if() {
     let mut state = State::new(w);
 
     // sample state after 8 seconds
-    a = tick(a, 8.0, &mut state);
+    let (a, _, _) = tick(a, 8.0, &mut state);
     assert_eq!(a, 10);
 
     // // sample state after 10 seconds
-    a = tick(a, 2.0, &mut state);
+    let (a, _, _) = tick(a, 2.0, &mut state);
     assert_eq!(a, 12);
 }
 
@@ -228,6 +235,75 @@ fn test_alter_wait_time() {
     let mut state = State::new(rep);
 
     // sample after 10 seconds
-    let a = tick(a, 10.0, &mut state);
+    let (a, _, _) = tick(a, 10.0, &mut state);
     assert_eq!(a, 10);
+}
+
+#[test]
+fn test_select_succeed_on_first() {
+    let a: i32 = 0;
+    let sel = Select(vec![Action(Inc), Action(Inc), Action(Inc)]);
+    let mut state = State::new(sel);
+
+    let (a, _, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 1);
+    let (a, _, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 2);
+}
+
+#[test]
+fn test_select_succeed_on_second_last() {
+    let a: i32 = 3;
+    let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
+    let mut state = State::new(sel);
+
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 2);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 1);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 0);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, -1);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn test_select_and_when_all() {
+    let a: i32 = 3;
+    let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
+    let whenall = WhenAll(vec![Wait(0.35), sel]);
+    let mut state = State::new(whenall);
+
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 2);
+    assert_eq!(s, Running);
+    let (a, s, _) = tick(a, 0.3, &mut state);
+    assert_eq!(a, 2);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn test_select_and_invert() {
+    let a: i32 = 3;
+    let sel = Invert(Box::new(Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)])));
+    let whenall = WhenAll(vec![Wait(0.35), sel]);
+    let mut state = State::new(whenall);
+
+    // Running + Failure = Failure
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 2);
+    assert_eq!(s, Failure);
+    let (a, s, _) = tick(a, 0.3, &mut state);
+    assert_eq!(a, 1);
+    assert_eq!(s, Failure);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 0);
+    assert_eq!(s, Failure);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, -1);
+    assert_eq!(s, Failure);
 }
