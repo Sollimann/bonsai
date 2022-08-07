@@ -195,15 +195,28 @@ fn while_wait_forever_sequence() {
 }
 
 #[test]
-fn if_less_than() {
-    let a: i32 = 0;
-    let inc = Sequence(vec![Action(Inc), Action(Inc)]);
-    let dec = Sequence(vec![Action(Dec), Action(Dec)]);
-    let _if = If(Box::new(Action(LessThan(0))), Box::new(inc), Box::new(dec));
+fn test_if_less_than() {
+    let a: i32 = 3;
+    let _if = If(
+        Box::new(Action(LessThan(1))),
+        Box::new(Action(Inc)), // if true
+        Box::new(Action(Dec)), // else
+    );
+
     let mut state = State::new(_if);
 
-    let (a, _, _) = tick(a, 0.0, &mut state);
-    assert_eq!(a, -2);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 2);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 1);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 0);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, -1);
+    assert_eq!(s, Success);
 }
 
 #[test]
@@ -293,31 +306,6 @@ fn test_select_with_state_reset() {
 
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 0);
-    assert_eq!(s, Success);
-}
-
-#[test]
-fn test_if() {
-    let a: i32 = 3;
-    let _if = If(
-        Box::new(Action(LessThan(1))),
-        Box::new(Action(Inc)),
-        Box::new(Action(Dec)),
-    );
-
-    let mut state = State::new(_if);
-
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 2);
-    assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 1);
-    assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 0);
-    assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, -1);
     assert_eq!(s, Success);
 }
 
