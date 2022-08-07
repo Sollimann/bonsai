@@ -252,10 +252,60 @@ fn test_select_succeed_on_first() {
 }
 
 #[test]
-fn test_select_succeed_on_second_last() {
+fn test_select_no_state_reset() {
     let a: i32 = 3;
     let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
     let mut state = State::new(sel);
+
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 2);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 1);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 0);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, -1);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn test_select_with_state_reset() {
+    let a: i32 = 3;
+    let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
+    let sel_clone = sel.clone();
+    let mut state = State::new(sel);
+
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 2);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 1);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 0);
+    assert_eq!(s, Success);
+
+    // reset state
+    state = State::new(sel_clone);
+
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 0);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn test_if() {
+    let a: i32 = 3;
+    let _if = If(
+        Box::new(Action(LessThan(1))),
+        Box::new(Action(Inc)),
+        Box::new(Action(Dec)),
+    );
+
+    let mut state = State::new(_if);
 
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 2);
