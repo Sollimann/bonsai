@@ -24,8 +24,8 @@ impl<K, V> BlackBoard<K, V> {
 pub struct BT<A, K, V> {
     /// constructed behavior tree
     pub state: State<A>,
-    /// clean backup of original state
-    clean_backup_state: State<A>,
+    /// keep the initial state
+    initial_state: State<A>,
     /// blackboard
     bb: BlackBoard<K, V>,
 }
@@ -37,7 +37,7 @@ impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
         let bt_backup = State::new(backup_behavior);
         Self {
             state: bt,
-            clean_backup_state: bt_backup,
+            initial_state: bt_backup,
             bb: BlackBoard(blackboard),
         }
     }
@@ -56,7 +56,7 @@ impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
 
     /// todo
     pub fn reset_bt(&mut self) {
-        self.state = self.clean_backup_state.clone();
+        self.state = self.initial_state.clone();
     }
 }
 
