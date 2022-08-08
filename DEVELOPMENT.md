@@ -11,6 +11,12 @@ Enable pre-commit in repo
 $ pre-commit install
 ```
 
+### Install dev dependencies
+
+```sh
+$ make install-dev-deps
+```
+
 ### Useful resources
 
 * [Game AI BT](https://faculty.cc.gatech.edu/~surban6/2018sp-gameAI/homeworks/homework6.html)
