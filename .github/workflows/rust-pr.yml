@@ -1,13 +1,21 @@
-name: rust-cd
+name: Rust PR
 
 on:
-  push:
-    branches: [ main ] # run only when merging to main
+  pull_request:
+    branches: [ main ] # run only when making a PR for main
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libudev
+        run: sudo apt-get update && sudo apt-get install libudev-dev pkg-config librust-alsa-sys-dev
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.3
   build:
     runs-on: ubuntu-latest
     steps:
@@ -20,10 +28,3 @@ jobs:
       run: cargo build --examples
     - name: Run tests
       run: cargo test --verbose
-    - name: Push to codecov.io
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      run: |
-        cargo install cargo-tarpaulin
-        cargo tarpaulin --out Xml
-        bash <(curl -s https://codecov.io/bash) -X gcov -t $CODECOV_TOKEN

@@ -7,7 +7,8 @@ use crate::{Behavior, Status};
 use std::fmt::Debug;
 // use serde_derive::{Deserialize, Serialize};
 
-/// The action is still running. So, there is
+/// The action is still running, and thus the action consumes
+/// all the remaining delta time for the tick
 pub const RUNNING: (Status, f64) = (Running, 0.0);
 
 /// The arguments in the action callback.
@@ -60,6 +61,12 @@ pub enum State<A> {
 
 impl<A: Clone> State<A> {
     /// Creates a state from a behavior.
+    ///
+    /// For each behavior there is a `State` that keeps track of current running process.
+    /// When you declare a behavior, this state is not included, resulting in a compact
+    /// representation that can be copied or shared between objects having same behavior.
+    /// Behavior means the declarative representation of the behavior, and State represents
+    /// the executing instance of that behavior.
     pub fn new(behavior: Behavior<A>) -> Self {
         match behavior {
             Behavior::Action(action) => State::ActionState(action),
