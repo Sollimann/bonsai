@@ -54,7 +54,17 @@ impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
         &mut bt.state
     }
 
-    /// todo
+    /// The behavior tree is a stateful data structure in which the immediate
+    /// state of the BT is allocated and updated in heap memory through the lifetime
+    /// of the BT. The state of the BT is said to be `transient` meaning upon entering
+    /// a this state, the process may never return this state again. If a behavior concludes,
+    /// only the latest results will be stored in heap memory.
+    ///
+    /// If your BT has surpassed a desired state or that your BT has reached a steady state - meaning
+    /// that the behavior has concluded and ticking the BT won't progress any further - then it could
+    /// be desirable to return the BT to it's initial state at t=0.0 before it was ever ticked.
+    ///
+    /// PS! invoking reset_bt does not reset the Blackboard.
     pub fn reset_bt(&mut self) {
         self.state = self.initial_state.clone();
     }

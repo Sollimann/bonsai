@@ -47,7 +47,6 @@ fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, String, i32>) -> (i32, b
 fn test_select_succeed_on_second_last() {
     let a: i32 = 3;
     let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
-    // let mut state = State::new(sel);
 
     let h: HashMap<String, i32> = HashMap::new();
     let mut bt = BT::new(sel, h);

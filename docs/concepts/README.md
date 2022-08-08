@@ -5,10 +5,10 @@
   - [When to use a Behavior Tree?](#when-to-use-a-behavior-tree)
     - [BT vs FSM:](#bt-vs-fsm)
   - [How to use a Behavior tree?](#how-to-use-a-behavior-tree)
-- [Types of Nodes](#types-of-nodes)
-- [Understand Asynchrous Nodes, Concurrency and Parallelism](#understand-asynchrous-nodes-concurrency-and-parallelism)
-  - [Concurrency vs Parallelism](#concurrency-vs-parallelism)
-  - [Asynchronous vs Synchronous](#asynchronous-vs-synchronous)
+- [Parallel semantics](#parallel-semantics)
+- [Behavior vs State](#behavior-vs-state)
+- [Events](#events)
+- [Instant Actions](#instant-actions)
 
 ## Fundamentals
 
@@ -60,35 +60,30 @@ For example, if you have a state `A` and a state `B`:
 
 See the `Behavior` enum for more information.
 
+## Parallel semantics
+Parallel semantics has two important properties:
 
-## Types of Nodes
+* Makes it easier to create more complex behavior from simpler ones
+* Infinite loops of behavior can be terminated based on external conditions
 
-TODO
+This semantics solves the problem of scaling up building blocks of behavior to any arbitrary size. Such trees can be put together in many complex ways, resulting in many complex states.
 
+The building blocks used in this library has been crafted to cover as many parallel scenarios as possible using common sense as guide.
 
-## Understand Asynchrous Nodes, Concurrency and Parallelism
+One effect of parallel semantics is that it can't be simulated perfectly on a single thread. The behavior is deterministic, but the logic breaks down for shorter time intervals than given by updates per second. The consequences are determined by the interaction of side effects.
 
-When designing reactive Behavior Trees, it is important to understand 2 main concepts:
+For example, in a racing game, `WhenAny` can be used to detect when there is a winner, keeping track of a process for each car. The first car in the list might trigger `Success` even if the second car logically should come first, but only if the first car completes within a delta time interval. However, this will have no logical consequences if the physical simulation runs separately and the winner is picked based on who actually crossed the finish line first.
 
-- what we mean by **"Asynchronous"** Actions VS **"Synchronous"** ones.
-- The difference between **Concurrency** and **Parallelism** in general and in the context of behavior trees.
+## Behavior vs State
 
-### Concurrency vs Parallelism
+For each behavior there is a state that keeps track of current running process. When you declare a behavior, this state is not included, resulting in a compact representation that can be copied or shared between objects having same behavior. Behavior means the declarative representation of the behavior, and State represents the executing instance of that behavior.
 
-If you Google those words, you will read many good articles about this topic.
+## Events
 
-* **Concurrency** is when two or more tasks can start, run, and complete in overlapping time periods. It doesn't necessarily mean they'll ever both be running at the same instant.
+The Bonsai behavior tree models the world in terms of an discretized event loop where updates comes with a *delta time interval* `dt`. When an process terminates, it tells how much time is left of the delta time interval, such that the next process can be executed for the remaining time.
 
-* **Parallelism** is when tasks literally run at the same time in different  threads, e.g., on a multicore processor.
+Events are partially consumable. When one action terminates, it can pass on the remaining delta time to the next action.
 
-### Asynchronous vs Synchronous
+## Instant Actions
 
-In general, an Asynchronous Action (or TreeNode) is simply one that:
-
-- May return RUNNING instead of SUCCESS or FAILURE, when ticked.
-- Can be stopped as fast as possible when the method `halt()` (to be implemented by the developer) is invoked.
-
-When your Tree ends up executing an Asynchronous action that returns running, that RUNNING state is usually propagated backbard and the entire Tree is itself in the RUNNING state.
-
-In the example below, "ActionE" is asynchronous and RUNNING; when
-a node is RUNNING, usually its parent returns RUNNING too.
+Update actions that does not consume delta time, returning the same delta time as they receive, can lead to infinite loops. A `Wait` behavior can be used to prevent this. The meaning of update is defined as "consume time to stop" so it will continue running actions until it hits one that does not have enough time to terminate.

@@ -10,7 +10,7 @@
 <!-- [![version](https://img.shields.io/badge/version-1.0.0-blue)](https://GitHub.com/Sollimann/CleanIt/releases/) -->
 [![Build Status](https://github.com/Sollimann/bonsai/workflows/rust-ci/badge.svg)](https://github.com/Sollimann/bonsai/actions)
 [![Bonsai crate](https://img.shields.io/crates/v/bonsai-bt.svg)](https://crates.io/crates/bonsai-bt)
-[![minimum rustc 1.56](https://img.shields.io/badge/rustc-1.56+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
+[![minimum rustc 1.60](https://img.shields.io/badge/rustc-1.60+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
 [![Docs](https://docs.rs/bonsai-bt/badge.svg)](https://docs.rs/bonsai-bt)
 [![codecov](https://codecov.io/gh/Sollimann/bonsai/branch/main/graph/badge.svg?token=JX8JBPWORV)](https://codecov.io/gh/Sollimann/bonsai)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Sollimann/bonsai/graphs/commit-activity)
@@ -42,9 +42,7 @@ A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how 
 
 ### How to use a Behavior tree?
 
-An AI behavior tree is a very generic way of organizing interactive logic.
-It has built-in semantics for processes that signals `Running`, `Success` or
-`Failure`.
+A Behavior Tree forms a tree structure where each node represents a process. When the process terminates, it signals `Success` or `Failure`. This can then be used by the parent node to select the next process. A signal `Running` is used to tell the process is not done yet.
 
 For example, if you have a state `A` and a state `B`:
 
