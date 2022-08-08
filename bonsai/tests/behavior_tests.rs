@@ -1,7 +1,7 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan};
 use bonsai_bt::{
     Action,
-    Behavior::{If, Invert, Select},
+    Behavior::{After, If, Invert, Select},
     Event, Failure, Sequence, State,
     Status::Running,
     Success, UpdateArgs, Wait, WaitForever, WhenAll, While,
@@ -344,4 +344,42 @@ fn test_select_and_invert() {
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, -1);
     assert_eq!(s, Failure);
+}
+
+#[test]
+fn test_after_all_succeed_in_order() {
+    let a: i32 = 0;
+    let after = After(vec![Action(Inc), Wait(0.1), Wait(0.2)]);
+    let mut state = State::new(after);
+
+    let (a, s, dt) = tick(a, 0.1, &mut state);
+
+    assert_eq!(a, 1);
+    assert_eq!(s, Running);
+    assert_eq!(dt, 0.0);
+
+    let (a, s, dt) = tick(a, 0.1, &mut state);
+
+    assert_eq!(a, 1);
+    assert_eq!(s, Success);
+    assert_eq!(dt, 0.0);
+}
+
+#[test]
+fn test_after_all_succeed_out_of_order() {
+    let a: i32 = 0;
+    let after = After(vec![Action(Inc), Wait(0.2), Wait(0.1)]);
+    let mut state = State::new(after);
+
+    let (a, s, dt) = tick(a, 0.05, &mut state);
+
+    assert_eq!(a, 1);
+    assert_eq!(s, Running);
+    assert_eq!(dt, 0.0);
+
+    let (a, s, dt) = tick(a, 0.1, &mut state);
+
+    assert_eq!(a, 1);
+    assert_eq!(s, Failure);
+    assert_eq!(dt, 0.0);
 }

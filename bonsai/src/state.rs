@@ -7,7 +7,8 @@ use crate::{Behavior, Status};
 use std::fmt::Debug;
 // use serde_derive::{Deserialize, Serialize};
 
-/// The action is still running. So, there is
+/// The action is still running, and thus the action consumes
+/// all the remaining delta time for the tick
 pub const RUNNING: (Status, f64) = (Running, 0.0);
 
 /// The arguments in the action callback.
