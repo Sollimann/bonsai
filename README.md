@@ -42,9 +42,7 @@ A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how 
 
 ### How to use a Behavior tree?
 
-An AI behavior tree is a very generic way of organizing interactive logic.
-It has built-in semantics for processes that signals `Running`, `Success` or
-`Failure`.
+A Behavior Tree forms a tree structure where each node represents a process. When the process terminates, it signals `Success` or `Failure`. This can then be used by the parent node to select the next process. A signal `Running` is used to tell the process is not done yet.
 
 For example, if you have a state `A` and a state `B`:
 

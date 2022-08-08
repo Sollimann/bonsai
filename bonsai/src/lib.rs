@@ -9,9 +9,10 @@
 //!
 //! ### How to use a Behavior tree?
 
-//! An AI behavior tree is a very generic way of organizing interactive logic.
-//! It has built-in semantics for processes that signals `Running`, `Success` or
-//! `Failure`.
+//! A Behavior Tree forms a tree structure where each node represents a process.
+//! When the process terminates, it signals `Success` or `Failure`. This can then
+//! be used by the parent node to select the next process.
+//! A signal `Running` is used to tell the process is not done yet.
 
 //! For example, if you have a state `A` and a state `B`:
 
@@ -110,6 +111,10 @@
 //!     let bb = bt.get_blackboard();
 //!     let count = bb.get_db().get("count").unwrap();
 //!     assert_eq!(*count, 1);
+//!
+//!     // if the behavior tree concludes (reaches a steady state)
+//!     // you can reset the tree back to it's initial state at t=0.0
+//!     bt.reset_bt();
 //! }
 //! ```
 
