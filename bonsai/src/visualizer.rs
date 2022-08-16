@@ -18,7 +18,11 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
             }
             Behavior::Invert(ev) => todo!(),
             Behavior::AlwaysSucceed(ev) => todo!(),
-            Behavior::Wait(dt) => todo!(),
+            Behavior::Wait(dt) => {
+                let node_id = self.graph.add_node(format!("Wait({:?})", dt));
+                self.graph.add_edge(prev_node, node_id, 1);
+                self.gen_graph(queue, prev_node)
+            }
             Behavior::WaitForever => todo!(),
             Behavior::If(condition, success, failure) => todo!(),
             Behavior::Select(sel) => {
@@ -43,7 +47,7 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Behavior::{Action, Select, Sequence};
+    use crate::Behavior::{Action, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While};
     use crate::Status::{self, Success};
     use crate::{Event, UpdateArgs};
 
@@ -118,5 +122,28 @@ mod tests {
 
         assert_eq!(g.edge_count(), 8);
         assert_eq!(g.node_count(), 9);
+    }
+
+    #[test]
+    fn test_viz_sequence_action_wait() {
+        use petgraph::dot::{Config, Dot};
+        use petgraph::Graph;
+
+        let behavior = Sequence(vec![
+            Action(Dec),
+            Wait(10.0),
+            Action(Dec),
+            Select(vec![Wait(5.0), Sequence(vec![Action(Inc), Action(Dec)])]),
+        ]);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        bt.generate_graph();
+        let g = bt.graph.clone();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        assert_eq!(g.edge_count(), 9);
+        assert_eq!(g.node_count(), 10);
     }
 }
