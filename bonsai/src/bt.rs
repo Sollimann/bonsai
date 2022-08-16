@@ -4,6 +4,7 @@ use std::fmt::Debug;
 
 use petgraph::{stable_graph::NodeIndex, Graph};
 
+use crate::visualizer::NodeType;
 use crate::{Behavior, State};
 
 /// A "blackboard" is a simple key/value storage shared by all the nodes of the Tree.
@@ -31,7 +32,7 @@ pub struct BT<A, K, V> {
     /// blackboard
     bb: BlackBoard<K, V>,
     /// Tree formulated as PetGraph
-    pub(crate) graph: Graph<String, u32, petgraph::Directed>,
+    pub(crate) graph: Graph<NodeType<A>, u32, petgraph::Directed>,
     /// root node
     root_id: NodeIndex,
 }
@@ -42,8 +43,8 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
         let bt = State::new(behavior);
 
         // generate graph
-        let mut graph = Graph::<String, u32, petgraph::Directed>::new();
-        let root_id = graph.add_node("root".to_string());
+        let mut graph = Graph::<NodeType<A>, u32, petgraph::Directed>::new();
+        let root_id = graph.add_node(NodeType::Root);
 
         Self {
             state: bt,

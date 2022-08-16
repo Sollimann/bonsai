@@ -1,7 +1,25 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 use crate::{Behavior, Sequence, State, BT};
-use petgraph::{graph::Graph, stable_graph::NodeIndex};
+use petgraph::{graph::Graph, stable_graph::NodeIndex, Direction::Outgoing};
 use std::{collections::VecDeque, fmt::Debug};
+
+#[derive(Debug, Clone)]
+pub(crate) enum NodeType<A> {
+    Root,
+    Wait(f64),
+    WaitForever,
+    Action(A),
+    Invert,
+    AlwaysSucceed,
+    Select,
+    If,
+    Sequence,
+    While,
+    WhenAll,
+    WhenAny,
+    After,
+}
+
 impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
     pub(crate) fn gen_graph(&mut self, queue: &mut VecDeque<Behavior<A>>, prev_node: NodeIndex) {
         if queue.is_empty() {
@@ -12,33 +30,55 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
 
         match behavior {
             Behavior::Action(action) => {
-                let node_id = self.graph.add_node(format!("Action({:?})", action));
+                println!("Action: {:?}", action);
+                let node_id = self.graph.add_node(NodeType::Action(action));
                 self.graph.add_edge(prev_node, node_id, 1);
                 self.gen_graph(queue, prev_node)
             }
-            Behavior::Invert(ev) => todo!(),
+            Behavior::Invert(ev) => {
+                println!("Invert: {:?}", ev);
+                let inv_node_id = self.graph.add_node(NodeType::Invert);
+                let inv_par_id = prev_node;
+
+                self.graph.add_edge(prev_node, inv_node_id, 1);
+                queue.push_front(*ev);
+
+                self.gen_graph(queue, inv_node_id);
+                let mut neighbor_edges = self.graph.neighbors_directed(inv_node_id, Outgoing);
+                let most_recent_child_id = neighbor_edges.next().unwrap();
+
+                // update edges
+                let to_remove = self.graph.find_edge(inv_node_id, most_recent_child_id).unwrap();
+                self.graph.remove_edge(to_remove);
+                self.graph.add_edge(inv_par_id, most_recent_child_id, 1);
+                // reconnect right most neighbor of invert to the parent of invert
+                // 1. find invert parent index - inv_par_id
+                // 2. find invert right most neighbor - most_recent_child_id
+                // 3. connect (inv_par_id, inv_right_id)
+            }
             Behavior::AlwaysSucceed(ev) => todo!(),
             Behavior::Wait(dt) => {
-                let node_id = self.graph.add_node(format!("Wait({:?})", dt));
+                let node_id = self.graph.add_node(NodeType::Wait(dt));
                 self.graph.add_edge(prev_node, node_id, 1);
                 self.gen_graph(queue, prev_node)
             }
             Behavior::WaitForever => todo!(),
             Behavior::If(condition, success, failure) => todo!(),
             Behavior::Select(sel) => {
-                let node_id = self.graph.add_node("Select".to_string());
+                let node_id = self.graph.add_node(NodeType::Select);
                 self.graph.add_edge(prev_node, node_id, 1);
                 queue.append(&mut VecDeque::from(sel));
                 self.gen_graph(queue, node_id)
             }
             Behavior::Sequence(seq) => {
-                let node_id = self.graph.add_node("Sequence".to_string());
+                println!("seq: {:?}", seq);
+                let node_id = self.graph.add_node(NodeType::Sequence);
                 self.graph.add_edge(prev_node, node_id, 1);
                 queue.append(&mut VecDeque::from(seq));
                 self.gen_graph(queue, node_id)
             }
             Behavior::While(ev, seq) => {
-                let node_id = self.graph.add_node("While".to_string());
+                let node_id = self.graph.add_node(NodeType::While);
                 self.graph.add_edge(prev_node, node_id, 1);
 
                 queue.push_back(*ev);
@@ -55,12 +95,13 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Behavior::{Action, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While};
-    use crate::Status::{self, Success};
-    use crate::{Event, UpdateArgs};
-
     use super::*;
     use crate::visualizer::tests::TestActions::{Dec, Inc};
+    use crate::Behavior::{Action, After, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While};
+    use crate::Status::{self, Success};
+    use crate::{Event, UpdateArgs};
+    use petgraph::dot::{Config, Dot};
+    use petgraph::Graph;
     use std::collections::HashMap;
 
     /// Some test actions.
@@ -112,9 +153,6 @@ mod tests {
 
     #[test]
     fn test_viz_select_and_action() {
-        use petgraph::dot::{Config, Dot};
-        use petgraph::Graph;
-
         let behavior = Select(vec![
             Action(Dec),
             Action(Dec),
@@ -134,9 +172,6 @@ mod tests {
 
     #[test]
     fn test_viz_sequence_action_wait() {
-        use petgraph::dot::{Config, Dot};
-        use petgraph::Graph;
-
         let behavior = Sequence(vec![
             Action(Dec),
             Wait(10.0),
@@ -157,9 +192,6 @@ mod tests {
 
     #[test]
     fn test_viz_while() {
-        use petgraph::dot::{Config, Dot};
-        use petgraph::Graph;
-
         let behavior = While(Box::new(Wait(50.0)), vec![Wait(0.5), Action(Inc), Wait(0.5)]);
 
         let h: HashMap<String, i32> = HashMap::new();
@@ -175,9 +207,6 @@ mod tests {
 
     #[test]
     fn test_viz_while_select_sequence_wait() {
-        use petgraph::dot::{Config, Dot};
-        use petgraph::Graph;
-
         let behavior = While(
             Box::new(Select(vec![Wait(5.0), Sequence(vec![Action(Inc), Action(Dec)])])),
             vec![Wait(0.5), Action(Inc), Wait(0.5)],
@@ -192,5 +221,40 @@ mod tests {
 
         assert_eq!(g.edge_count(), 10);
         assert_eq!(g.node_count(), 11);
+    }
+
+    #[test]
+    fn test_invert() {
+        let behavior = Sequence(vec![Invert(Box::new(Action(Inc))), Action(Dec)]);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        bt.generate_graph();
+        let g = bt.graph.clone();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        assert_eq!(g.edge_count(), 4);
+        assert_eq!(g.node_count(), 5);
+    }
+
+    #[test]
+    fn test_sequence_invert_select() {
+        let behavior = Sequence(vec![
+            Invert(Box::new(Select(vec![Action(Inc), Action(Dec)]))),
+            Action(Dec),
+            Action(Inc),
+            Action(Dec),
+        ]);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        bt.generate_graph();
+        let g = bt.graph.clone();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        // assert_eq!(g.edge_count(), 4);
+        // assert_eq!(g.node_count(), 5);
     }
 }
