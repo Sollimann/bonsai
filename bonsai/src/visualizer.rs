@@ -1,9 +1,9 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-use crate::{Behavior, State, BT};
+use crate::{Behavior, Sequence, State, BT};
 use petgraph::{graph::Graph, stable_graph::NodeIndex};
 use std::{collections::VecDeque, fmt::Debug};
 impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
-    pub(crate) fn gen_graph(&mut self, mut queue: VecDeque<Behavior<A>>, prev_node: NodeIndex) {
+    pub(crate) fn gen_graph(&mut self, queue: &mut VecDeque<Behavior<A>>, prev_node: NodeIndex) {
         if queue.is_empty() {
             return;
         }
@@ -37,7 +37,15 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
                 queue.append(&mut VecDeque::from(seq));
                 self.gen_graph(queue, node_id)
             }
-            Behavior::While(ev, rep) => todo!(),
+            Behavior::While(ev, seq) => {
+                let node_id = self.graph.add_node("While".to_string());
+                self.graph.add_edge(prev_node, node_id, 1);
+
+                queue.push_back(*ev);
+                self.gen_graph(queue, node_id);
+                queue.append(&mut VecDeque::from(vec![Sequence(seq)]));
+                self.gen_graph(queue, node_id);
+            }
             Behavior::WhenAll(all) => todo!(),
             Behavior::WhenAny(all) => todo!(),
             Behavior::After(seq) => todo!(),
@@ -145,5 +153,44 @@ mod tests {
 
         assert_eq!(g.edge_count(), 9);
         assert_eq!(g.node_count(), 10);
+    }
+
+    #[test]
+    fn test_viz_while() {
+        use petgraph::dot::{Config, Dot};
+        use petgraph::Graph;
+
+        let behavior = While(Box::new(Wait(50.0)), vec![Wait(0.5), Action(Inc), Wait(0.5)]);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        bt.generate_graph();
+        let g = bt.graph.clone();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        assert_eq!(g.edge_count(), 6);
+        assert_eq!(g.node_count(), 7);
+    }
+
+    #[test]
+    fn test_viz_while_select_sequence_wait() {
+        use petgraph::dot::{Config, Dot};
+        use petgraph::Graph;
+
+        let behavior = While(
+            Box::new(Select(vec![Wait(5.0), Sequence(vec![Action(Inc), Action(Dec)])])),
+            vec![Wait(0.5), Action(Inc), Wait(0.5)],
+        );
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        bt.generate_graph();
+        let g = bt.graph.clone();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        assert_eq!(g.edge_count(), 10);
+        assert_eq!(g.node_count(), 11);
     }
 }

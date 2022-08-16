@@ -58,7 +58,7 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
         let behavior = self.initial_behavior.to_owned();
         let mut queue: VecDeque<Behavior<A>> = VecDeque::new();
         queue.push_back(behavior);
-        self.gen_graph(queue, self.root_id);
+        self.gen_graph(&mut queue, self.root_id);
     }
 
     /// Retrieve a mutable reference to the blackboard for
