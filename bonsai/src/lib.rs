@@ -133,4 +133,5 @@ mod event;
 mod sequence;
 mod state;
 mod status;
+mod visualizer;
 mod when_all;

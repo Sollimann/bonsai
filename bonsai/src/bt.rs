@@ -2,6 +2,8 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use petgraph::Graph;
+
 use crate::{Behavior, State};
 
 /// A "blackboard" is a simple key/value storage shared by all the nodes of the Tree.
@@ -28,6 +30,8 @@ pub struct BT<A, K, V> {
     initial_state: State<A>,
     /// blackboard
     bb: BlackBoard<K, V>,
+    /// Tree formulated as PetGraph
+    graph: Graph<String, String, petgraph::Directed>,
 }
 
 impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
@@ -39,6 +43,7 @@ impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
             state: bt,
             initial_state: bt_backup,
             bb: BlackBoard(blackboard),
+            graph: Graph::<String, String, petgraph::Directed>::new(),
         }
     }
 
