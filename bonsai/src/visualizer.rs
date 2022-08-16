@@ -75,19 +75,24 @@ mod tests {
     }
 
     #[test]
-    fn test_viz_action() {
+    fn test_viz_sequence_and_action() {
         use petgraph::dot::{Config, Dot};
         use petgraph::Graph;
-        let a: i32 = 3;
-        let sel = Sequence(vec![Action(Dec), Action(Dec), Sequence(vec![Action(Inc), Action(Inc)])]);
+
+        let behavior = Sequence(vec![
+            Action(Dec),
+            Action(Dec),
+            Sequence(vec![Action(Inc), Sequence(vec![Action(Inc)])]),
+        ]);
 
         let h: HashMap<String, i32> = HashMap::new();
-        let mut bt = BT::new(sel, h);
+        let mut bt = BT::new(behavior, h);
         bt.generate_graph();
         let g = bt.graph.clone();
-        println!("graph: {:?}", g);
+
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
-        let (a, s, _) = tick(a, 0.1, &mut bt);
+        assert_eq!(g.edge_count(), 7);
+        assert_eq!(g.node_count(), 8);
     }
 }
