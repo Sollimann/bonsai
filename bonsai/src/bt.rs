@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use petgraph::Graph;
+use petgraph::{stable_graph::NodeIndex, Graph};
 
 use crate::{Behavior, State};
 
@@ -27,24 +27,36 @@ pub struct BT<A, K, V> {
     /// constructed behavior tree
     pub state: State<A>,
     /// keep the initial state
-    initial_state: State<A>,
+    initial_behavior: Behavior<A>,
     /// blackboard
     bb: BlackBoard<K, V>,
     /// Tree formulated as PetGraph
-    graph: Graph<String, String, petgraph::Directed>,
+    pub(crate) graph: Graph<String, u32, petgraph::Directed>,
+    /// root node
+    root_id: NodeIndex,
 }
 
-impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
+impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
     pub fn new(behavior: Behavior<A>, blackboard: HashMap<K, V>) -> Self {
         let backup_behavior = behavior.clone();
         let bt = State::new(behavior);
-        let bt_backup = State::new(backup_behavior);
+
+        // generate graph
+        let mut graph = Graph::<String, u32, petgraph::Directed>::new();
+        let root_id = graph.add_node("root".to_string());
+
         Self {
             state: bt,
-            initial_state: bt_backup,
+            initial_behavior: backup_behavior,
             bb: BlackBoard(blackboard),
-            graph: Graph::<String, String, petgraph::Directed>::new(),
+            graph,
+            root_id,
         }
+    }
+
+    pub fn generate_graph(&mut self) {
+        let initial_behavior = self.initial_behavior.to_owned();
+        self.gen_graph(initial_behavior, self.root_id);
     }
 
     /// Retrieve a mutable reference to the blackboard for
@@ -71,7 +83,8 @@ impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
     ///
     /// PS! invoking reset_bt does not reset the Blackboard.
     pub fn reset_bt(&mut self) {
-        self.state = self.initial_state.clone();
+        let initial_behavior = self.initial_behavior.to_owned();
+        self.state = State::new(initial_behavior)
     }
 }
 
