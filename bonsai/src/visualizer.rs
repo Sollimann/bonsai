@@ -8,12 +8,10 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
             return;
         }
 
-        println!("queue: {:?}", queue);
         let behavior = queue.pop_front().unwrap();
 
         match behavior {
             Behavior::Action(action) => {
-                println!("action: {:?}", action);
                 let node_id = self.graph.add_node(format!("Action({:?})", action));
                 self.graph.add_edge(prev_node, node_id, 1);
                 self.gen_graph(queue, prev_node)
@@ -23,9 +21,13 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
             Behavior::Wait(dt) => todo!(),
             Behavior::WaitForever => todo!(),
             Behavior::If(condition, success, failure) => todo!(),
-            Behavior::Select(sel) => todo!(),
+            Behavior::Select(sel) => {
+                let node_id = self.graph.add_node("Select".to_string());
+                self.graph.add_edge(prev_node, node_id, 1);
+                queue.append(&mut VecDeque::from(sel));
+                self.gen_graph(queue, node_id)
+            }
             Behavior::Sequence(seq) => {
-                println!("seq: {:?}", seq);
                 let node_id = self.graph.add_node("Sequence".to_string());
                 self.graph.add_edge(prev_node, node_id, 1);
                 queue.append(&mut VecDeque::from(seq));
@@ -41,7 +43,7 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Behavior::{Action, Sequence};
+    use crate::Behavior::{Action, Select, Sequence};
     use crate::Status::{self, Success};
     use crate::{Event, UpdateArgs};
 
@@ -94,5 +96,27 @@ mod tests {
 
         assert_eq!(g.edge_count(), 7);
         assert_eq!(g.node_count(), 8);
+    }
+
+    #[test]
+    fn test_viz_select_and_action() {
+        use petgraph::dot::{Config, Dot};
+        use petgraph::Graph;
+
+        let behavior = Select(vec![
+            Action(Dec),
+            Action(Dec),
+            Select(vec![Action(Inc), Sequence(vec![Action(Inc), Action(Dec)])]),
+        ]);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        bt.generate_graph();
+        let g = bt.graph.clone();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        assert_eq!(g.edge_count(), 8);
+        assert_eq!(g.node_count(), 9);
     }
 }
