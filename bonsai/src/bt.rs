@@ -56,6 +56,39 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
         }
     }
 
+    /// This is a simple example with two possible Actions: Increment a number, Decrement a number. We
+    /// construct a BT where we increment a number twice, one second apart. Then wait 0.5 seconds before we
+    /// then decrement the same number again. Additionally we use a Blackboard to store/persist the immediate
+    /// state of the number accessed by the key `count`.
+    ///
+    /// ```rust
+    /// use crate::Actions::{Inc, Dec};
+    /// use std::collections::HashMap;
+    /// use bonsai_bt::{
+    ///     Behavior::{Action, Sequence, Wait, WaitForever, While},
+    ///     BT
+    /// };
+    ///
+    /// #[derive(Clone, Debug, Copy)]
+    /// pub enum Actions {
+    ///     // Increment accumulator.
+    ///     Inc,
+    ///     // Decrement accumulator.
+    ///     Dec,
+    /// }
+    ///
+    ///
+    /// // create the behavior
+    /// let behavior = While(Box::new(WaitForever), vec![Wait(0.5), Action(Inc), WaitForever]);
+    ///
+    /// let h: HashMap<String, i32> = HashMap::new();
+    /// let mut bt = BT::new(behavior, h);
+    ///
+    /// // produce a string DiGraph compatible with graphviz
+    /// // paste the contents in graphviz, e.g: https://dreampuf.github.io/GraphvizOnline/#
+    /// let g = bt.get_graphviz();
+    /// println!("{}", g);
+    /// ```
     pub fn get_graphviz(&mut self) -> String {
         let behavior = self.initial_behavior.to_owned();
         self.dfs_recursive(behavior, self.root_id);
