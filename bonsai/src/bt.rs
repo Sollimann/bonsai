@@ -56,10 +56,7 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
         }
     }
 
-    /// This is a simple example with two possible Actions: Increment a number, Decrement a number. We
-    /// construct a BT where we increment a number twice, one second apart. Then wait 0.5 seconds before we
-    /// then decrement the same number again. Additionally we use a Blackboard to store/persist the immediate
-    /// state of the number accessed by the key `count`.
+    /// Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
     ///
     /// ```rust
     /// use crate::Actions::{Inc, Dec};
