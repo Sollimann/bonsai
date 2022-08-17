@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_variables)]
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -59,7 +58,6 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
     /// Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
     ///
     /// ```rust
-    /// use crate::Actions::{Inc, Dec};
     /// use std::collections::HashMap;
     /// use bonsai_bt::{
     ///     Behavior::{Action, Sequence, Wait, WaitForever, While},
