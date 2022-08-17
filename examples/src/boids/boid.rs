@@ -65,7 +65,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
 
     #[rustfmt::skip]
     bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, Action>| {
-        match &*args.action {
+        match args.action {
             Action::AvoidOthers => {
                 let avoid_factor = 0.5;
                 let mut move_x = 0.0;

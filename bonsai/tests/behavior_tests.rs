@@ -1,7 +1,7 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan};
 use bonsai_bt::{
     Action,
-    Behavior::{After, If, Invert, Select},
+    Behavior::{After, AlwaysSucceed, If, Invert, Select},
     Event, Failure, Sequence, State,
     Status::Running,
     Success, UpdateArgs, Wait, WaitForever, WhenAll, While,
@@ -344,6 +344,33 @@ fn test_select_and_invert() {
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, -1);
     assert_eq!(s, Failure);
+}
+
+#[test]
+fn test_allways_succeed() {
+    let a: i32 = 3;
+    let sel = Sequence(vec![
+        Wait(0.5),
+        Action(LessThan(2)),
+        Wait(0.5),
+        Action(LessThan(1)),
+        Wait(0.5),
+    ]);
+    let behavior = AlwaysSucceed(Box::new(sel));
+    let mut state = State::new(behavior);
+
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 3);
+    assert_eq!(s, Running);
+    let (a, s, _) = tick(a, 0.7, &mut state);
+    assert_eq!(a, 3);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.4, &mut state);
+    assert_eq!(a, 3);
+    assert_eq!(s, Success);
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 3);
+    assert_eq!(s, Success);
 }
 
 #[test]

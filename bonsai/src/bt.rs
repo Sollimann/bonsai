@@ -2,6 +2,10 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use petgraph::dot::{Config, Dot};
+use petgraph::{stable_graph::NodeIndex, Graph};
+
+use crate::visualizer::NodeType;
 use crate::{Behavior, State};
 
 /// A "blackboard" is a simple key/value storage shared by all the nodes of the Tree.
@@ -25,21 +29,38 @@ pub struct BT<A, K, V> {
     /// constructed behavior tree
     pub state: State<A>,
     /// keep the initial state
-    initial_state: State<A>,
+    initial_behavior: Behavior<A>,
     /// blackboard
     bb: BlackBoard<K, V>,
+    /// Tree formulated as PetGraph
+    pub(crate) graph: Graph<NodeType<A>, u32, petgraph::Directed>,
+    /// root node
+    root_id: NodeIndex,
 }
 
-impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
+impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
     pub fn new(behavior: Behavior<A>, blackboard: HashMap<K, V>) -> Self {
         let backup_behavior = behavior.clone();
         let bt = State::new(behavior);
-        let bt_backup = State::new(backup_behavior);
+
+        // generate graph
+        let mut graph = Graph::<NodeType<A>, u32, petgraph::Directed>::new();
+        let root_id = graph.add_node(NodeType::Root);
+
         Self {
             state: bt,
-            initial_state: bt_backup,
+            initial_behavior: backup_behavior,
             bb: BlackBoard(blackboard),
+            graph,
+            root_id,
         }
+    }
+
+    pub fn get_graphviz(&mut self) -> String {
+        let behavior = self.initial_behavior.to_owned();
+        self.dfs_recursive(behavior, self.root_id);
+        let digraph = Dot::with_config(&self.graph, &[Config::EdgeNoLabel]);
+        format!("{:?}", digraph)
     }
 
     /// Retrieve a mutable reference to the blackboard for
@@ -66,7 +87,8 @@ impl<A: Clone, K: Debug, V: Debug> BT<A, K, V> {
     ///
     /// PS! invoking reset_bt does not reset the Blackboard.
     pub fn reset_bt(&mut self) {
-        self.state = self.initial_state.clone();
+        let initial_behavior = self.initial_behavior.to_owned();
+        self.state = State::new(initial_behavior)
     }
 }
 

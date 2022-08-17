@@ -15,7 +15,7 @@ enum TestActions {
 fn tick(mut acc: usize, dt: f64, t: &mut f64, counter: &mut usize, state: &mut State<TestActions>) -> usize {
     let e: Event = UpdateArgs { dt }.into();
 
-    let (_s, _t) = state.tick(&e, &mut |args| match &*args.action {
+    let (_s, _t) = state.tick(&e, &mut |args| match args.action {
         Inc => {
             acc += 1;
             (Success, args.dt)
