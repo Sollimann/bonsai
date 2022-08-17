@@ -65,7 +65,7 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
     /// };
     ///
     /// #[derive(Clone, Debug, Copy)]
-    /// pub enum Actions {
+    /// pub enum Counter {
     ///     // Increment accumulator.
     ///     Inc,
     ///     // Decrement accumulator.
@@ -74,7 +74,7 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
     ///
     ///
     /// // create the behavior
-    /// let behavior = While(Box::new(WaitForever), vec![Wait(0.5), Action(Inc), WaitForever]);
+    /// let behavior = While(Box::new(WaitForever), vec![Wait(0.5), Action(Counter::Inc), WaitForever]);
     ///
     /// let h: HashMap<String, i32> = HashMap::new();
     /// let mut bt = BT::new(behavior, h);
