@@ -41,5 +41,5 @@ Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [D
 `cargo run --bin graphviz`
 
 <p align="center">
-  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/graphviz.png" width="700" ">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/attack_drone.png" width="700" ">
 </p>
