@@ -24,3 +24,7 @@ path = "src/3d/main.rs"
 [[bin]]
 name = "boids"
 path = "src/boids/main.rs"
+
+[[bin]]
+name = "graphviz"
+path = "src/graphviz/main.rs"

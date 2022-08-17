@@ -163,7 +163,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -182,7 +182,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -202,7 +202,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -217,7 +217,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -232,7 +232,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -254,7 +254,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -269,7 +269,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -289,7 +289,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -304,7 +304,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -324,7 +324,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -346,7 +346,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -368,7 +368,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -388,7 +388,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -407,7 +407,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
@@ -427,7 +427,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.generate_graph();
+        bt.get_graphviz();
         let g = bt.graph.clone();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));

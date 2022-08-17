@@ -33,3 +33,13 @@ rotation and translation and timers.
 <p align="center">
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/3d.png" width="700" ">
 </p>
+
+## Show BT in graphviz
+
+Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
+
+`cargo run --bin graphviz`
+
+<p align="center">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/graphviz.png" width="700" ">
+</p>

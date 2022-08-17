@@ -186,6 +186,21 @@ fn main() {
 }
 ```
 
+Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
+
+```rust
+let mut bt = BT::new(under_attack_behavior, blackboard);
+
+// produce a string DiGraph compatible with graphviz
+// paste the contents in graphviz, e.g: https://dreampuf.github.io/GraphvizOnline/#
+let g = bt.get_graphviz();
+println!("{}", g);
+```
+
+<p align="center">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/graphviz.png" width="700" ">
+</p>
+
 ## Similar Crates
 
 Bonsai is inspired by many other crates out there, here's a few worth mentioning:

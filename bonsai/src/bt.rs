@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use petgraph::dot::{Config, Dot};
 use petgraph::{stable_graph::NodeIndex, Graph};
 
 use crate::visualizer::NodeType;
@@ -55,12 +56,11 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
         }
     }
 
-    pub fn generate_graph(&mut self) {
+    pub fn get_graphviz(&mut self) -> String {
         let behavior = self.initial_behavior.to_owned();
-        // let mut queue: VecDeque<Behavior<A>> = VecDeque::new();
-        // queue.push_back(behavior);
-        // self.gen_graph(&mut queue, self.root_id);
         self.dfs_recursive(behavior, self.root_id);
+        let digraph = Dot::with_config(&self.graph, &[Config::EdgeNoLabel]);
+        format!("{:?}", digraph)
     }
 
     /// Retrieve a mutable reference to the blackboard for
