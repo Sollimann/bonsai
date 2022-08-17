@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables)]
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 use petgraph::{stable_graph::NodeIndex, Graph};
@@ -57,9 +57,10 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
 
     pub fn generate_graph(&mut self) {
         let behavior = self.initial_behavior.to_owned();
-        let mut queue: VecDeque<Behavior<A>> = VecDeque::new();
-        queue.push_back(behavior);
-        self.gen_graph(&mut queue, self.root_id);
+        // let mut queue: VecDeque<Behavior<A>> = VecDeque::new();
+        // queue.push_back(behavior);
+        // self.gen_graph(&mut queue, self.root_id);
+        self.dfs_recursive(behavior, self.root_id);
     }
 
     /// Retrieve a mutable reference to the blackboard for

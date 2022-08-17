@@ -91,8 +91,8 @@ impl<A: Clone> State<A> {
                 State::WhileState(Box::new(State::new(*ev)), rep, 0, Box::new(state))
             }
             Behavior::WhenAll(all) => State::WhenAllState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
-            Behavior::WhenAny(all) => State::WhenAnyState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
-            Behavior::After(seq) => State::AfterState(0, seq.into_iter().map(State::new).collect()),
+            Behavior::WhenAny(any) => State::WhenAnyState(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
+            Behavior::After(after_all) => State::AfterState(0, after_all.into_iter().map(State::new).collect()),
         }
     }
 
