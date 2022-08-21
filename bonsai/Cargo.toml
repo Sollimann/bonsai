@@ -22,6 +22,7 @@ path = "src/lib.rs"
 petgraph = "0.6.2"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
+imnodes = { git = "https://github.com/Sollimann/imnodes.rs", branch = "main" }
 
 [[test]]
 name = "tests"
