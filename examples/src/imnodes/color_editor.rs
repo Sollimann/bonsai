@@ -163,7 +163,7 @@ fn update(graph: &mut Graph, curr_node_idx: usize, input_pin: Option<InputPinId>
             }
         }
         NodeType::Sine(_) => {
-            curr_node.value = if let Some(input) = predecessors.get(0) {
+            curr_node.value = if let Some(input) = predecessors.first() {
                 (nodes[*input].value * std::f32::consts::PI).sin()
             } else {
                 0.0
