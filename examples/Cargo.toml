@@ -4,8 +4,12 @@ description = "Behavior tree examples"
 edition = "2021"
 name = "examples"
 repository = "https://github.com/sollimann/bonsai.git"
-rust-version = "1.56.0"
+rust-version = "1.60.0"
 version = "0.1.0"
+
+[features]
+# export all low level functions
+include_low_level_bindings = []
 
 [dependencies]
 bonsai-bt = { path = "../bonsai" }
@@ -16,6 +20,15 @@ nalgebra = { version = "0.30", features = ["rand"] }
 rand = "0.8"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
+# imnodes
+futures = "0.3.19"
+imgui = "0.8.2"
+# imgui-wgpu = "0.20.0"
+imgui-winit-support = { version = "0.8.2", features = ["winit-26"] }
+imnodes = { git = "https://github.com/Sollimann/imnodes.rs", branch = "main" }
+# wgpu = "0.13.1"
+# wgpu-hal = "0.13.2"
+winit = "0.26.1"
 
 [[bin]]
 name = "3d"
@@ -28,3 +41,7 @@ path = "src/boids/main.rs"
 [[bin]]
 name = "graphviz"
 path = "src/graphviz/main.rs"
+
+[[bin]]
+name = "imnodes"
+path = "src/imnodes/main.rs"
