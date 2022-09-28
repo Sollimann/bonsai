@@ -34,6 +34,12 @@ rotation and translation and timers.
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/3d.png" width="700" ">
 </p>
 
+## asybc drone
+
+Carry out long-running jobs for a drone using async/await in background threads.
+
+`cargo run --bin async_drone`
+
 ## Show BT in graphviz
 
 Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
