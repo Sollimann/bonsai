@@ -6,6 +6,8 @@ use bonsai_bt::{
 use futures::FutureExt;
 use jobs::{collision_avoidance_task, landing_task, takeoff_task};
 use std::sync::mpsc::{channel, Receiver};
+
+use crate::jobs::{fly_to_point_task, Point};
 mod jobs;
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -17,9 +19,9 @@ pub enum DroneAction {
     /// Land the drone
     Land,
     // /// Check battery
-    // CheckBattery,
+    CheckBattery,
     // /// Fly to point
-    // FlyToPoint(f32, f32, f32),
+    FlyToPoint(f32, f32, f32),
 }
 
 #[derive(Debug)]
@@ -28,7 +30,7 @@ pub struct DroneState {
     pub takeoff: Option<Receiver<Status>>,
     pub land: Option<Receiver<Status>>,
     // pub check_battery: Option<Receiver<Status>>,
-    // pub fly_to_point: Option<Receiver<Status>>,
+    pub fly_to_point: Option<Receiver<Status>>,
 }
 
 async fn drone_tick(
@@ -139,15 +141,50 @@ async fn drone_tick(
                     (status, args.dt)
                 }
             },
-            // DroneAction::CheckBattery => todo!(),
-            // DroneAction::FlyToPoint(_, _, _) => todo!(),
+            DroneAction::CheckBattery => {
+                (Success, args.dt)
+            },
+            DroneAction::FlyToPoint(x, y, z) => {
+                let flying_state = &drone_state.fly_to_point;
+                if let Some(flying_status) = flying_state {
+                    match flying_status.recv() {
+                        Ok(status) => {
+                            match status {
+                                Success => {
+                                    drone_state.fly_to_point = None;
+                                    (Status::Success, args.dt)
+                                },
+                                Failure => {
+                                    drone_state.fly_to_point = None;
+                                    (Status::Failure, args.dt)
+                                },
+                                Status::Running => RUNNING,
+                            }
+                        },
+                        Err(_) => {
+                            drone_state.fly_to_point = None;
+                            (Status::Failure, args.dt)
+                        },
+                    }
+                } else {
+                    println!("flying task initialized");
+                    let (tx, rx) = channel();
+                    let (remote_job, handler) = fly_to_point_task(Point::new(x, y, z), tx).remote_handle();
+                    handler.forget();
+                    tokio::spawn(remote_job);
+                    drone_state.fly_to_point = Some(rx);
+                    let receiver = drone_state.fly_to_point.as_ref().unwrap();
+                    let status = receiver.recv().unwrap();
+                    (status, args.dt)
+                }
+            },
         }
     );
 }
 
 #[tokio::main]
 async fn main() {
-    use bonsai_bt::{Action, Wait, While};
+    use bonsai_bt::{Action, Select, Sequence, Wait, While};
     use std::collections::HashMap;
     use std::thread::sleep;
     use std::time::Duration;
@@ -155,17 +192,28 @@ async fn main() {
     let avoid_others = Action(DroneAction::AvoidOthers);
     let takeoff = Action(DroneAction::TakeOff);
     let land = Action(DroneAction::Land);
+    let is_battery_level_ok = Action(DroneAction::CheckBattery);
+
+    let fly_if_healthy = Sequence(vec![
+        is_battery_level_ok,
+        Action(DroneAction::FlyToPoint(10.0, 10.0, 10.0)),
+    ]);
+
+    // if battery is low, then land
+    let fly_to_dock = Action(DroneAction::FlyToPoint(0.0, 0.0, 0.0));
+    let mission_with_fallback = Select(vec![fly_if_healthy, fly_to_dock]);
 
     let behavior = While(
         Box::new(avoid_others),
-        // takeoff, wait, land again
-        vec![takeoff, Wait(0.2), land],
+        // takeoff, do mission, land again
+        vec![takeoff, mission_with_fallback, land],
     );
 
     let blackboard: HashMap<String, serde_json::Value> = HashMap::new();
-    let bt_serialized = serde_json::to_string_pretty(&behavior).unwrap();
-    println!("creating bt: \n {} \n", bt_serialized);
     let mut bt = BT::new(behavior, blackboard);
+    let g = bt.get_graphviz();
+    println!("{}", g);
+
     let mut timer = Timer::init_time();
 
     // initialize drone
@@ -173,6 +221,7 @@ async fn main() {
         avoid_others: None,
         takeoff: None,
         land: None,
+        fly_to_point: None,
     };
 
     loop {
