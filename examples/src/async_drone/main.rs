@@ -184,7 +184,7 @@ async fn drone_tick(
 
 #[tokio::main]
 async fn main() {
-    use bonsai_bt::{Action, Select, Sequence, Wait, While};
+    use bonsai_bt::{Action, Select, Sequence, While};
     use std::collections::HashMap;
     use std::thread::sleep;
     use std::time::Duration;
