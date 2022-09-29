@@ -86,6 +86,7 @@ pub async fn fly_to_point_task(point: Point, tx: Sender<Status>) {
     let _on_drop = PrintOnDrop("flying task dropped");
 
     println!("flying task started");
+    println!("flying to point {point:?}");
 
     let timeout = Duration::from_millis(500);
     let mut duration = 0;
