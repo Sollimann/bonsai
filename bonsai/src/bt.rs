@@ -8,8 +8,11 @@ use crate::visualizer::NodeType;
 use crate::{Behavior, State};
 
 /// A "blackboard" is a simple key/value storage shared by all the nodes of the Tree.
-/// It is esseintially a database in which the behavior tree can store information
-/// whilst traversing the tree
+///
+/// It is essentially a database in which the behavior tree can store information
+/// whilst traversing the tree. Certain action nodes depend on state that might be
+/// dynamically created by other nodes in the tree. State is written to and read from
+/// a blackboard, a messaging capability that allows nodes to share state in the behavior tree.
 ///
 /// An "entry" of the Blackboard is a key/value pair.
 #[derive(Clone, Debug)]

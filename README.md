@@ -58,6 +58,12 @@ For example, if you have a state `A` and a state `B`:
 
 See the `Behavior` enum for more information.
 
+### Calling long-running tasks in behavior tree
+
+To make sure that the behavior tree is always responsive, it is important that the actions that are created executes instantly so that they do not block the tree traversal. If you have long-running tasks/functions that can take seconds or minutes to execute - either `async` or `sync` - then we can dispatch those jobs into background threads, and get status of the task through a channel.
+
+see *async drone* example in the `/examples` folder for more details.
+
 ## Example of use
 
 This is a enemy NPC (non-player-character) behavior mock-up which decides if the AI should shoot while running for nearby cover, rush in to attack the player up close or stand its ground while firing at the player.

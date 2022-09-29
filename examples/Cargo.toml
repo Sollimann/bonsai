@@ -9,6 +9,14 @@ version = "0.1.0"
 
 [dependencies]
 bonsai-bt = { path = "../bonsai" }
+futures = "0.3.24"
+tokio = { version = "1.21.1", features = [
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "time",
+    "signal",
+] }
 ggez = "0.7.0"
 glam = "0.20.2"
 kiss3d = "0.34.0"
@@ -16,6 +24,10 @@ nalgebra = { version = "0.30", features = ["rand"] }
 rand = "0.8"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
+
+[[bin]]
+name = "async_drone"
+path = "src/async_drone/main.rs"
 
 [[bin]]
 name = "3d"
