@@ -29,7 +29,6 @@ rand = "0.8"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
 # imnodes
-futures = "0.3.19"
 glium = { version = "0.30.2", default-features = true }
 imgui = { version = "0.8.2", features = ["tables-api"] }
 imgui-glium-renderer = "0.8.2"
