@@ -13,6 +13,14 @@ include_low_level_bindings = []
 
 [dependencies]
 bonsai-bt = { path = "../bonsai" }
+futures = "0.3.24"
+tokio = { version = "1.21.1", features = [
+    "rt-multi-thread",
+    "macros",
+    "sync",
+    "time",
+    "signal",
+] }
 ggez = "0.7.0"
 glam = "0.20.2"
 kiss3d = "0.34.0"
@@ -28,6 +36,10 @@ imgui-glium-renderer = "0.8.2"
 imgui-winit-support = "0.8.2"
 imnodes = { git = "https://github.com/Sollimann/imnodes.rs", branch = "main" }
 winit = "0.26.1"
+
+[[bin]]
+name = "async_drone"
+path = "src/async_drone/main.rs"
 
 [[bin]]
 name = "3d"
