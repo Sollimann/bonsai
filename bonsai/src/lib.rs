@@ -126,6 +126,7 @@ pub use bt::BT;
 pub use event::{Event, Timer, UpdateArgs, UpdateEvent};
 pub use state::{ActionArgs, State, RUNNING};
 pub use status::Status::{self, Failure, Running, Success};
+pub use visualizer::run;
 
 mod behavior;
 mod bt;
@@ -134,4 +135,5 @@ mod graph;
 mod sequence;
 mod state;
 mod status;
+mod visualizer;
 mod when_all;
