@@ -1,4 +1,4 @@
-// #![allow(dead_code, unused_imports)]
+#![allow(dead_code, unused_imports)]
 use imgui::{PopupModal, Slider, Ui};
 use imnodes::{
     editor, AttributeFlag, AttributeId, Context, EditorContext, IdentifierGenerator, InputPinId, LinkId, NodeId,
@@ -13,17 +13,32 @@ use super::types::{
 impl<A: Clone + Debug> Graph<A> {
     /// generate a new graph
     fn new(id_gen: &mut IdentifierGenerator) -> Self {
-        let output = id_gen.next_node();
+        let root_node_id = id_gen.next_node();
+        let wait_input_id = id_gen.next_input_pin();
+        let root_output_id = id_gen.next_output_pin();
 
         Self {
-            nodes: vec![Node {
-                id: output,
-                typ: UiNodeType::<A>::Root(RootNode {
-                    output: id_gen.next_output_pin(),
-                    attribute: id_gen.next_attribute(),
-                }),
+            nodes: vec![
+                Node {
+                    id: id_gen.next_node(),
+                    typ: UiNodeType::<A>::Wait(WaitNode {
+                        input: wait_input_id,
+                        wait: 30.0,
+                    }),
+                },
+                Node {
+                    id: root_node_id,
+                    typ: UiNodeType::<A>::Root(RootNode {
+                        output: root_output_id,
+                        attribute: id_gen.next_attribute(),
+                    }),
+                },
+            ],
+            links: vec![Link {
+                id: id_gen.next_link(),
+                start: root_output_id,
+                end: wait_input_id,
             }],
-            links: vec![],
         }
     }
 }
@@ -54,17 +69,17 @@ where
     state.editor_context.set_style_colors_classic();
 
     ui.text("press \"A\" or right click to add a Node");
-    ui.same_line();
 
     let title_bar_color =
         imnodes::ColorStyle::TitleBar.push_color([11.0 / 255.0, 109.0 / 255.0, 191.0 / 255.0], &state.editor_context);
-    let title_bar_hovered_color = imnodes::ColorStyle::TitleBarHovered
+    let title_bar_hovewait_input_id_color = imnodes::ColorStyle::TitleBarHovered
         .push_color([45.0 / 255.0, 126.0 / 255.0, 194.0 / 255.0], &state.editor_context);
     let title_bar_selected_color = imnodes::ColorStyle::TitleBarSelected
         .push_color([81.0 / 255.0, 148.0 / 255.0, 204.0 / 255.0], &state.editor_context);
 
     let link_color = imnodes::ColorStyle::Link.push_color([0.8, 0.5, 0.1], &state.editor_context);
 
+    // used to position a node
     state.graph.nodes[0]
         .id
         .set_position(
@@ -106,7 +121,7 @@ where
 
     // cleanup in the end
     title_bar_color.pop();
-    title_bar_hovered_color.pop();
+    title_bar_hovewait_input_id_color.pop();
     title_bar_selected_color.pop();
     link_color.pop();
 
