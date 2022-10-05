@@ -10,6 +10,8 @@ use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::fmt::Debug;
 use std::time::Instant;
 
+use super::types;
+
 // the actual imnodes samples are in there
 
 impl<A: Clone + Debug + 'static, K: Debug, V: Debug> BT<A, K, V> {
@@ -41,7 +43,7 @@ impl<A: Clone + Debug + 'static, K: Debug, V: Debug> BT<A, K, V> {
         let mut height = display.gl_window().window().inner_size().height;
         let mut last_frame = Instant::now();
 
-        let mut editor = editor::State::<A>::new(&imnodes_ui);
+        let mut editor = types::State::<A>::new(&imnodes_ui);
 
         event_loop.run(move |event, _, control_flow| match event {
             glutin::event::Event::NewEvents(_) => {
