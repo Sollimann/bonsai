@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use petgraph::dot::{Config, Dot};
 use petgraph::{stable_graph::NodeIndex, Graph};
 
-use crate::visualizer::NodeType;
+use crate::graph::NodeType;
 use crate::{Behavior, State};
 
 /// A "blackboard" is a simple key/value storage shared by all the nodes of the Tree.

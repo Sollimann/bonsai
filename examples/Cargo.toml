@@ -4,8 +4,12 @@ description = "Behavior tree examples"
 edition = "2021"
 name = "examples"
 repository = "https://github.com/sollimann/bonsai.git"
-rust-version = "1.56.0"
+rust-version = "1.60.0"
 version = "0.1.0"
+
+[features]
+# export all low level functions
+include_low_level_bindings = []
 
 [dependencies]
 bonsai-bt = { path = "../bonsai" }
@@ -24,6 +28,13 @@ nalgebra = { version = "0.30", features = ["rand"] }
 rand = "0.8"
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
+# imnodes
+glium = { version = "0.30.2", default-features = true }
+imgui = { version = "0.8.2", features = ["tables-api"] }
+imgui-glium-renderer = "0.8.2"
+imgui-winit-support = "0.8.2"
+imnodes = { git = "https://github.com/Sollimann/imnodes.rs", branch = "main" }
+winit = "0.26.1"
 
 [[bin]]
 name = "async_drone"
@@ -40,3 +51,7 @@ path = "src/boids/main.rs"
 [[bin]]
 name = "graphviz"
 path = "src/graphviz/main.rs"
+
+[[bin]]
+name = "imnodes"
+path = "src/imnodes/main.rs"

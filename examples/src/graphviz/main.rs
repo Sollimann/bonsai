@@ -58,4 +58,7 @@ fn main() {
     // paste the contents in graphviz, e.g: https://dreampuf.github.io/GraphvizOnline/#
     let g = bt.get_graphviz();
     println!("{}", g);
+
+    // run node editor visualizer
+    bt.run_visualizer();
 }

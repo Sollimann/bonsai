@@ -56,3 +56,13 @@ Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [D
 <p align="center">
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/attack_drone.png" width="700">
 </p>
+
+## NodeEditor
+
+*NOTE!* If you're using WSL2 and get the following error `"ìnternal error: entered unreachable code"`, then install the following `sudo apt install libxkbcommon-dev libegl1 libwayland-dev`
+
+To run example:
+
+```sh
+$ cargo run --bin imnodes
+```
