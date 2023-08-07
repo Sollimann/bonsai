@@ -3,6 +3,7 @@ mod boid;
 use boid::{game_tick, Action};
 use bonsai_bt::BT;
 use ggez::{conf, event, graphics, input, timer, Context, ContextBuilder, GameResult};
+use borrowck_sacrifices::splittable_container::Splittable;
 
 //window stuff
 const HEIGHT: f32 = 720.0;
@@ -83,15 +84,12 @@ impl event::EventHandler for GameState {
                 }
 
                 for i in 0..(self.boids).len() {
-                    let boids_vec = self.boids.to_vec();
-                    let mut b = &mut self.boids[i];
-                    game_tick(self.dt.as_secs_f32(), input::mouse::position(ctx), b, boids_vec);
+                    let (b, others) = self.boids.extract_at_index_mut(i);
 
+                    game_tick(self.dt.as_secs_f32(), input::mouse::position(ctx), b, others);
                     //Convert new velocity to postion change
                     b.x += b.dx * tick;
                     b.y += b.dy * tick;
-
-                    self.boids[i] = b.clone();
                 }
             }
         };
@@ -144,13 +142,7 @@ impl event::EventHandler for GameState {
                     0.1,
                     [1.0, 1.0, 1.0, 0.5].into(),
                 )?;
-                let line = &[
-                    glam::vec2(0.0, 0.0),
-                    glam::vec2(50.0, 5.0),
-                    glam::vec2(42.0, 10.0),
-                    glam::vec2(150.0, 100.0),
-                ];
-                mb.polyline(graphics::DrawMode::stroke(2.0), line, [1.0, 1.0, 1.0, 1.0].into())?;
+                
                 let m = mb.build(ctx)?;
                 graphics::draw(ctx, &m, graphics::DrawParam::new())?;
             }

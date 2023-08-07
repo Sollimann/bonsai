@@ -53,7 +53,12 @@ impl Boid {
     }
 }
 
-pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boids: Vec<Boid>) {
+pub fn game_tick<'a>(
+    dt: f32,
+    cursor: mint::Point2<f32>,
+    boid: &'a mut Boid,
+    other_boids: (&'a mut [Boid], &'a mut [Boid]),
+) {
     // proceed to next iteration in event loop
     let e: Event = UpdateArgs { dt: dt.into() }.into();
 
@@ -65,12 +70,13 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
 
     #[rustfmt::skip]
     bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, Action>| {
+        let other_boids_iter = other_boids.0.iter().chain(other_boids.1.iter());    
         match args.action {
             Action::AvoidOthers => {
                 let avoid_factor = 0.5;
                 let mut move_x = 0.0;
                 let mut move_y = 0.0;
-                for other in &other_boids {
+                for other in other_boids_iter {
                     let dist = boid.distance(other);
                     if dist < MIN_DISTANCE && dist > 0.0 {
                         move_x += boid.x - other.x;
@@ -87,7 +93,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                 let mut center_x = 0.0;
                 let mut center_y = 0.0;
                 let mut num_neighbors = 0.0;
-                for other in &other_boids {
+                for other in other_boids_iter {
                     if boid.distance(other) < VISUAL_RANGE {
                         center_x += other.x;
                         center_y += other.y;
@@ -109,7 +115,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
                 let mut avg_dx = 0.0;
                 let mut avg_dy = 0.0;
                 let mut num_neighbors = 0.0;
-                for other in &other_boids {
+                for other in other_boids_iter {
                     if boid.distance(other) < VISUAL_RANGE {
                         avg_dx += other.dx;
                         avg_dy += other.dy;
