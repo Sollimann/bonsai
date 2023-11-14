@@ -40,3 +40,7 @@ path = "src/boids/main.rs"
 [[bin]]
 name = "graphviz"
 path = "src/graphviz/main.rs"
+
+[[bin]]
+name = "simple_npc_ai"
+path = "src/simple_npc_ai/main.rs"

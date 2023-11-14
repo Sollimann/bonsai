@@ -51,6 +51,8 @@ pub enum State<A> {
     SequenceState(Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `While` behavior.
     WhileState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
+    /// Keeps track of a `While` behavior.
+    RepeatSequenceState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `WhenAll` behavior.
     WhenAllState(Vec<Option<State<A>>>),
     /// Keeps track of a `WhenAny` behavior.
@@ -93,6 +95,10 @@ impl<A: Clone> State<A> {
             Behavior::WhenAll(all) => State::WhenAllState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::WhenAny(any) => State::WhenAnyState(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::After(after_all) => State::AfterState(0, after_all.into_iter().map(State::new).collect()),
+            Behavior::RepeatSequence(ev, rep) => {
+                let state = State::new(rep[0].clone());
+                State::RepeatSequenceState(Box::new(State::new(*ev)), rep, 0, Box::new(state))
+            }
         }
     }
 
@@ -285,6 +291,57 @@ impl<A: Clone> State<A> {
                     RUNNING
                 }
             }
+            (_, &mut RepeatSequenceState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
+
+                let cur = cursor;
+                let mut remaining_dt = upd.unwrap_or(0.0);
+                let mut remaining_e;
+                loop {
+
+                    // Only check the condition when the sequence starts.
+                    if *i == 0 {
+                        // If the event terminates, stop.
+                        match ev_cursor.tick(e, f) {
+                            (Running, _) => {}
+                            x => return x,
+                        };
+                    }
+
+
+                    match cur.tick(
+                        match upd {
+                            Some(_) => {
+                                remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                                &remaining_e
+                            }
+                            _ => e,
+                        },
+                        f,
+                    ) {
+                        (Failure, x) => return (Failure, x),
+                        (Running, _) => break,
+                        (Success, new_dt) => {
+                            remaining_dt = match upd {
+                                // Change update event with remaining delta time.
+                                Some(_) => new_dt,
+                                // Other events are 'consumed' and not passed to next.
+                                _ => return RUNNING,
+                            }
+                        }
+                    };
+                    *i += 1;
+                    // If end of repeated events,
+                    // start over from the first one.
+                    if *i >= rep.len() {
+                        *i = 0;
+                    }
+                    // Create a new cursor for next event.
+                    // Use the same pointer to avoid allocation.
+                    **cur = State::new(rep[*i].clone());
+                }
+                RUNNING
+            }
+
             // WaitForeverState, WaitState
             _ => RUNNING,
         }

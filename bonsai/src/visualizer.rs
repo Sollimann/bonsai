@@ -14,6 +14,7 @@ pub(crate) enum NodeType<A> {
     Select,
     If,
     Sequence,
+    RepeatSequence,
     While,
     WhenAll,
     WhenAny,
@@ -77,6 +78,18 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
             }
             Behavior::While(ev, seq) => {
                 let node_id = self.graph.add_node(NodeType::While);
+                self.graph.add_edge(parent_node, node_id, 1);
+
+                // left
+                let left = *ev;
+                self.dfs_recursive(left, node_id);
+
+                // right
+                let right = Sequence(seq);
+                self.dfs_recursive(right, node_id)
+            }
+            Behavior::RepeatSequence(ev, seq) => {
+                let node_id = self.graph.add_node(NodeType::RepeatSequence);
                 self.graph.add_edge(parent_node, node_id, 1);
 
                 // left
