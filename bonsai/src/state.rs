@@ -292,12 +292,10 @@ impl<A: Clone> State<A> {
                 }
             }
             (_, &mut RepeatSequenceState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
-
                 let cur = cursor;
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let mut remaining_e;
                 loop {
-
                     // Only check the condition when the sequence starts.
                     if *i == 0 {
                         // If the event terminates, stop.
@@ -306,7 +304,6 @@ impl<A: Clone> State<A> {
                             x => return x,
                         };
                     }
-
 
                     match cur.tick(
                         match upd {

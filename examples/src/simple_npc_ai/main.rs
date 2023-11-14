@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use bonsai_bt::{Behavior::Action, BT, Event, Failure, Running, Status, Success, UpdateArgs};
 use bonsai_bt::Behavior::RepeatSequence;
+use bonsai_bt::{Behavior::Action, Event, Failure, Running, Status, Success, UpdateArgs, BT};
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
 pub enum EnemyNPC {
@@ -12,7 +12,6 @@ pub enum EnemyNPC {
 }
 
 fn game_tick(bt: &mut BT<EnemyNPC, (), ()>, state: &mut EnemyNPCState) -> Status {
-
     let e: Event = UpdateArgs { dt: 0.0 }.into();
 
     #[rustfmt::skip]
@@ -50,7 +49,7 @@ fn game_tick(bt: &mut BT<EnemyNPC, (), ()>, state: &mut EnemyNPCState) -> Status
 
 struct EnemyNPCState {
     pub action_points: usize,
-    pub max_action_points: usize
+    pub max_action_points: usize,
 }
 impl EnemyNPCState {
     fn consume_action_point(&mut self) {
@@ -64,8 +63,7 @@ impl EnemyNPCState {
         if self.action_points > 0 {
             self.consume_action_point();
             println!("Performing action: {}. Action points: {}", action, self.action_points);
-        }
-        else {
+        } else {
             println!("Cannot perform action: {}. Not enough action points", action);
         }
     }
@@ -77,12 +75,7 @@ fn main() {
 
     let npc_ai = RepeatSequence(
         Box::new(Action(EnemyNPC::HasActionPointsLeft)),
-        vec![
-            Action(EnemyNPC::Run),
-            Action(EnemyNPC::Jump),
-            Action(EnemyNPC::Shoot)
-        ],
-
+        vec![Action(EnemyNPC::Run), Action(EnemyNPC::Jump), Action(EnemyNPC::Shoot)],
     );
     let mut bt = BT::new(npc_ai, blackboard);
 
@@ -94,7 +87,9 @@ fn main() {
     loop {
         match game_tick(&mut bt, &mut npc_state) {
             Success => {}
-            Failure => { break;}
+            Failure => {
+                break;
+            }
             Running => {}
         }
     }
