@@ -47,6 +47,7 @@ A Behavior Tree forms a tree structure where each node represents a process. Whe
 For example, if you have a state `A` and a state `B`:
 
 - Move from state `A` to state `B` if `A` succeeds: `Sequence([A, B])`
+- Move from state `A` to sequence of states `[B]` if `A` is running. If all states in the sequence `[B]` succeed in order, check if `A` is still running and repeat. Stop if `A` succeeds or any of the states fail: `RepeatSequence(A, [B])`
 - Try `A` first and then try `B` if `A` fails: `Select([A, B])`
 - If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
 - If `A` succeeds, return failure (and vice-versa): `Invert(A)`

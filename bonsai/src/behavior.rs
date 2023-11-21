@@ -53,6 +53,11 @@ pub enum Behavior<A> {
     /// Succeeds if the conditional behavior succeeds.
     /// Fails if the conditional behavior fails,
     /// or if any behavior in the sequence fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given behavior sequence is empty.
+    ///
     RepeatSequence(Box<Behavior<A>>, Vec<Behavior<A>>),
     /// Runs all behaviors in parallel until all succeeded.
     ///
