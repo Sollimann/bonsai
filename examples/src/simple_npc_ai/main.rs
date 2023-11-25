@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bonsai_bt::Behavior::RepeatSequence;
-use bonsai_bt::{Behavior::Action, Event, Failure, Running, Status, Success, UpdateArgs, BT, While, Sequence};
+use bonsai_bt::{Behavior::Action, Event, Failure, Running, Status, Success, UpdateArgs, BT};
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
 pub enum EnemyNPC {
@@ -21,38 +21,38 @@ fn game_tick(bt: &mut BT<EnemyNPC, (), ()>, state: &mut EnemyNPCState) -> Status
         match *args.action {
             EnemyNPC::Run => {
                 state.perform_action("run");
-                return (Success, 0.0)
+                (Success, 0.0)
             },
             EnemyNPC::HasActionPointsLeft => {
                 if state.action_points == 0 {
                     println!("NPC does not have actions points left... ");
-                    return (Success, 0.0);
+                    (Success, 0.0)
                 }
                 else {
                     println!("NPC has action points: {}", state.action_points );
-                    return(Running, 0.0)
+                    (Running, 0.0)
                 }
             }
             EnemyNPC::Shoot => {
                 state.perform_action("shoot");
-                return(Success, 0.0)
+                (Success, 0.0)
             }
             EnemyNPC::Rest => {
                 if state.fully_rested() {
                     return (Success, 0.0)
                 }
                 state.rest();
-                return (Running, 0.0)
+                (Running, 0.0)
             }
             EnemyNPC::Die => {
                 state.die();
-                return (Success, 0.0);
+                (Success, 0.0)
             }
             EnemyNPC::IsDead => {
                 if state.is_alive() {
                     return (Running, 0.0);
                 }
-                return (Success, 0.0);
+                (Success, 0.0)
             }
         }
     });
@@ -68,7 +68,7 @@ struct EnemyNPCState {
 }
 impl EnemyNPCState {
     fn consume_action_point(&mut self) {
-        self.action_points = self.action_points.checked_sub(1).unwrap_or(0);
+        self.action_points = self.action_points.saturating_sub(1);
     }
     fn rest(&mut self) {
         self.action_points = (self.action_points + 1).min(self.max_action_points);
@@ -81,8 +81,7 @@ impl EnemyNPCState {
     fn is_alive(&self) -> bool {
         if self.alive {
             println!("NPC is alive...");
-        }
-        else {
+        } else {
             println!("NPC is dead...");
         }
         self.alive
@@ -161,12 +160,10 @@ fn main() {
         alive: true,
     };
 
-
     loop {
         println!("reached main loop...");
         match game_tick(&mut bt, &mut npc_state) {
-            Success |
-            Failure => {
+            Success | Failure => {
                 break;
             }
             Running => {}
