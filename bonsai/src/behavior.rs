@@ -44,6 +44,21 @@ pub enum Behavior<A> {
     /// Fails if the conditional behavior fails,
     /// or if any behavior in the loop body fails.
     While(Box<Behavior<A>>, Vec<Behavior<A>>),
+
+    /// Runs a sequence on repeat as long as a conditional behavior
+    /// that precedes the sequence is running.
+    /// Conditional behavior is **only** checked before the sequence runs and
+    /// not during the sequence.
+    ///
+    /// Succeeds if the conditional behavior succeeds.
+    /// Fails if the conditional behavior fails,
+    /// or if any behavior in the sequence fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given behavior sequence is empty.
+    ///
+    RepeatSequence(Box<Behavior<A>>, Vec<Behavior<A>>),
     /// Runs all behaviors in parallel until all succeeded.
     ///
     /// Succeeds if all behaviors succeed.

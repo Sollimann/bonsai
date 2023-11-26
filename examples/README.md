@@ -2,6 +2,15 @@
 
 `cargo build --package examples`
 
+## Game NPC AI console application
+
+Demonstrates use of a behavior tree in minimal and easy to follow console application setting where a fictional
+non-playing game character
+updates its AI state. Run and inspect this example if you want to get a quick introduction on how behavior tree can be
+used in an application.
+
+`cargo run --bin simple_npc_ai`
+
 ## Boids flocking
 
 Constructing boids flocking behavior by copying the same behavior tree across many agents.

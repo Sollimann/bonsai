@@ -84,7 +84,7 @@ impl event::EventHandler for GameState {
 
                 for i in 0..(self.boids).len() {
                     let boids_vec = self.boids.to_vec();
-                    let mut b = &mut self.boids[i];
+                    let b = &mut self.boids[i];
                     game_tick(self.dt.as_secs_f32(), input::mouse::position(ctx), b, boids_vec);
 
                     //Convert new velocity to postion change
@@ -113,8 +113,8 @@ impl event::EventHandler for GameState {
                 });
 
                 let text_pos = glam::vec2(
-                    (WIDTH - menu_text.width(ctx) as f32) / 2.0,
-                    (HEIGHT - menu_text.height(ctx) as f32) / 2.0,
+                    (WIDTH - menu_text.width(ctx)) / 2.0,
+                    (HEIGHT - menu_text.height(ctx)) / 2.0,
                 );
 
                 graphics::draw(ctx, &menu_text, graphics::DrawParam::default().dest(text_pos))?;

@@ -1,4 +1,5 @@
-use crate::behavior_tests::TestActions::{Dec, Inc, LessThan};
+use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
+use bonsai_bt::Behavior::RepeatSequence;
 use bonsai_bt::{
     Action,
     Behavior::{After, AlwaysSucceed, If, Invert, Select},
@@ -16,6 +17,8 @@ enum TestActions {
     Dec,
     ///, Check if less than
     LessThan(i32),
+    /// Check if less than and return [Running]. If more or equal return [Success].
+    LessThanRunningSuccess(i32),
 }
 
 // A test state machine that can increment and decrement.
@@ -41,6 +44,16 @@ fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> (i32, bonsai_b
                 (Failure, args.dt)
             }
         }
+        TestActions::LessThanRunningSuccess(v) => {
+            println!("inside LessThanRunningSuccess with acc: {}", acc);
+            if acc < v {
+                println!("success {}<{}", acc, v);
+                (Running, args.dt)
+            } else {
+                println!("failure {}>={}", acc, v);
+                (Success, args.dt)
+            }
+        }
     });
     println!("status: {:?} dt: {}", s, t);
 
@@ -59,7 +72,7 @@ fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut State<TestActions>) {
             *acc -= 1;
             (Success, args.dt)
         }
-        LessThan(_) => todo!(),
+        TestActions::LessThanRunningSuccess(_) | LessThan(_) => todo!(),
     });
 }
 
@@ -409,4 +422,74 @@ fn test_after_all_succeed_out_of_order() {
     assert_eq!(a, 1);
     assert_eq!(s, Failure);
     assert_eq!(dt, 0.0);
+}
+
+#[test]
+fn test_repeat_sequence() {
+    {
+        let a: i32 = 0;
+        let after = RepeatSequence(Box::new(Action(LessThanRunningSuccess(5))), vec![Action(Inc)]);
+
+        let mut state = State::new(after);
+
+        let (a, s, dt) = tick(a, 0.0, &mut state);
+
+        assert_eq!(a, 5);
+        assert_eq!(s, Success);
+        assert_eq!(dt, 0.0);
+
+        let (a, s, dt) = tick(a, 0.0, &mut state);
+
+        assert_eq!(a, 5);
+        assert_eq!(s, Success);
+        assert_eq!(dt, 0.0);
+    }
+}
+
+#[test]
+fn test_repeat_sequence_fail() {
+    {
+        let a: i32 = 4;
+        let after = RepeatSequence(
+            Box::new(Action(LessThanRunningSuccess(5))),
+            vec![Action(Dec), Action(LessThan(0))],
+        );
+        let mut state = State::new(after);
+        let (a, s, dt) = tick(a, 0.0, &mut state);
+
+        assert_eq!(a, 3);
+        assert_eq!(s, Failure);
+        assert_eq!(dt, 0.0);
+    }
+}
+
+#[test]
+fn test_repeat_sequence_timed() {
+    let a: i32 = 0;
+    let time_step = 0.1;
+    let steps = 5;
+    let after = RepeatSequence(
+        Box::new(Action(LessThanRunningSuccess(steps))),
+        vec![Wait(time_step), Action(Inc)],
+    );
+    let mut state = State::new(after);
+
+    // increment 3 times
+    let (a, s, dt) = tick(a, time_step * 3.0, &mut state);
+    assert_eq!(dt, 0.0);
+    assert_eq!(a, 3);
+    assert_eq!(s, Running);
+
+    let (a, s, dt) = tick(a, 100.0, &mut state);
+    assert_eq!(dt, 100.0);
+    assert_eq!(a, 5);
+    assert_eq!(s, Success);
+}
+
+#[test]
+#[should_panic]
+fn test_repeat_sequence_empty() {
+    let after = RepeatSequence(Box::new(Action(LessThanRunningSuccess(0))), vec![]);
+    // panics because no behaviors...
+    let _state = State::new(after);
 }
