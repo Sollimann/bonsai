@@ -76,7 +76,7 @@ fn game_tick(
     w: &mut Window,
     mut events: EventManager,
     timer: &mut Timer,
-    bt: &mut BT<Animation, String, serde_json::Value>,
+    bt: &mut BT<Animation, HashMap<String, serde_json::Value>>,
 ) {
     // timer since bt was first invoked
     let t = timer.duration_since_start();

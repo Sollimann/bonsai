@@ -37,7 +37,7 @@
 //!
 //! ```rust
 //! use bonsai_bt::{Event, Success, UpdateArgs, BT};
-//!
+//! use std::collections::HashMap;
 //! // Some test actions.
 //! #[derive(Clone, Debug, Copy)]
 //! pub enum Actions {
@@ -48,8 +48,8 @@
 //! }
 //!
 //! // A test state machine that can increment and decrement.
-//! fn tick(mut acc: i32, dt: f64, bt: &mut BT<Actions, String, i32>) -> i32 {
-//!     let e: Event = UpdateArgs { dt }.into();
+//! fn tick(mut acc: i32, dt: f64, bt: &mut BT<Actions, HashMap<String, i32>>) -> i32 {
+//! let e: Event = UpdateArgs { dt }.into();
 //!
 //!     let (_status, _dt) = bt.state.tick(&e, &mut |args| match *args.action {
 //!         Actions::Inc => {

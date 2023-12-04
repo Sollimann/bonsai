@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 use petgraph::dot::{Config, Dot};
@@ -16,10 +15,10 @@ use crate::{Behavior, State};
 ///
 /// An "entry" of the Blackboard is a key/value pair.
 #[derive(Clone, Debug)]
-pub struct BlackBoard<K, V>(HashMap<K, V>);
+pub struct BlackBoard<K>(K);
 
-impl<K, V> BlackBoard<K, V> {
-    pub fn get_db(&mut self) -> &mut HashMap<K, V> {
+impl<K> BlackBoard<K> {
+    pub fn get_db(&mut self) -> &mut K {
         &mut self.0
     }
 }
@@ -27,21 +26,21 @@ impl<K, V> BlackBoard<K, V> {
 /// The BT struct contains a compiled (immutable) version
 /// of the behavior and a blackboard key/value storage
 #[derive(Clone, Debug)]
-pub struct BT<A, K, V> {
+pub struct BT<A, K> {
     /// constructed behavior tree
     pub state: State<A>,
     /// keep the initial state
     initial_behavior: Behavior<A>,
     /// blackboard
-    bb: BlackBoard<K, V>,
+    bb: BlackBoard<K>,
     /// Tree formulated as PetGraph
     pub(crate) graph: Graph<NodeType<A>, u32, petgraph::Directed>,
     /// root node
     root_id: NodeIndex,
 }
 
-impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
-    pub fn new(behavior: Behavior<A>, blackboard: HashMap<K, V>) -> Self {
+impl<A: Clone + Debug, K: Debug> BT<A, K> {
+    pub fn new(behavior: Behavior<A>, blackboard: K) -> Self {
         let backup_behavior = behavior.clone();
         let bt = State::new(behavior);
 
@@ -96,13 +95,13 @@ impl<A: Clone + Debug, K: Debug, V: Debug> BT<A, K, V> {
 
     /// Retrieve a mutable reference to the blackboard for
     /// this Behavior Tree
-    pub fn get_blackboard(&mut self) -> &mut BlackBoard<K, V> {
+    pub fn get_blackboard(&mut self) -> &mut BlackBoard<K> {
         &mut self.bb
     }
 
     /// Retrieve a mutable reference to the internal state
     /// of the Behavior Tree
-    pub fn get_state(bt: &mut BT<A, K, V>) -> &mut State<A> {
+    pub fn get_state(bt: &mut BT<A, K>) -> &mut State<A> {
         &mut bt.state
     }
 
