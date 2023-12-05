@@ -38,8 +38,10 @@ fn game_tick(bt: &mut BT<EnemyNPC, BlackBoardData>, state: &mut EnemyNPCState) -
 
                 // for the sake of example we get access blackboard and update
                 // one of its values here:
-                //let mut blackboard = args.get_blackboard().get_db();
-                //blackboard.times_shot += 1;
+
+                // second mutable borrow:
+                // let mut blackboard = bt.get_blackboard().get_db();
+                // blackboard.times_shot += 1;
 
                 (Success, 0.0)
             }
