@@ -15,7 +15,7 @@ fn game_tick(bt: &mut BT<EnemyNPC, BlackBoardData>, state: &mut EnemyNPCState) -
     let e: Event = UpdateArgs { dt: 0.0 }.into();
 
     #[rustfmt::skip]
-    let status = bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, EnemyNPC>| {
+    let status = bt.tick(&e, &mut |args: bonsai_bt::ActionArgs<Event, EnemyNPC>, blackboard| {
         match *args.action {
             EnemyNPC::Run => {
                 state.perform_action("run");
@@ -40,8 +40,8 @@ fn game_tick(bt: &mut BT<EnemyNPC, BlackBoardData>, state: &mut EnemyNPCState) -
                 // one of its values here:
 
                 // second mutable borrow:
-                // let mut blackboard = bt.get_blackboard().get_db();
-                // blackboard.times_shot += 1;
+                let mut blackboard = blackboard.get_db();
+                blackboard.times_shot += 1;
 
                 (Success, 0.0)
             }

@@ -50,7 +50,7 @@ async fn drone_tick(
 
     // update state of behaviosuccessr tree
     #[rustfmt::skip]
-    bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, DroneAction>|
+    bt.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, DroneAction>, blackboard|
         match *args.action {
             DroneAction::AvoidOthers => {
                 let avoid_state = &drone_state.avoid_others;

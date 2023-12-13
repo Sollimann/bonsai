@@ -4,7 +4,7 @@ use petgraph::dot::{Config, Dot};
 use petgraph::{stable_graph::NodeIndex, Graph};
 
 use crate::visualizer::NodeType;
-use crate::{Behavior, State};
+use crate::{ActionArgs, Behavior, State, Status, UpdateEvent};
 
 /// A "blackboard" is a simple key/value storage shared by all the nodes of the Tree.
 ///
@@ -55,6 +55,15 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
             graph,
             root_id,
         }
+    }
+
+    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
+    where
+        E: UpdateEvent,
+        F: FnMut(ActionArgs<E, A>, &mut BlackBoard<K>) -> (Status, f64),
+        A: Debug,
+    {
+        self.state.tick(e, &mut self.bb, f)
     }
 
     /// Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).

@@ -2,11 +2,12 @@ use crate::status::Status::*;
 use crate::{event::UpdateEvent, ActionArgs, Behavior, State, Status, RUNNING};
 use std::fmt::Debug;
 
+// type TickClosure<E,A, B> = dyn FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64);
 // `Sequence` and `Select` share same algorithm.
 //
 // `Sequence` fails if any fails and succeeds when all succeeds.
 // `Select` succeeds if any succeeds and fails when all fails.
-pub fn sequence<A, E, F>(
+pub fn sequence<A, E, F, B>(
     select: bool,
     upd: Option<f64>,
     seq: &[Behavior<A>],
@@ -14,11 +15,12 @@ pub fn sequence<A, E, F>(
     cursor: &mut Box<State<A>>,
     e: &E,
     f: &mut F,
+    blackboard: &mut B,
 ) -> (Status, f64)
 where
     A: Clone,
     E: UpdateEvent,
-    F: FnMut(ActionArgs<E, A>) -> (Status, f64),
+    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
     A: Debug,
 {
     let (status, inv_status) = if select {
@@ -39,6 +41,7 @@ where
                 }
                 _ => e,
             },
+            blackboard,
             f,
         ) {
             (Running, _) => {

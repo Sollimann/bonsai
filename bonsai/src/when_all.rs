@@ -7,17 +7,18 @@ use std::fmt::Debug;
 // `WhenAll` fails if any fails and succeeds when all succeeds.
 // `WhenAny` succeeds if any succeeds and fails when all fails.
 #[rustfmt::skip]
-pub fn when_all<A, E, F>(
+pub fn when_all<A, E, F, B>(
     any: bool,
     upd: Option<f64>,
     cursors: &mut [Option<State<A>>],
     e: &E,
     f: &mut F,
+    blackboard: &mut B,
 ) -> (Status, f64)
 where
     A: Clone,
     E: UpdateEvent,
-    F: FnMut(ActionArgs<E, A>) -> (Status, f64),
+    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
     A: Debug,
 {
     let (status, inv_status) = if any {
@@ -35,7 +36,7 @@ where
         match *cur {
             None => {}
             Some(ref mut cur) => {
-                match cur.tick(e, f) {
+                match cur.tick(e, blackboard, f) {
                     (Running, _) => {
                         continue;
                     }
