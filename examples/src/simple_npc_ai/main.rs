@@ -36,7 +36,7 @@ fn game_tick(bt: &mut BT<EnemyNPC, BlackBoardData>, state: &mut EnemyNPCState) -
             EnemyNPC::Shoot => {
                 state.perform_action("shoot");
 
-                // for the sake of example we get access blackboard and update
+                // for the sake of example we get access to blackboard and update
                 // one of its values here:
                 blackboard.get_db().times_shot += 1;
 
