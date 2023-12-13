@@ -1,11 +1,12 @@
-use crate::bt::BlackBoard;
+use std::fmt::Debug;
+
 use crate::event::UpdateEvent;
-use crate::sequence::sequence;
+use crate::sequence::{sequence, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::when_all::when_all;
 use crate::{Behavior, Status};
-use std::fmt::Debug;
+
 // use serde_derive::{Deserialize, Serialize};
 
 /// The action is still running, and thus the action consumes
@@ -208,12 +209,30 @@ impl<A: Clone> State<A> {
             (_, &mut SelectState(ref seq, ref mut i, ref mut cursor)) => {
                 // println!("In SelectState: {:?}", seq);
                 let select = true;
-                sequence(select, upd, seq, i, cursor, e, f, blackboard)
+                sequence(SequenceArgs {
+                    select,
+                    upd,
+                    seq,
+                    i,
+                    cursor,
+                    e,
+                    f,
+                    blackboard,
+                })
             }
             (_, &mut SequenceState(ref seq, ref mut i, ref mut cursor)) => {
                 // println!("In SequenceState: {:?}", seq);
                 let select = false;
-                sequence(select, upd, seq, i, cursor, e, f, blackboard)
+                sequence(SequenceArgs {
+                    select,
+                    upd,
+                    seq,
+                    i,
+                    cursor,
+                    e,
+                    f,
+                    blackboard,
+                })
             }
             (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
                 // println!("In WhileState: {:?}", ev_cursor);

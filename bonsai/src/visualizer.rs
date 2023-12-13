@@ -128,12 +128,13 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bt::BlackBoard;
     use crate::visualizer::tests::TestActions::{Dec, Inc};
     use crate::Behavior::{
         Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
     };
     use crate::Status::{self, Success};
-    use crate::{Event, UpdateArgs};
+    use crate::{ActionArgs, Event, UpdateArgs};
     use petgraph::dot::{Config, Dot};
     use petgraph::Graph;
     use std::collections::HashMap;
@@ -150,7 +151,7 @@ mod tests {
     // A test state machine that can increment and decrement.
     fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, HashMap<String, i32>>) -> (i32, Status, f64) {
         let e: Event = UpdateArgs { dt }.into();
-        let (s, t) = bt.state.tick(&e, &mut |args| match args.action {
+        let (s, t) = bt.tick(&e, &mut |args, blackboard| match args.action {
             TestActions::Inc => {
                 acc += 1;
                 (Success, args.dt)

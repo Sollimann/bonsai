@@ -18,7 +18,7 @@ enum TestActions {
 fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, HashMap<String, i32>>) -> (i32, bonsai_bt::Status, f64) {
     let e: Event = UpdateArgs { dt }.into();
     println!("acc {}", acc);
-    let (s, t) = bt.state.tick(&e, &mut |args| match *args.action {
+    let (s, t) = bt.tick(&e, &mut |args, _| match *args.action {
         Inc => {
             acc += 1;
             (Success, args.dt)
