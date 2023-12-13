@@ -57,6 +57,7 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
         }
     }
 
+    #[inline]
     pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
