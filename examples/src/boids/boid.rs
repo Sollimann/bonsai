@@ -1,5 +1,6 @@
 use bonsai_bt::{Event, Status::Success, UpdateArgs, BT, RUNNING};
 use ggez::mint;
+use std::collections::HashMap;
 
 //algorithm stuff
 const SPEED_LIMIT: f32 = 400.0; // Pixels per second
@@ -27,11 +28,11 @@ pub struct Boid {
     pub dx: f32,
     pub dy: f32,
     pub color: [f32; 4],
-    pub bt: BT<Action, String, f32>,
+    pub bt: BT<Action, HashMap<String, f32>>,
 }
 
 impl Boid {
-    pub fn new(win_width: f32, win_height: f32, bt: BT<Action, String, f32>) -> Boid {
+    pub fn new(win_width: f32, win_height: f32, bt: BT<Action, HashMap<String, f32>>) -> Boid {
         Boid {
             x: (rand::random::<f32>() * win_width / 2.0 + win_width / 4.0),
             y: (rand::random::<f32>() * win_height / 2.0 + win_height / 4.0),
@@ -64,7 +65,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
     let win_height: f32 = *db.get("win_height").unwrap();
 
     #[rustfmt::skip]
-    bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, Action>| {
+    bt.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, Action>, _| {
         match args.action {
             Action::AvoidOthers => {
                 let avoid_factor = 0.5;

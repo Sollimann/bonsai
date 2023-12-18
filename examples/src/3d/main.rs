@@ -76,7 +76,7 @@ fn game_tick(
     w: &mut Window,
     mut events: EventManager,
     timer: &mut Timer,
-    bt: &mut BT<Animation, String, serde_json::Value>,
+    bt: &mut BT<Animation, HashMap<String, serde_json::Value>>,
 ) {
     // timer since bt was first invoked
     let t = timer.duration_since_start();
@@ -94,7 +94,7 @@ fn game_tick(
     let mut last_pos = mouse_pos(0.0, 0.0);
     // update state of behaviosuccessr tree
     #[rustfmt::skip]
-    bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, Animation>|
+    bt.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, Animation>, _|
         match *args.action {
             Animation::LongerThan(dur) => {
                 if t > dur {

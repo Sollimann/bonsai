@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use bonsai_bt::Behavior::RepeatSequence;
 use bonsai_bt::{Behavior::Action, Event, Failure, Running, Status, Success, UpdateArgs, BT};
 
@@ -13,11 +11,11 @@ pub enum EnemyNPC {
     IsDead,
 }
 
-fn game_tick(bt: &mut BT<EnemyNPC, (), ()>, state: &mut EnemyNPCState) -> Status {
+fn game_tick(bt: &mut BT<EnemyNPC, BlackBoardData>, state: &mut EnemyNPCState) -> Status {
     let e: Event = UpdateArgs { dt: 0.0 }.into();
 
     #[rustfmt::skip]
-    let status = bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, EnemyNPC>| {
+    let status = bt.tick(&e, &mut |args: bonsai_bt::ActionArgs<Event, EnemyNPC>, blackboard| {
         match *args.action {
             EnemyNPC::Run => {
                 state.perform_action("run");
@@ -35,6 +33,11 @@ fn game_tick(bt: &mut BT<EnemyNPC, (), ()>, state: &mut EnemyNPCState) -> Status
             }
             EnemyNPC::Shoot => {
                 state.perform_action("shoot");
+
+                // for the sake of example we get access to blackboard and update
+                // one of its values here:
+                blackboard.get_db().times_shot += 1;
+
                 (Success, 0.0)
             }
             EnemyNPC::Rest => {
@@ -135,9 +138,6 @@ impl EnemyNPCState {
 ///
 ///
 fn main() {
-    // define blackboard (even though we're not using it)
-    let blackboard: HashMap<(), ()> = HashMap::new();
-
     let run_and_shoot_ai = RepeatSequence(
         Box::new(Action(EnemyNPC::HasActionPointsLeft)),
         vec![Action(EnemyNPC::Run), Action(EnemyNPC::Shoot)],
@@ -146,6 +146,9 @@ fn main() {
         Box::new(Action(EnemyNPC::IsDead)),
         vec![run_and_shoot_ai.clone(), Action(EnemyNPC::Rest), Action(EnemyNPC::Die)],
     );
+
+    let blackboard = BlackBoardData { times_shot: 0 };
+
     let mut bt = BT::new(top_ai, blackboard);
 
     let print_graph = false;
@@ -169,4 +172,13 @@ fn main() {
             Running => {}
         }
     }
+    println!(
+        "NPC shot {} times during the simulation.",
+        bt.get_blackboard().get_db().times_shot
+    );
+}
+
+#[derive(Debug)]
+struct BlackBoardData {
+    times_shot: usize,
 }

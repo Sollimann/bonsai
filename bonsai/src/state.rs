@@ -1,10 +1,12 @@
+use std::fmt::Debug;
+
 use crate::event::UpdateEvent;
-use crate::sequence::sequence;
+use crate::sequence::{sequence, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::when_all::when_all;
 use crate::{Behavior, Status};
-use std::fmt::Debug;
+
 // use serde_derive::{Deserialize, Serialize};
 
 /// The action is still running, and thus the action consumes
@@ -118,10 +120,10 @@ impl<A: Clone> State<A> {
     /// function returns the result of the tree traversal, and how long
     /// it actually took to complete the traversal and propagate the
     /// results back up to the root node
-    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
+    pub fn tick<E, F, B>(&mut self, e: &E, blackboard: &mut B, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
-        F: FnMut(ActionArgs<E, A>) -> (Status, f64),
+        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
         A: Debug,
     {
         let upd = e.update(|args| Some(args.dt)).unwrap_or(None);
@@ -130,15 +132,18 @@ impl<A: Clone> State<A> {
         match (upd, self) {
             (_, &mut ActionState(ref action)) => {
                 // println!("In ActionState: {:?}", action);
-                f(ActionArgs {
-                    event: e,
-                    dt: upd.unwrap_or(0.0),
-                    action,
-                })
+                f(
+                    ActionArgs {
+                        event: e,
+                        dt: upd.unwrap_or(0.0),
+                        action,
+                    },
+                    blackboard,
+                )
             }
             (_, &mut InvertState(ref mut cur)) => {
                 // println!("In InvertState: {:?}", cur);
-                match cur.tick(e, f) {
+                match cur.tick(e, blackboard, f) {
                     (Running, dt) => (Running, dt),
                     (Failure, dt) => (Success, dt),
                     (Success, dt) => (Failure, dt),
@@ -146,7 +151,7 @@ impl<A: Clone> State<A> {
             }
             (_, &mut AlwaysSucceedState(ref mut cur)) => {
                 // println!("In AlwaysSucceedState: {:?}", cur);
-                match cur.tick(e, f) {
+                match cur.tick(e, blackboard, f) {
                     (Running, dt) => (Running, dt),
                     (_, dt) => (Success, dt),
                 }
@@ -170,7 +175,7 @@ impl<A: Clone> State<A> {
                 // remaining delta time after condition.
                 loop {
                     *status = match *status {
-                        Running => match state.tick(e, f) {
+                        Running => match state.tick(e, blackboard, f) {
                             (Running, dt) => {
                                 return (Running, dt);
                             }
@@ -194,6 +199,7 @@ impl<A: Clone> State<A> {
                                     }
                                     _ => e,
                                 },
+                                blackboard,
                                 f,
                             );
                         }
@@ -203,17 +209,35 @@ impl<A: Clone> State<A> {
             (_, &mut SelectState(ref seq, ref mut i, ref mut cursor)) => {
                 // println!("In SelectState: {:?}", seq);
                 let select = true;
-                sequence(select, upd, seq, i, cursor, e, f)
+                sequence(SequenceArgs {
+                    select,
+                    upd,
+                    seq,
+                    i,
+                    cursor,
+                    e,
+                    f,
+                    blackboard,
+                })
             }
             (_, &mut SequenceState(ref seq, ref mut i, ref mut cursor)) => {
                 // println!("In SequenceState: {:?}", seq);
                 let select = false;
-                sequence(select, upd, seq, i, cursor, e, f)
+                sequence(SequenceArgs {
+                    select,
+                    upd,
+                    seq,
+                    i,
+                    cursor,
+                    e,
+                    f,
+                    blackboard,
+                })
             }
             (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
                 // println!("In WhileState: {:?}", ev_cursor);
                 // If the event terminates, do not execute the loop.
-                match ev_cursor.tick(e, f) {
+                match ev_cursor.tick(e, blackboard, f) {
                     (Running, _) => {}
                     x => return x,
                 };
@@ -229,6 +253,7 @@ impl<A: Clone> State<A> {
                             }
                             _ => e,
                         },
+                        blackboard,
                         f,
                     ) {
                         (Failure, x) => return (Failure, x),
@@ -257,19 +282,19 @@ impl<A: Clone> State<A> {
             (_, &mut WhenAllState(ref mut cursors)) => {
                 // println!("In WhenAllState: {:?}", cursors);
                 let any = false;
-                when_all(any, upd, cursors, e, f)
+                when_all(any, upd, cursors, e, f, blackboard)
             }
             (_, &mut WhenAnyState(ref mut cursors)) => {
                 // println!("In WhenAnyState: {:?}", cursors);
                 let any = true;
-                when_all(any, upd, cursors, e, f)
+                when_all(any, upd, cursors, e, f, blackboard)
             }
             (_, &mut AfterState(ref mut i, ref mut cursors)) => {
                 // println!("In AfterState: {}", i);
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
                 for (j, item) in cursors.iter_mut().enumerate().skip(*i) {
-                    match item.tick(e, f) {
+                    match item.tick(e, blackboard, f) {
                         (Running, _) => {
                             min_dt = 0.0;
                         }
@@ -303,7 +328,7 @@ impl<A: Clone> State<A> {
                     // Only check the condition when the sequence starts.
                     if *i == 0 {
                         // If the event terminates, stop.
-                        match ev_cursor.tick(e, f) {
+                        match ev_cursor.tick(e, blackboard, f) {
                             (Running, _) => {}
                             x => return x,
                         };
@@ -317,6 +342,7 @@ impl<A: Clone> State<A> {
                             }
                             _ => e,
                         },
+                        blackboard,
                         f,
                     ) {
                         (Failure, x) => return (Failure, x),

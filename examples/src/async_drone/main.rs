@@ -5,6 +5,7 @@ use bonsai_bt::{
 };
 use futures::FutureExt;
 use jobs::{collision_avoidance_task, landing_task, takeoff_task};
+use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver};
 
 use crate::jobs::{fly_to_point_task, Point};
@@ -36,7 +37,7 @@ pub struct DroneState {
 async fn drone_tick(
     timer: &mut Timer,
     drone_state: &mut DroneState,
-    bt: &mut BT<DroneAction, String, serde_json::Value>,
+    bt: &mut BT<DroneAction, HashMap<String, serde_json::Value>>,
 ) {
     // timer since bt was first invoked
     let _t = timer.duration_since_start();
@@ -49,7 +50,7 @@ async fn drone_tick(
 
     // update state of behaviosuccessr tree
     #[rustfmt::skip]
-    bt.state.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, DroneAction>|
+    bt.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, DroneAction>, _|
         match *args.action {
             DroneAction::AvoidOthers => {
                 let avoid_state = &drone_state.avoid_others;

@@ -3,6 +3,7 @@ mod boid;
 use boid::{game_tick, Action};
 use bonsai_bt::BT;
 use ggez::{conf, event, graphics, input, timer, Context, ContextBuilder, GameResult};
+use std::collections::HashMap;
 
 //window stuff
 const HEIGHT: f32 = 720.0;
@@ -13,7 +14,7 @@ const NUM_BOIDS: usize = 100; // n
 const BOID_SIZE: f32 = 32.0; // Pixels
 
 // generate boids
-fn get_boids(bt: &BT<Action, String, f32>) -> Vec<boid::Boid> {
+fn get_boids(bt: &BT<Action, HashMap<String, f32>>) -> Vec<boid::Boid> {
     std::iter::repeat_with(|| boid::Boid::new(WIDTH, HEIGHT, bt.clone()))
         .take(NUM_BOIDS)
         .collect()
@@ -30,11 +31,11 @@ struct GameState {
     dt: std::time::Duration,
     boids: Vec<boid::Boid>,
     points: Vec<glam::Vec2>,
-    bt: BT<Action, String, f32>,
+    bt: BT<Action, HashMap<String, f32>>,
 }
 
 impl GameState {
-    pub fn new(_ctx: &mut Context, bt: BT<Action, String, f32>) -> GameState {
+    pub fn new(_ctx: &mut Context, bt: BT<Action, HashMap<String, f32>>) -> GameState {
         GameState {
             state: PlayState::Setup,
             dt: std::time::Duration::new(0, 0),
@@ -162,7 +163,6 @@ impl event::EventHandler for GameState {
 
 fn main() {
     use bonsai_bt::{Action, WhenAll, While};
-    use std::collections::HashMap;
     let (mut ctx, events_loop) = ContextBuilder::new("Boids", "Daniel Eisen")
         .window_mode(conf::WindowMode::default().dimensions(WIDTH, HEIGHT))
         .window_setup(conf::WindowSetup::default().samples(conf::NumSamples::Eight))

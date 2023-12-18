@@ -1,26 +1,39 @@
 use crate::status::Status::*;
 use crate::{event::UpdateEvent, ActionArgs, Behavior, State, Status, RUNNING};
 use std::fmt::Debug;
+pub(crate) struct SequenceArgs<'a, A, E, F, B> {
+    pub select: bool,
+    pub upd: Option<f64>,
+    pub seq: &'a [Behavior<A>],
+    pub i: &'a mut usize,
+    pub cursor: &'a mut Box<State<A>>,
+    pub e: &'a E,
+    pub blackboard: &'a mut B,
+    pub f: &'a mut F,
+}
 
 // `Sequence` and `Select` share same algorithm.
 //
 // `Sequence` fails if any fails and succeeds when all succeeds.
 // `Select` succeeds if any succeeds and fails when all fails.
-pub fn sequence<A, E, F>(
-    select: bool,
-    upd: Option<f64>,
-    seq: &[Behavior<A>],
-    i: &mut usize,
-    cursor: &mut Box<State<A>>,
-    e: &E,
-    f: &mut F,
-) -> (Status, f64)
+pub fn sequence<A, E, F, B>(args: SequenceArgs<A, E, F, B>) -> (Status, f64)
 where
     A: Clone,
     E: UpdateEvent,
-    F: FnMut(ActionArgs<E, A>) -> (Status, f64),
+    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
     A: Debug,
 {
+    let SequenceArgs {
+        select,
+        upd,
+        seq,
+        i,
+        cursor,
+        e,
+        blackboard,
+        f,
+    } = args;
+
     let (status, inv_status) = if select {
         // `Select`
         (Status::Failure, Status::Success)
@@ -39,6 +52,7 @@ where
                 }
                 _ => e,
             },
+            blackboard,
             f,
         ) {
             (Running, _) => {
