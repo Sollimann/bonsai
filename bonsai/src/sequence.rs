@@ -1,7 +1,8 @@
 use crate::status::Status::*;
 use crate::{event::UpdateEvent, ActionArgs, Behavior, State, Status, RUNNING};
 use std::fmt::Debug;
-pub(crate) struct SequenceArgs<'a, A, E, F, B> {
+
+pub struct SequenceArgs<'a, A, E, F, B> {
     pub select: bool,
     pub upd: Option<f64>,
     pub seq: &'a [Behavior<A>],
