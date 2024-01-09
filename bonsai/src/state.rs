@@ -99,7 +99,7 @@ impl<A: Clone> State<A> {
             Behavior::After(after_all) => State::AfterState(0, after_all.into_iter().map(State::new).collect()),
             Behavior::RepeatSequence(ev, rep) => {
                 let state = State::new(
-                    rep.get(0)
+                    rep.first()
                         .expect("RepeatSequence's sequence of behaviors to run cannot be empty!")
                         .clone(),
                 );
