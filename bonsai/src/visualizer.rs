@@ -22,103 +22,107 @@ pub(crate) enum NodeType<A> {
 }
 
 impl<A: Clone + Debug, K: Debug> BT<A, K> {
-    pub(crate) fn dfs_recursive(&mut self, behavior: Behavior<A>, parent_node: NodeIndex) {
+    pub(crate) fn dfs_recursive(
+        graph: &mut Graph<NodeType<A>, u32, petgraph::Directed>,
+        behavior: Behavior<A>,
+        parent_node: NodeIndex,
+    ) {
         match behavior {
             Behavior::Action(action) => {
-                let node_id = self.graph.add_node(NodeType::Action(action));
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::Action(action));
+                graph.add_edge(parent_node, node_id, 1);
             }
             Behavior::Invert(ev) => {
-                let node_id = self.graph.add_node(NodeType::Invert);
-                self.graph.add_edge(parent_node, node_id, 1);
-                self.dfs_recursive(*ev, node_id)
+                let node_id = graph.add_node(NodeType::Invert);
+                graph.add_edge(parent_node, node_id, 1);
+                Self::dfs_recursive(graph, *ev, node_id)
             }
             Behavior::AlwaysSucceed(ev) => {
-                let node_id = self.graph.add_node(NodeType::AlwaysSucceed);
-                self.graph.add_edge(parent_node, node_id, 1);
-                self.dfs_recursive(*ev, node_id)
+                let node_id = graph.add_node(NodeType::AlwaysSucceed);
+                graph.add_edge(parent_node, node_id, 1);
+                Self::dfs_recursive(graph, *ev, node_id)
             }
             Behavior::Wait(dt) => {
-                let node_id = self.graph.add_node(NodeType::Wait(dt));
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::Wait(dt));
+                graph.add_edge(parent_node, node_id, 1);
             }
             Behavior::WaitForever => {
-                let node_id = self.graph.add_node(NodeType::WaitForever);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::WaitForever);
+                graph.add_edge(parent_node, node_id, 1);
             }
             Behavior::If(condition, success, failure) => {
-                let node_id = self.graph.add_node(NodeType::If);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::If);
+                graph.add_edge(parent_node, node_id, 1);
 
                 // left (if condition)
                 let left = *condition;
-                self.dfs_recursive(left, node_id);
+                Self::dfs_recursive(graph, left, node_id);
 
                 // middle (execute if condition is True)
                 let middle = *success;
-                self.dfs_recursive(middle, node_id);
+                Self::dfs_recursive(graph, middle, node_id);
 
                 // right (execute if condition is False)
                 let right = *failure;
-                self.dfs_recursive(right, node_id);
+                Self::dfs_recursive(graph, right, node_id);
             }
             Behavior::Select(sel) => {
-                let node_id = self.graph.add_node(NodeType::Select);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::Select);
+                graph.add_edge(parent_node, node_id, 1);
                 for b in sel {
-                    self.dfs_recursive(b, node_id)
+                    Self::dfs_recursive(graph, b, node_id)
                 }
             }
             Behavior::Sequence(seq) => {
-                let node_id = self.graph.add_node(NodeType::Sequence);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::Sequence);
+                graph.add_edge(parent_node, node_id, 1);
                 for b in seq {
-                    self.dfs_recursive(b, node_id)
+                    Self::dfs_recursive(graph, b, node_id)
                 }
             }
             Behavior::While(ev, seq) => {
-                let node_id = self.graph.add_node(NodeType::While);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::While);
+                graph.add_edge(parent_node, node_id, 1);
 
                 // left
                 let left = *ev;
-                self.dfs_recursive(left, node_id);
+                Self::dfs_recursive(graph, left, node_id);
 
                 // right
                 let right = Sequence(seq);
-                self.dfs_recursive(right, node_id)
+                Self::dfs_recursive(graph, right, node_id)
             }
             Behavior::RepeatSequence(ev, seq) => {
-                let node_id = self.graph.add_node(NodeType::RepeatSequence);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::RepeatSequence);
+                graph.add_edge(parent_node, node_id, 1);
 
                 // left
                 let left = *ev;
-                self.dfs_recursive(left, node_id);
+                Self::dfs_recursive(graph, left, node_id);
 
                 // right
                 let right = Sequence(seq);
-                self.dfs_recursive(right, node_id)
+                Self::dfs_recursive(graph, right, node_id)
             }
             Behavior::WhenAll(all) => {
-                let node_id = self.graph.add_node(NodeType::WhenAll);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::WhenAll);
+                graph.add_edge(parent_node, node_id, 1);
                 for b in all {
-                    self.dfs_recursive(b, node_id)
+                    Self::dfs_recursive(graph, b, node_id)
                 }
             }
             Behavior::WhenAny(any) => {
-                let node_id = self.graph.add_node(NodeType::WhenAny);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::WhenAny);
+                graph.add_edge(parent_node, node_id, 1);
                 for b in any {
-                    self.dfs_recursive(b, node_id)
+                    Self::dfs_recursive(graph, b, node_id)
                 }
             }
             Behavior::After(after_all) => {
-                let node_id = self.graph.add_node(NodeType::After);
-                self.graph.add_edge(parent_node, node_id, 1);
+                let node_id = graph.add_node(NodeType::After);
+                graph.add_edge(parent_node, node_id, 1);
                 for b in after_all {
-                    self.dfs_recursive(b, node_id)
+                    Self::dfs_recursive(graph, b, node_id)
                 }
             }
         }
@@ -177,8 +181,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -196,8 +199,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -216,8 +218,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -231,8 +232,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -246,8 +246,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -268,8 +267,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -283,8 +281,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -303,8 +300,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -318,8 +314,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -338,8 +333,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -360,8 +354,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
         assert_eq!(g.edge_count(), 16);
@@ -382,8 +375,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -402,8 +394,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
         assert_eq!(g.edge_count(), 7);
@@ -421,8 +412,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 
@@ -441,8 +431,7 @@ mod tests {
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
-        bt.get_graphviz();
-        let g = bt.graph.clone();
+        let (_, g) = bt.get_graphviz_with_graph_instance();
 
         println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
 

@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use petgraph::dot::{Config, Dot};
-use petgraph::{stable_graph::NodeIndex, Graph};
+use petgraph::Graph;
 
 use crate::visualizer::NodeType;
 use crate::{ActionArgs, Behavior, State, Status, UpdateEvent};
@@ -33,10 +33,6 @@ pub struct BT<A, K> {
     initial_behavior: Behavior<A>,
     /// blackboard
     bb: BlackBoard<K>,
-    /// Tree formulated as PetGraph
-    pub(crate) graph: Graph<NodeType<A>, u32, petgraph::Directed>,
-    /// root node
-    root_id: NodeIndex,
 }
 
 impl<A: Clone + Debug, K: Debug> BT<A, K> {
@@ -44,16 +40,10 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
         let backup_behavior = behavior.clone();
         let bt = State::new(behavior);
 
-        // generate graph
-        let mut graph = Graph::<NodeType<A>, u32, petgraph::Directed>::new();
-        let root_id = graph.add_node(NodeType::Root);
-
         Self {
             state: bt,
             initial_behavior: backup_behavior,
             bb: BlackBoard(blackboard),
-            graph,
-            root_id,
         }
     }
 
@@ -109,10 +99,19 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
     /// println!("{}", g);
     /// ```
     pub fn get_graphviz(&mut self) -> String {
+        self.get_graphviz_with_graph_instance().0
+    }
+
+    pub(crate) fn get_graphviz_with_graph_instance(&mut self) -> (String, Graph<NodeType<A>, u32>) {
         let behavior = self.initial_behavior.to_owned();
-        self.dfs_recursive(behavior, self.root_id);
-        let digraph = Dot::with_config(&self.graph, &[Config::EdgeNoLabel]);
-        format!("{:?}", digraph)
+
+        let mut graph = Graph::<NodeType<A>, u32, petgraph::Directed>::new();
+        let root_id = graph.add_node(NodeType::Root);
+
+        Self::dfs_recursive(&mut graph, behavior, root_id);
+
+        let digraph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
+        (format!("{:?}", digraph), graph)
     }
 
     /// Retrieve a mutable reference to the blackboard for
