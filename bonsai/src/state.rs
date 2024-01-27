@@ -332,8 +332,21 @@ impl<A: Clone> State<A> {
             ) => {
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 loop {
+                    // If end of repeated events,
+                    // start over from the first one
+                    // and allow run condition check to happen:
+                    if *cur_seq_idx >= all_sequence_behaviors.len() {
+                        *can_check_condition = true;
+                        *cur_seq_idx = 0;
+                    }
+
+                    // check run condition only if allowed at this time:
                     if *can_check_condition {
                         *can_check_condition = false;
+                        debug_assert!(
+                            *cur_seq_idx == 0,
+                            "sequence index should always be 0 when condition is checked!"
+                        );
                         match condition_behavior.tick(e, blackboard, f) {
                             // if running, move to sequence:
                             (Running, _) => {}
@@ -350,12 +363,6 @@ impl<A: Clone> State<A> {
                         }
                         _ => e,
                     };
-                    // If end of repeated events,
-                    // start over from the first one.
-                    if *cur_seq_idx >= all_sequence_behaviors.len() {
-                        *can_check_condition = true;
-                        *cur_seq_idx = 0;
-                    }
 
                     // Create a new cursor for next event.
                     // Use the same pointer to avoid allocation.
@@ -367,6 +374,7 @@ impl<A: Clone> State<A> {
                             break;
                         }
                         (Success, new_dt) => {
+                            // only success moves the sequence cursor forward:
                             *cur_seq_idx += 1;
                             remaining_dt = new_dt;
                         }
