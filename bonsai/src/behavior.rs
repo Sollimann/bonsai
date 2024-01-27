@@ -65,18 +65,20 @@ pub enum Behavior<A> {
     ///use bonsai_bt::Event;
     ///
     ///#[derive(Clone, Debug)]
+    ///
     ///enum Ex { A, B, C }
+    ///
     ///let rs = RepeatSequence(
     ///    Box::new(Action(Ex::A)),
     ///    vec![Action(Ex::B), Action(Ex::C)],
     ///);
-    ///let mut bt = BT::new(rs, ());
+    ///
     ///let (SUCCESS, FAILURE, RUNNING ) = ((Success, 0.0), (Failure, 0.0), (Running, 0.0));
     ///
-    ///let e: Event = UpdateArgs { dt: 0.0 }.into();
+    ///let mut bt = BT::new(rs, ());
     ///
     ///let mut i = 0;
-    ///let status = bt.tick(&e, &mut |args: ActionArgs<Event, Ex>, blackboard| {
+    ///let status = bt.tick(&Event::zero_dt_args(), &mut |args: ActionArgs<Event, Ex>, _| {
     ///    match args.action {
     ///        Ex::A => {
     ///            i += 1;
