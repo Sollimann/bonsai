@@ -54,7 +54,7 @@ pub enum State<A> {
     /// Keeps track of a `While` behavior.
     WhileState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `RepeatSequence` behavior.
-    RepeatSequenceState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
+    RepeatSequenceState(Box<State<A>>, Vec<Behavior<A>>, usize, bool, Box<State<A>>),
     /// Keeps track of a `WhenAll` behavior.
     WhenAllState(Vec<Option<State<A>>>),
     /// Keeps track of a `WhenAny` behavior.
@@ -103,7 +103,7 @@ impl<A: Clone> State<A> {
                         .expect("RepeatSequence's sequence of behaviors to run cannot be empty!")
                         .clone(),
                 );
-                State::RepeatSequenceState(Box::new(State::new(*ev)), rep, 0, Box::new(state))
+                State::RepeatSequenceState(Box::new(State::new(*ev)), rep, 0, true, Box::new(state))
             }
         }
     }
@@ -320,51 +320,57 @@ impl<A: Clone> State<A> {
                     RUNNING
                 }
             }
-            (_, &mut RepeatSequenceState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
-                let cur = cursor;
+            (
+                _,
+                &mut RepeatSequenceState(
+                    ref mut condition_behavior,
+                    ref all_sequence_behaviors,
+                    ref mut cur_seq_idx,
+                    ref mut can_check_condition,
+                    ref mut current_sequence_behavior,
+                ),
+            ) => {
                 let mut remaining_dt = upd.unwrap_or(0.0);
-                let mut remaining_e;
                 loop {
-                    // Only check the condition when the sequence starts.
-                    if *i == 0 {
-                        // If the event terminates, stop.
-                        match ev_cursor.tick(e, blackboard, f) {
+                    if *can_check_condition {
+                        *can_check_condition = false;
+                        match condition_behavior.tick(e, blackboard, f) {
+                            // if running, move to sequence:
                             (Running, _) => {}
+                            // if success or failure, get out:
                             x => return x,
                         };
                     }
 
-                    match cur.tick(
-                        match upd {
-                            Some(_) => {
-                                remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
-                                &remaining_e
-                            }
-                            _ => e,
-                        },
-                        blackboard,
-                        f,
-                    ) {
-                        (Failure, x) => return (Failure, x),
-                        (Running, _) => break,
-                        (Success, new_dt) => {
-                            remaining_dt = match upd {
-                                // Change update event with remaining delta time.
-                                Some(_) => new_dt,
-                                // Other events are 'consumed' and not passed to next.
-                                _ => return RUNNING,
-                            }
+                    let remaining_e;
+                    let ev = match upd {
+                        Some(_) => {
+                            remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                            &remaining_e
                         }
+                        _ => e,
                     };
-                    *i += 1;
                     // If end of repeated events,
                     // start over from the first one.
-                    if *i >= rep.len() {
-                        *i = 0;
+                    if *cur_seq_idx >= all_sequence_behaviors.len() {
+                        *can_check_condition = true;
+                        *cur_seq_idx = 0;
                     }
+
                     // Create a new cursor for next event.
                     // Use the same pointer to avoid allocation.
-                    **cur = State::new(rep[*i].clone());
+                    **current_sequence_behavior = State::new(all_sequence_behaviors[*cur_seq_idx].clone());
+
+                    match current_sequence_behavior.tick(ev, blackboard, f) {
+                        (Failure, x) => return (Failure, x),
+                        (Running, _) => {
+                            break;
+                        }
+                        (Success, new_dt) => {
+                            *cur_seq_idx += 1;
+                            remaining_dt = new_dt;
+                        }
+                    };
                 }
                 RUNNING
             }

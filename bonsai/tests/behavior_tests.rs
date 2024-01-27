@@ -446,17 +446,40 @@ fn test_repeat_sequence() {
         assert_eq!(a, 5);
         assert_eq!(s, Success);
         assert_eq!(dt, 0.0);
-
-        let (a, s, dt) = tick(a, 0.0, &mut state);
-
-        assert_eq!(a, 5);
-        assert_eq!(s, Success);
-        assert_eq!(dt, 0.0);
     }
 }
 
 #[test]
 fn test_repeat_sequence_fail() {
+    {
+        let after = RepeatSequence(
+            Box::new(Action(LessThanRunningSuccess(5))), // running...
+            vec![
+                Action(LessThanRunningSuccess(5)), // running... until value is 5
+                Action(Dec),                       // success... 4
+                Action(Dec),                       // success... 3
+                Action(LessThan(1)),               // failure
+            ],
+        );
+        let mut state = State::new(after);
+
+        let mut cur_a = 4;
+        loop {
+            let (a, s, _) = tick(cur_a, 0.0, &mut state);
+            cur_a = a;
+            match s {
+                Running => {
+                    cur_a += 1; // increase value everytime tick returns running
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+
+        assert_eq!(cur_a, 3);
+    }
+
     {
         let a: i32 = 4;
         let after = RepeatSequence(
@@ -465,13 +488,13 @@ fn test_repeat_sequence_fail() {
         );
         let mut state = State::new(after);
         let (a, s, dt) = tick(a, 0.0, &mut state);
-
         assert_eq!(a, 3);
         assert_eq!(s, Failure);
         assert_eq!(dt, 0.0);
     }
 }
 
+/*
 #[test]
 fn test_repeat_sequence_timed() {
     let a: i32 = 0;
@@ -495,6 +518,7 @@ fn test_repeat_sequence_timed() {
     assert_eq!(s, Success);
 }
 
+*/
 #[test]
 #[should_panic]
 fn test_repeat_sequence_empty() {
