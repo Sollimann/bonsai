@@ -450,36 +450,40 @@ fn test_repeat_sequence() {
 }
 
 #[test]
-fn test_repeat_sequence_fail() {
-    {
-        let after = RepeatSequence(
-            Box::new(Action(LessThanRunningSuccess(5))), // running...
-            vec![
-                Action(LessThanRunningSuccess(5)), // running... until value is 5
-                Action(Dec),                       // success... 4
-                Action(Dec),                       // success... 3
-                Action(LessThan(1)),               // failure
-            ],
-        );
-        let mut state = State::new(after);
+/// Ensure that if the condition behavior and the first sequence behavior both return
+/// running initially, then the condition behavior cannot run more than once until the whole
+/// sequence has succeeded.
+fn test_repeat_sequence_double_running() {
+    let after = RepeatSequence(
+        Box::new(Action(LessThanRunningSuccess(5))), // running...
+        vec![
+            Action(LessThanRunningSuccess(5)), // running... until current value is 5
+            Action(Dec),                       // success... 4
+            Action(Dec),                       // success... 3
+            Action(LessThan(0)),               // failure
+        ],
+    );
+    let mut state = State::new(after);
 
-        let mut cur_a = 4;
-        loop {
-            let (a, s, _) = tick(cur_a, 0.0, &mut state);
-            cur_a = a;
-            match s {
-                Running => {
-                    cur_a += 1; // increase value everytime tick returns running
-                }
-                _ => {
-                    break;
-                }
+    let mut current_value = 0;
+    loop {
+        let (a, s, _) = tick(current_value, 0.0, &mut state);
+        current_value = a;
+        match s {
+            Running => {
+                current_value += 1; // increase curent value everytime sequence behavior returns running
+            }
+            _ => {
+                break;
             }
         }
-
-        assert_eq!(cur_a, 3);
     }
 
+    assert_eq!(current_value, 3);
+}
+
+#[test]
+fn test_repeat_sequence_fail() {
     {
         let a: i32 = 4;
         let after = RepeatSequence(
@@ -494,7 +498,6 @@ fn test_repeat_sequence_fail() {
     }
 }
 
-/*
 #[test]
 fn test_repeat_sequence_timed() {
     let a: i32 = 0;
@@ -518,7 +521,6 @@ fn test_repeat_sequence_timed() {
     assert_eq!(s, Success);
 }
 
-*/
 #[test]
 #[should_panic]
 fn test_repeat_sequence_empty() {
