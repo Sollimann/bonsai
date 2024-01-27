@@ -528,3 +528,43 @@ fn test_repeat_sequence_empty() {
     // panics because no behaviors...
     let _state = State::new(after);
 }
+
+//
+//#[test]
+//fn blb() {
+//    use bonsai_bt::{BT, Running, Failure, Success};
+//    #[derive(Clone, Debug)]
+//    enum Ex { A, B, C }
+//    let rs = RepeatSequence(
+//        Box::new(Action(Ex::A)),
+//        vec![Action(Ex::B), Action(Ex::C)],
+//    );
+//    let mut bt = BT::new(rs, ());
+//    let (SUCCESS, FAILURE, RUNNING ) = ((Success, 0.0), (Failure, 0.0), (Running, 0.0));
+//
+//    let e: Event = UpdateArgs { dt: 0.0 }.into();
+//
+//    let mut i = 0;
+//    let status = bt.tick(&e, &mut |args: ActionArgs<Event, Ex>, blackboard| {
+//        match args.action {
+//            Ex::A => {
+//                i += 1;
+//                if i == 4 {
+//                    SUCCESS
+//                }
+//                else {
+//                    RUNNING
+//                }
+//            }
+//            Ex::B => {
+//                i += 1;
+//                SUCCESS
+//            }
+//            Ex::C => {
+//                i += 1;
+//                SUCCESS
+//            }
+//        }
+//    });
+//    assert!(i == 4);
+//}
