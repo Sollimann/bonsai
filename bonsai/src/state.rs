@@ -332,14 +332,6 @@ impl<A: Clone> State<A> {
             ) => {
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 loop {
-                    // If end of repeated events,
-                    // start over from the first one
-                    // and allow run condition check to happen:
-                    if *cur_seq_idx >= all_sequence_behaviors.len() {
-                        *can_check_condition = true;
-                        *cur_seq_idx = 0;
-                    }
-
                     // check run condition only if allowed at this time:
                     if *can_check_condition {
                         *can_check_condition = false;
@@ -364,10 +356,6 @@ impl<A: Clone> State<A> {
                         _ => e,
                     };
 
-                    // Create a new cursor for next event.
-                    // Use the same pointer to avoid allocation.
-                    **current_sequence_behavior = State::new(all_sequence_behaviors[*cur_seq_idx].clone());
-
                     match current_sequence_behavior.tick(ev, blackboard, f) {
                         (Failure, x) => return (Failure, x),
                         (Running, _) => {
@@ -376,6 +364,18 @@ impl<A: Clone> State<A> {
                         (Success, new_dt) => {
                             // only success moves the sequence cursor forward:
                             *cur_seq_idx += 1;
+
+                            // If end of repeated events,
+                            // start over from the first one
+                            // and allow run condition check to happen:
+                            if *cur_seq_idx >= all_sequence_behaviors.len() {
+                                *can_check_condition = true;
+                                *cur_seq_idx = 0;
+                            }
+
+                            // Create a new cursor for next event.
+                            // Use the same pointer to avoid allocation.
+                            **current_sequence_behavior = State::new(all_sequence_behaviors[*cur_seq_idx].clone());
                             remaining_dt = new_dt;
                         }
                     };

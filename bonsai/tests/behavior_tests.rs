@@ -483,6 +483,106 @@ fn test_repeat_sequence_double_running() {
 }
 
 #[test]
+fn test_repeat_sequence2() {
+    let after = RepeatSequence(
+        Box::new(Action(LessThanRunningSuccess(5))), // running...
+        vec![
+            Action(LessThanRunningSuccess(10)), // running... until current value is 5
+            Action(Dec),                        // success... 4
+            Action(Dec),                        // success... 3
+            Action(Dec),                        // success... 2
+        ],
+    );
+    let mut state = State::new(after);
+
+    let mut current_value = 0;
+    let mut current_status;
+    loop {
+        let (a, s, _) = tick(current_value, 0.0, &mut state);
+        current_value = a;
+        current_status = s;
+        match s {
+            Running => {
+                current_value += 1; // increase current value everytime sequence behavior returns running
+            }
+            _ => {
+                break;
+            }
+        }
+    }
+    assert_eq!(current_status, bonsai_bt::Status::Success);
+    assert_eq!(current_value, 7);
+}
+
+#[test]
+fn test_repeat_sequence3() {
+    let after = RepeatSequence(
+        Box::new(Action(LessThanRunningSuccess(2))),
+        vec![
+            Action(LessThanRunningSuccess(10)),
+            Action(Dec),
+            Action(Dec),
+            Action(Dec),
+            Action(LessThanRunningSuccess(10)),
+            Action(Dec),
+        ],
+    );
+    let mut state = State::new(after);
+
+    let mut current_value = 0;
+    let mut current_status;
+    loop {
+        let (a, s, _) = tick(current_value, 0.0, &mut state);
+        current_value = a;
+        current_status = s;
+        match s {
+            Running => {
+                current_value += 1;
+            }
+            _ => {
+                break;
+            }
+        }
+    }
+    assert_eq!(current_status, Success);
+    assert_eq!(current_value, 9);
+}
+
+#[test]
+fn test_repeat_sequence_nested() {
+    let dec2 = Sequence(vec![Action(Dec), Action(Dec)]);
+    let inc1 = Sequence(vec![Action(Inc)]);
+
+    let nested = RepeatSequence(Box::new(Action(LessThanRunningSuccess(5))), vec![Action(Inc), inc1]);
+
+    let after = RepeatSequence(
+        Box::new(Action(LessThanRunningSuccess(1))),
+        vec![
+            nested,      // inc to 6
+            Action(Dec), // -1
+            dec2,        // -2
+        ], // == 3
+    );
+    let mut state = State::new(after);
+
+    let mut current_value = 0;
+    let mut current_status;
+    loop {
+        let (a, s, _) = tick(current_value, 0.0, &mut state);
+        current_value = a;
+        current_status = s;
+        match s {
+            Running => {}
+            _ => {
+                break;
+            }
+        }
+    }
+    assert_eq!(current_status, bonsai_bt::Status::Success);
+    assert_eq!(current_value, 3);
+}
+
+#[test]
 fn test_repeat_sequence_fail() {
     {
         let a: i32 = 4;
