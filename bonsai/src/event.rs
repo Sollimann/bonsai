@@ -9,6 +9,13 @@ pub struct UpdateArgs {
     pub dt: f64,
 }
 
+impl UpdateArgs {
+    /// Creates [UpdateArgs] with `0.0` delta time.
+    pub fn zero_dt() -> UpdateArgs {
+        Self { dt: 0.0 }
+    }
+}
+
 /// Models loop events.
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, serde::Deserialize, serde::Serialize)]
 pub enum Loop {
@@ -29,6 +36,12 @@ pub enum Event {
     ///
     /// Events that commonly used by event loops.
     Loop(Loop),
+}
+impl Event {
+    /// Creates [Event] from [UpdateArgs] with `0.0` delta time.
+    pub fn zero_dt_args() -> Self {
+        UpdateArgs::zero_dt().into()
+    }
 }
 
 /// When the application state should be updated.
