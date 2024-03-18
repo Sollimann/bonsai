@@ -24,7 +24,7 @@ another) if a higher-priority task requires the same resources.
 3. **Leaf nodes are executable behaviors:** Each leaf will do something, whether it’s a simple check or a complex action, and will output a status (success, failure, or running). In other words, leaf nodes are where you connect a BT to the lower-level code for your specific application.
 4. **Internal nodes control tree traversal:** The internal (non-leaf) nodes of the tree will accept the resulting status of their children and apply their own rules to dictate which node should be expanded next.
 5. **Task Tracking through working memory:** Behavior trees keep track of progress on tasks by maintaining a working memory (often referred to as a *Blackboard* or *Cache*) that holds variables and values relevant to the BT. Certain action nodes depend on state that might be dynamically created by other nodes in the tree. State is written to and read from a blackboard, a messaging capability that allows nodes to share state in the behavior tree.
-6. **Behavior Trees can have parallell semantics:** This library has parallel semantics for AI behavior trees. It means that multiple processes can happen at the same time and the logic can be constructed around how these processes runs or terminate. A property of BT's with parallel semantics is that you can control termination conditions externally, as opposed to most programming languages where termination condition is controlled internally.
+6. **Behavior Trees can have parallel semantics:** This library has parallel semantics for AI behavior trees. It means that multiple processes can happen at the same time and the logic can be constructed around how these processes runs or terminate. A property of BT's with parallel semantics is that you can control termination conditions externally, as opposed to most programming languages where termination condition is controlled internally.
 
 
 ### When to use a Behavior Tree?
@@ -32,7 +32,7 @@ another) if a higher-priority task requires the same resources.
 * Use BT's to manage complexity when system control logic grows.
 * Use BT's if priority ordering of conditions and actions matter.
 * Use BT's when failures can occur and your system would need repeated attempts to complete a task.
-* Use BT's when you need parallell semantics. It means that multiple processes can happen at the same time and the logic can be constructed around how these processes runs or terminate.
+* Use BT's when you need parallel semantics. It means that multiple processes can happen at the same time and the logic can be constructed around how these processes runs or terminate.
 
 #### BT vs FSM:
 
@@ -54,9 +54,9 @@ For example, if you have a state `A` and a state `B`:
 - If `A` succeeds, return failure (and vice-versa): `Invert(A)`
 - Do `B` repeatedly while `A` runs: `While(A, [B])`
 - Do `A`, `B` forever: `While(WaitForever, [A, B])`
-- Run `A` and `B` in parallell and wait for both to succeed: `WhenAll([A, B])`
-- Run `A` and `B` in parallell and wait for any to succeed: `WhenAny([A, B])`
-- Run `A` and `B` in parallell, but `A` has to succeed before `B`: `After([A, B])`
+- Run `A` and `B` in parallel and wait for both to succeed: `WhenAll([A, B])`
+- Run `A` and `B` in parallel and wait for any to succeed: `WhenAny([A, B])`
+- Run `A` and `B` in parallel, but `A` has to succeed before `B`: `After([A, B])`
 
 See the `Behavior` enum for more information.
 
