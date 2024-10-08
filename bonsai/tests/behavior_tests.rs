@@ -1,9 +1,7 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
-    Action, ActionArgs,
-    Event, Failure, Sequence, State,
-    Status::Running,
-    Success, UpdateArgs, Wait, WaitForever, WhenAll, While, WhileAll, After, AlwaysSucceed, If, Invert, Select
+    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, If, Invert, Select, Sequence, State, Status::Running,
+    Success, UpdateArgs, Wait, WaitForever, WhenAll, While, WhileAll,
 };
 
 /// Some test actions.
