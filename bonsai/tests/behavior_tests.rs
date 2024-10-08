@@ -1,11 +1,7 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
-use bonsai_bt::Behavior::RepeatSequence;
 use bonsai_bt::{
-    Action, ActionArgs,
-    Behavior::{After, AlwaysSucceed, If, Invert, Select},
-    Event, Failure, Sequence, State,
-    Status::Running,
-    Success, UpdateArgs, Wait, WaitForever, WhenAll, While,
+    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, If, Invert, Select, Sequence, State, Status::Running,
+    Success, UpdateArgs, Wait, WaitForever, WhenAll, While, WhileAll,
 };
 
 /// Some test actions.
@@ -437,7 +433,7 @@ fn test_after_all_succeed_out_of_order() {
 fn test_repeat_sequence() {
     {
         let a: i32 = 0;
-        let after = RepeatSequence(Box::new(Action(LessThanRunningSuccess(5))), vec![Action(Inc)]);
+        let after = WhileAll(Box::new(Action(LessThanRunningSuccess(5))), vec![Action(Inc)]);
 
         let mut state = State::new(after);
 
@@ -454,7 +450,7 @@ fn test_repeat_sequence() {
 /// running initially, then the condition behavior cannot run more than once until the whole
 /// sequence has succeeded.
 fn test_repeat_sequence_double_running() {
-    let after = RepeatSequence(
+    let after = WhileAll(
         Box::new(Action(LessThanRunningSuccess(5))), // running...
         vec![
             Action(LessThanRunningSuccess(5)), // running... until current value is 5
@@ -484,7 +480,7 @@ fn test_repeat_sequence_double_running() {
 
 #[test]
 fn test_repeat_sequence2() {
-    let after = RepeatSequence(
+    let after = WhileAll(
         Box::new(Action(LessThanRunningSuccess(5))), // running...
         vec![
             Action(LessThanRunningSuccess(10)), // running... until current value is 5
@@ -516,7 +512,7 @@ fn test_repeat_sequence2() {
 
 #[test]
 fn test_repeat_sequence3() {
-    let after = RepeatSequence(
+    let after = WhileAll(
         Box::new(Action(LessThanRunningSuccess(2))),
         vec![
             Action(LessThanRunningSuccess(10)),
@@ -553,9 +549,9 @@ fn test_repeat_sequence_nested() {
     let dec2 = Sequence(vec![Action(Dec), Action(Dec)]);
     let inc1 = Sequence(vec![Action(Inc)]);
 
-    let nested = RepeatSequence(Box::new(Action(LessThanRunningSuccess(5))), vec![Action(Inc), inc1]);
+    let nested = WhileAll(Box::new(Action(LessThanRunningSuccess(5))), vec![Action(Inc), inc1]);
 
-    let after = RepeatSequence(
+    let after = WhileAll(
         Box::new(Action(LessThanRunningSuccess(1))),
         vec![
             nested,      // inc to 6
@@ -586,7 +582,7 @@ fn test_repeat_sequence_nested() {
 fn test_repeat_sequence_fail() {
     {
         let a: i32 = 4;
-        let after = RepeatSequence(
+        let after = WhileAll(
             Box::new(Action(LessThanRunningSuccess(5))),
             vec![Action(Dec), Action(LessThan(0))],
         );
@@ -603,7 +599,7 @@ fn test_repeat_sequence_timed() {
     let a: i32 = 0;
     let time_step = 0.1;
     let steps = 5;
-    let after = RepeatSequence(
+    let after = WhileAll(
         Box::new(Action(LessThanRunningSuccess(steps))),
         vec![Wait(time_step), Action(Inc)],
     );
@@ -624,7 +620,7 @@ fn test_repeat_sequence_timed() {
 #[test]
 #[should_panic]
 fn test_repeat_sequence_empty() {
-    let after = RepeatSequence(Box::new(Action(LessThanRunningSuccess(0))), vec![]);
+    let after = WhileAll(Box::new(Action(LessThanRunningSuccess(0))), vec![]);
     // panics because no behaviors...
     let _state = State::new(after);
 }

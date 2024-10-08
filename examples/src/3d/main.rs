@@ -64,11 +64,13 @@ fn write_to_screen(txt: String, w: &mut Window) {
         &Point3::new(1.0, 0.0, 1.0),
     );
 }
+
+#[allow(clippy::doc_lazy_continuation)]
 /// This method ticks the behavior tree for a given duration 'dt' to move the
 /// behavior tree forward in time. Note that a tick - basically a depth-first traversal
 /// - of the tree is intended to return instantly, so it is important that the action
 /// callbacks return instantly. Long-running tasks/actions might take many ticks to complete
-/// , where you update and monitor the task on a tick-basis.
+/// where you update and monitor the task on a tick-basis.
 ///
 /// The ticks to execute for as long as the specified time 'dt'.
 fn game_tick(

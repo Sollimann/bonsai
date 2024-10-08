@@ -53,8 +53,8 @@ pub enum State<A> {
     SequenceState(Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `While` behavior.
     WhileState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
-    /// Keeps track of a `RepeatSequence` behavior.
-    RepeatSequenceState(Box<State<A>>, Vec<Behavior<A>>, usize, bool, Box<State<A>>),
+    /// Keeps track of a `WhileAll` behavior.
+    WhileAllState(Box<State<A>>, Vec<Behavior<A>>, usize, bool, Box<State<A>>),
     /// Keeps track of a `WhenAll` behavior.
     WhenAllState(Vec<Option<State<A>>>),
     /// Keeps track of a `WhenAny` behavior.
@@ -97,13 +97,13 @@ impl<A: Clone> State<A> {
             Behavior::WhenAll(all) => State::WhenAllState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::WhenAny(any) => State::WhenAnyState(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::After(after_all) => State::AfterState(0, after_all.into_iter().map(State::new).collect()),
-            Behavior::RepeatSequence(ev, rep) => {
+            Behavior::WhileAll(ev, rep) => {
                 let state = State::new(
                     rep.first()
-                        .expect("RepeatSequence's sequence of behaviors to run cannot be empty!")
+                        .expect("WhileAll's sequence of behaviors to run cannot be empty!")
                         .clone(),
                 );
-                State::RepeatSequenceState(Box::new(State::new(*ev)), rep, 0, true, Box::new(state))
+                State::WhileAllState(Box::new(State::new(*ev)), rep, 0, true, Box::new(state))
             }
         }
     }
@@ -322,7 +322,7 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut RepeatSequenceState(
+                &mut WhileAllState(
                     ref mut condition_behavior,
                     ref all_sequence_behaviors,
                     ref mut cur_seq_idx,

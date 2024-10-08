@@ -43,10 +43,15 @@ pub enum Behavior<A> {
     /// Succeeds if the conditional behavior succeeds.
     /// Fails if the conditional behavior fails,
     /// or if any behavior in the loop body fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given behavior sequence is empty.
     While(Box<Behavior<A>>, Vec<Behavior<A>>),
 
     /// Runs a sequence on repeat as long as a conditional behavior
     /// that precedes the sequence is running.
+    ///
     /// Conditional behavior is **only** checked before the sequence runs and
     /// not during the sequence.
     ///
@@ -61,14 +66,14 @@ pub enum Behavior<A> {
     ///
     /// ```
     ///
-    ///use bonsai_bt::{BT, Running, Failure, Success, Action, UpdateArgs, Behavior::RepeatSequence, ActionArgs};
+    ///use bonsai_bt::{BT, Running, Failure, Success, Action, UpdateArgs, Behavior::WhileAll, ActionArgs};
     ///use bonsai_bt::Event;
     ///
     ///#[derive(Clone, Debug)]
     ///
     ///enum Ex { A, B, C }
     ///
-    ///let rs = RepeatSequence(
+    ///let rs = WhileAll(
     ///    Box::new(Action(Ex::A)),
     ///    vec![Action(Ex::B), Action(Ex::C)],
     ///);
@@ -101,7 +106,7 @@ pub enum Behavior<A> {
     ///});
     ///assert!(i == 4);
     /// ```
-    RepeatSequence(Box<Behavior<A>>, Vec<Behavior<A>>),
+    WhileAll(Box<Behavior<A>>, Vec<Behavior<A>>),
     /// Runs all behaviors in parallel until all succeeded.
     ///
     /// Succeeds if all behaviors succeed.
