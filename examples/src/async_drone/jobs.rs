@@ -4,11 +4,12 @@ use tokio::time::{sleep, Duration};
 
 struct PrintOnDrop(&'static str);
 
-#[derive(Clone, Debug)]
+#[allow(dead_code)]
+#[derive(Debug)]
 pub struct Point {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    x: f32,
+    y: f32,
+    z: f32,
 }
 
 impl Point {
