@@ -10,7 +10,7 @@
 <!-- [![version](https://img.shields.io/badge/version-1.0.0-blue)](https://GitHub.com/Sollimann/CleanIt/releases/) -->
 [![Build Status](https://github.com/Sollimann/bonsai/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/Sollimann/bonsai/actions)
 [![Bonsai crate](https://img.shields.io/crates/v/bonsai-bt.svg)](https://crates.io/crates/bonsai-bt)
-[![minimum rustc 1.72](https://img.shields.io/badge/rustc-1.56+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
+[![minimum rustc 1.72](https://img.shields.io/badge/rustc-1.72+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
 [![Docs](https://docs.rs/bonsai-bt/badge.svg)](https://docs.rs/bonsai-bt)
 [![codecov](https://codecov.io/gh/Sollimann/bonsai/branch/main/graph/badge.svg?token=JX8JBPWORV)](https://codecov.io/gh/Sollimann/bonsai)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Sollimann/bonsai/graphs/commit-activity)
