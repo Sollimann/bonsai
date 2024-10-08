@@ -1,4 +1,4 @@
-use bonsai_bt::Behavior::RepeatSequence;
+use bonsai_bt::Behavior::WhileAll;
 use bonsai_bt::{Behavior::Action, Event, Failure, Running, Status, Success, UpdateArgs, BT};
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
@@ -103,11 +103,11 @@ impl EnemyNPCState {
     }
 }
 
-/// Demonstrates a usage of [RepeatSequence] behavior with
+/// Demonstrates a usage of [WhileAll] behavior with
 /// a simple NPC simulation.
 ///
-/// The NPC AI first enters a higher [RepeatSequence] that
-/// checks if the NPC is dead, then it succeeds to inner [RepeatSequence]
+/// The NPC AI first enters a higher [WhileAll] that
+/// checks if the NPC is dead, then it succeeds to inner [WhileAll]
 /// where the NPC performs actions until it is determined that
 /// no action points are left to consume. Then the AI control flow returns
 /// to the previous higher sequence where the executions continues and the NPC rests
@@ -138,11 +138,11 @@ impl EnemyNPCState {
 ///
 ///
 fn main() {
-    let run_and_shoot_ai = RepeatSequence(
+    let run_and_shoot_ai = WhileAll(
         Box::new(Action(EnemyNPC::HasActionPointsLeft)),
         vec![Action(EnemyNPC::Run), Action(EnemyNPC::Shoot)],
     );
-    let top_ai = RepeatSequence(
+    let top_ai = WhileAll(
         Box::new(Action(EnemyNPC::IsDead)),
         vec![run_and_shoot_ai.clone(), Action(EnemyNPC::Rest), Action(EnemyNPC::Die)],
     );

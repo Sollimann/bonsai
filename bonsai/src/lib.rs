@@ -119,7 +119,7 @@
 //! ```
 
 pub use behavior::Behavior::{
-    self, Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
+    self, Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll
 };
 
 pub use bt::BT;
