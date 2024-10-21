@@ -1,4 +1,5 @@
-// use serde_derive::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// The result of a behavior or action.
 ///
@@ -7,7 +8,8 @@
 /// * Success
 /// * Failure or
 /// * Running, if the action is asynchronous and it needs more time to complete
-#[derive(Copy, Clone, serde::Deserialize, serde::Serialize, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Status {
     /// The behavior or action succeeded.
     Success,

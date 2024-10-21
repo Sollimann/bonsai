@@ -1,7 +1,7 @@
 use bonsai_bt::Behavior::WhileAll;
 use bonsai_bt::{Behavior::Action, Event, Failure, Running, Status, Success, UpdateArgs, BT};
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum EnemyNPC {
     Run,
     Shoot,

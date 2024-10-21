@@ -1,14 +1,14 @@
-use std::collections::HashMap;
-
 use bonsai_bt::{
     Behavior::{Action, Sequence, Wait, WaitForever, WhenAny, While},
     BT,
 };
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 type Damage = f64;
 type Distance = f64;
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 enum AttackDrone {
     /// Circles forever around target pos.
     Circling,
