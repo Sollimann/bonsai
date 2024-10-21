@@ -8,7 +8,6 @@ use std::fmt::Debug;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-// use serde_derive::{Deserialize, Serialize};
 
 /// The action is still running, and thus the action consumes
 /// all the remaining delta time for the tick
