@@ -12,7 +12,7 @@ name = "bonsai-bt"
 readme = "../README.md"
 repository = "https://github.com/sollimann/bonsai.git"
 rust-version = "1.80.0"
-version = "0.7.0"
+version = "0.8.0"
 
 [lib]
 name = "bonsai_bt"
