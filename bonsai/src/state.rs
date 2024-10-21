@@ -1,12 +1,13 @@
-use std::fmt::Debug;
-
 use crate::event::UpdateEvent;
 use crate::sequence::{sequence, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::when_all::when_all;
 use crate::{Behavior, Status};
+use std::fmt::Debug;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 // use serde_derive::{Deserialize, Serialize};
 
 /// The action is still running, and thus the action consumes
@@ -26,7 +27,8 @@ pub struct ActionArgs<'a, E: 'a, A: 'a> {
 }
 
 /// Keeps track of a behavior.
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum State<A> {
     /// Executes an action.
     ActionState(A),

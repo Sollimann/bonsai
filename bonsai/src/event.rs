@@ -1,9 +1,13 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Update arguments, such as delta time in seconds.
 /// To move the behavior tree forward in time it must be ticked on each iteration of the
 /// game/application loop.
 ///
 /// dt: states how much forward in time we should move the behavior tree
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct UpdateArgs {
     /// Delta time in seconds.
     pub dt: f64,
@@ -17,7 +21,8 @@ impl UpdateArgs {
 }
 
 /// Models loop events.
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, serde::Deserialize, serde::Serialize)]
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Loop {
     /// Update the state of the application.
     Update(UpdateArgs),

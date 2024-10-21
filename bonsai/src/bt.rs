@@ -1,10 +1,12 @@
 use std::fmt::Debug;
 
+use crate::visualizer::NodeType;
+use crate::{ActionArgs, Behavior, State, Status, UpdateEvent};
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
 
-use crate::visualizer::NodeType;
-use crate::{ActionArgs, Behavior, State, Status, UpdateEvent};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// A "blackboard" is a simple key/value storage shared by all the nodes of the Tree.
 ///
@@ -15,6 +17,7 @@ use crate::{ActionArgs, Behavior, State, Status, UpdateEvent};
 ///
 /// An "entry" of the Blackboard is a key/value pair.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BlackBoard<K>(K);
 
 impl<K> BlackBoard<K> {
@@ -26,6 +29,7 @@ impl<K> BlackBoard<K> {
 /// The BT struct contains a compiled (immutable) version
 /// of the behavior and a blackboard key/value storage
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BT<A, K> {
     /// constructed behavior tree
     pub state: State<A>,

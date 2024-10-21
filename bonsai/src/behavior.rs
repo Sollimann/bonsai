@@ -1,8 +1,12 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Describes a behavior.
 ///
 /// This is used for more complex event logic.
 /// Can also be used for game AI.
-#[derive(Clone, serde::Deserialize, serde::Serialize, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Behavior<A> {
     /// Waits an amount of time before continuing
     ///
@@ -125,6 +129,7 @@ pub enum Behavior<A> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "serde")]
 mod tests {
     use crate::Behavior::{self, Action, Sequence, Wait, WaitForever, WhenAny, While};
 

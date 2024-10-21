@@ -20,8 +20,10 @@ path = "src/lib.rs"
 
 [dependencies]
 petgraph = "0.6.2"
-serde = { version = "1.0.137", features = ["derive"] }
-serde_json = "1.0.81"
+serde = { version = "1.0.137", features = ["derive"] , optional = true }
+
+[dev-dependencies]
+serde_json = { version = "1.0.81" }
 
 [[test]]
 name = "tests"
