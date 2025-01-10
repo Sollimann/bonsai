@@ -8,24 +8,6 @@ use petgraph::Graph;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// A "blackboard" is a simple key/value storage shared by all the nodes of the Tree.
-///
-/// It is essentially a database in which the behavior tree can store information
-/// whilst traversing the tree. Certain action nodes depend on state that might be
-/// dynamically created by other nodes in the tree. State is written to and read from
-/// a blackboard, a messaging capability that allows nodes to share state in the behavior tree.
-///
-/// An "entry" of the Blackboard is a key/value pair.
-#[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct BlackBoard<K>(K);
-
-impl<K> BlackBoard<K> {
-    pub fn get_db(&mut self) -> &mut K {
-        &mut self.0
-    }
-}
-
 /// The BT struct contains a compiled (immutable) version
 /// of the behavior and a blackboard key/value storage
 #[derive(Clone, Debug)]
@@ -36,7 +18,7 @@ pub struct BT<A, K> {
     /// keep the initial state
     initial_behavior: Behavior<A>,
     /// blackboard
-    bb: BlackBoard<K>,
+    bb: K,
 }
 
 impl<A: Clone, K> BT<A, K> {
@@ -47,7 +29,7 @@ impl<A: Clone, K> BT<A, K> {
         Self {
             state: bt,
             initial_behavior: backup_behavior,
-            bb: BlackBoard(blackboard),
+            bb: blackboard,
         }
     }
 
@@ -67,14 +49,14 @@ impl<A: Clone, K> BT<A, K> {
     pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
-        F: FnMut(ActionArgs<E, A>, &mut BlackBoard<K>) -> (Status, f64),
+        F: FnMut(ActionArgs<E, A>, &mut K) -> (Status, f64),
     {
         self.state.tick(e, &mut self.bb, f)
     }
 
     /// Retrieve a mutable reference to the blackboard for
     /// this Behavior Tree
-    pub fn get_blackboard(&mut self) -> &mut BlackBoard<K> {
+    pub fn get_blackboard(&mut self) -> &mut K {
         &mut self.bb
     }
 
@@ -145,24 +127,5 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
 
         let digraph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
         (format!("{:?}", digraph), graph)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-
-    use super::BlackBoard;
-
-    #[test]
-    fn test_bb() {
-        // add some values to blackboard
-        let mut db: HashMap<String, f32> = HashMap::new();
-        db.insert("win_width".to_string(), 10.0);
-        db.insert("win_height".to_string(), 12.0);
-
-        let mut blackboard = BlackBoard(db);
-        let win_width = blackboard.get_db().get("win_width").unwrap().to_owned();
-        assert_eq!(win_width, 10.0);
     }
 }

@@ -36,7 +36,7 @@ fn game_tick(bt: &mut BT<EnemyNPC, BlackBoardData>, state: &mut EnemyNPCState) -
 
                 // for the sake of example we get access to blackboard and update
                 // one of its values here:
-                blackboard.get_db().times_shot += 1;
+                blackboard.times_shot += 1;
 
                 (Success, 0.0)
             }
@@ -174,7 +174,7 @@ fn main() {
     }
     println!(
         "NPC shot {} times during the simulation.",
-        bt.get_blackboard().get_db().times_shot
+        bt.get_blackboard().times_shot
     );
 }
 

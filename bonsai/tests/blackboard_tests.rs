@@ -31,8 +31,7 @@ fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, HashMap<String, i32>>) -
     // update counter in blackboard
     let bb = bt.get_blackboard();
 
-    bb.get_db()
-        .entry("count".to_string())
+    bb.entry("count".to_string())
         .and_modify(|count| *count = acc)
         .or_insert(0)
         .to_owned()
@@ -64,6 +63,6 @@ fn test_crate_bt() {
     assert_eq!(a, 1);
 
     let bb = bt.get_blackboard();
-    let count = bb.get_db().get("count").unwrap();
+    let count = bb.get("count").unwrap();
     assert_eq!(*count, 1);
 }
