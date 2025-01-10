@@ -39,7 +39,7 @@ pub struct BT<A, K> {
     bb: BlackBoard<K>,
 }
 
-impl<A: Clone + Debug, K: Debug> BT<A, K> {
+impl<A: Clone, K> BT<A, K> {
     pub fn new(behavior: Behavior<A>, blackboard: K) -> Self {
         let backup_behavior = behavior.clone();
         let bt = State::new(behavior);
@@ -73,6 +73,36 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
         self.state.tick(e, &mut self.bb, f)
     }
 
+    /// Retrieve a mutable reference to the blackboard for
+    /// this Behavior Tree
+    pub fn get_blackboard(&mut self) -> &mut BlackBoard<K> {
+        &mut self.bb
+    }
+
+    /// Retrieve a mutable reference to the internal state
+    /// of the Behavior Tree
+    pub fn get_state(bt: &mut BT<A, K>) -> &mut State<A> {
+        &mut bt.state
+    }
+
+    /// The behavior tree is a stateful data structure in which the immediate
+    /// state of the BT is allocated and updated in heap memory through the lifetime
+    /// of the BT. The state of the BT is said to be `transient` meaning upon entering
+    /// a this state, the process may never return this state again. If a behavior concludes,
+    /// only the latest results will be stored in heap memory.
+    ///
+    /// If your BT has surpassed a desired state or that your BT has reached a steady state - meaning
+    /// that the behavior has concluded and ticking the BT won't progress any further - then it could
+    /// be desirable to return the BT to it's initial state at t=0.0 before it was ever ticked.
+    ///
+    /// PS! invoking reset_bt does not reset the Blackboard.
+    pub fn reset_bt(&mut self) {
+        let initial_behavior = self.initial_behavior.to_owned();
+        self.state = State::new(initial_behavior)
+    }
+}
+
+impl<A: Clone + Debug, K: Debug> BT<A, K> {
     /// Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
     ///
     /// ```rust
@@ -116,34 +146,6 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
 
         let digraph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
         (format!("{:?}", digraph), graph)
-    }
-
-    /// Retrieve a mutable reference to the blackboard for
-    /// this Behavior Tree
-    pub fn get_blackboard(&mut self) -> &mut BlackBoard<K> {
-        &mut self.bb
-    }
-
-    /// Retrieve a mutable reference to the internal state
-    /// of the Behavior Tree
-    pub fn get_state(bt: &mut BT<A, K>) -> &mut State<A> {
-        &mut bt.state
-    }
-
-    /// The behavior tree is a stateful data structure in which the immediate
-    /// state of the BT is allocated and updated in heap memory through the lifetime
-    /// of the BT. The state of the BT is said to be `transient` meaning upon entering
-    /// a this state, the process may never return this state again. If a behavior concludes,
-    /// only the latest results will be stored in heap memory.
-    ///
-    /// If your BT has surpassed a desired state or that your BT has reached a steady state - meaning
-    /// that the behavior has concluded and ticking the BT won't progress any further - then it could
-    /// be desirable to return the BT to it's initial state at t=0.0 before it was ever ticked.
-    ///
-    /// PS! invoking reset_bt does not reset the Blackboard.
-    pub fn reset_bt(&mut self) {
-        let initial_behavior = self.initial_behavior.to_owned();
-        self.state = State::new(initial_behavior)
     }
 }
 
