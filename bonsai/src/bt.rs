@@ -68,7 +68,6 @@ impl<A: Clone, K> BT<A, K> {
     where
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A>, &mut BlackBoard<K>) -> (Status, f64),
-        A: Debug,
     {
         self.state.tick(e, &mut self.bb, f)
     }

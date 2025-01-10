@@ -125,7 +125,6 @@ impl<A: Clone> State<A> {
     where
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
-        A: Debug,
     {
         let upd = e.update(|args| Some(args.dt)).unwrap_or(None);
 
