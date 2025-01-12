@@ -1,6 +1,5 @@
 use crate::status::Status::*;
 use crate::{event::UpdateEvent, ActionArgs, Behavior, State, Status, RUNNING};
-use std::fmt::Debug;
 
 pub struct SequenceArgs<'a, A, E, F, B> {
     pub select: bool,
@@ -22,7 +21,6 @@ where
     A: Clone,
     E: UpdateEvent,
     F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
-    A: Debug,
 {
     let SequenceArgs {
         select,
