@@ -36,11 +36,7 @@ pub enum State<A> {
     /// Ignores failures and always return `Success`.
     AlwaysSucceedState(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
-    ///
-    /// f64: Total time in seconds to wait
-    ///
-    /// f64: Time elapsed in seconds
-    WaitState(f64, f64),
+    WaitState { time_to_wait: f64, elapsed_time: f64 },
     /// Waits forever.
     WaitForeverState,
     /// Keeps track of an `If` behavior.
@@ -77,7 +73,10 @@ impl<A: Clone> State<A> {
             Behavior::Action(action) => State::ActionState(action),
             Behavior::Invert(ev) => State::InvertState(Box::new(State::new(*ev))),
             Behavior::AlwaysSucceed(ev) => State::AlwaysSucceedState(Box::new(State::new(*ev))),
-            Behavior::Wait(dt) => State::WaitState(dt, 0.0),
+            Behavior::Wait(dt) => State::WaitState {
+                time_to_wait: dt,
+                elapsed_time: 0.0,
+            },
             Behavior::WaitForever => State::WaitForeverState,
             Behavior::If(condition, success, failure) => {
                 let state = State::new(*condition);
@@ -157,14 +156,20 @@ impl<A: Clone> State<A> {
                     (_, dt) => (Success, dt),
                 }
             }
-            (Some(dt), &mut WaitState(wait_t, ref mut t)) => {
-                // println!("In WaitState: {}", wait_t);
-                if *t + dt >= wait_t {
-                    let time_overdue = *t + dt - wait_t;
-                    *t = wait_t;
+            (
+                Some(dt),
+                &mut WaitState {
+                    time_to_wait,
+                    ref mut elapsed_time,
+                },
+            ) => {
+                // println!("In WaitState: {}", time_to_wait);
+                *elapsed_time += dt;
+                if *elapsed_time >= time_to_wait {
+                    let time_overdue = *elapsed_time - time_to_wait;
+                    *elapsed_time = time_to_wait;
                     (Success, time_overdue)
                 } else {
-                    *t += dt;
                     RUNNING
                 }
             }
