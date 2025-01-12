@@ -12,17 +12,17 @@ use serde::{Deserialize, Serialize};
 /// of the behavior and a blackboard key/value storage
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct BT<A, K> {
+pub struct BT<A, B> {
     /// constructed behavior tree
     pub state: State<A>,
     /// keep the initial state
     initial_behavior: Behavior<A>,
     /// blackboard
-    bb: K,
+    bb: B,
 }
 
-impl<A: Clone, K> BT<A, K> {
-    pub fn new(behavior: Behavior<A>, blackboard: K) -> Self {
+impl<A: Clone, B> BT<A, B> {
+    pub fn new(behavior: Behavior<A>, blackboard: B) -> Self {
         let backup_behavior = behavior.clone();
         let bt = State::new(behavior);
 
@@ -49,20 +49,20 @@ impl<A: Clone, K> BT<A, K> {
     pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
-        F: FnMut(ActionArgs<E, A>, &mut K) -> (Status, f64),
+        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
     {
         self.state.tick(e, &mut self.bb, f)
     }
 
     /// Retrieve a mutable reference to the blackboard for
     /// this Behavior Tree
-    pub fn get_blackboard(&mut self) -> &mut K {
+    pub fn get_blackboard(&mut self) -> &mut B {
         &mut self.bb
     }
 
     /// Retrieve a mutable reference to the internal state
     /// of the Behavior Tree
-    pub fn get_state(bt: &mut BT<A, K>) -> &mut State<A> {
+    pub fn get_state(bt: &mut BT<A, B>) -> &mut State<A> {
         &mut bt.state
     }
 
@@ -83,7 +83,7 @@ impl<A: Clone, K> BT<A, K> {
     }
 }
 
-impl<A: Clone + Debug, K: Debug> BT<A, K> {
+impl<A: Clone + Debug, B: Debug> BT<A, B> {
     /// Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
     ///
     /// ```rust
