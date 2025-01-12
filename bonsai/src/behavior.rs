@@ -87,8 +87,8 @@ pub enum Behavior<A> {
     ///let mut bt = BT::new(rs, ());
     ///
     ///let mut i = 0;
-    ///let status = bt.tick(&Event::zero_dt_args(), &mut |args: ActionArgs<Event, Ex>, _| {
-    ///    match args.action {
+    ///let status = bt.tick(&Event::zero_dt_args(), &mut |action, _, _| {
+    ///    match action {
     ///        Ex::A => {
     ///            i += 1;
     ///            if i == 4 {
