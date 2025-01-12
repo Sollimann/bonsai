@@ -61,7 +61,14 @@ pub enum State<A> {
         current_state: Box<State<A>>,
     },
     /// Keeps track of an `Sequence` behavior.
-    SequenceState(Vec<Behavior<A>>, usize, Box<State<A>>),
+    SequenceState {
+        /// The behaviors that will be executed in order.
+        behaviors: Vec<Behavior<A>>,
+        /// The index of the behavior currently being executed.
+        current_index: usize,
+        /// The state of the behavior currently being executed.
+        current_state: Box<State<A>>,
+    },
     /// Keeps track of a `While` behavior.
     WhileState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of a `WhileAll` behavior.
@@ -109,9 +116,13 @@ impl<A: Clone> State<A> {
                     current_state: Box::new(state),
                 }
             }
-            Behavior::Sequence(seq) => {
-                let state = State::new(seq[0].clone());
-                State::SequenceState(seq, 0, Box::new(state))
+            Behavior::Sequence(behaviors) => {
+                let state = State::new(behaviors[0].clone());
+                State::SequenceState {
+                    behaviors,
+                    current_index: 0,
+                    current_state: Box::new(state),
+                }
             }
             Behavior::While(ev, rep) => {
                 let state = State::new(rep[0].clone());
@@ -264,7 +275,14 @@ impl<A: Clone> State<A> {
                     blackboard,
                 })
             }
-            (_, &mut SequenceState(ref seq, ref mut i, ref mut cursor)) => {
+            (
+                _,
+                &mut SequenceState {
+                    behaviors: ref seq,
+                    current_index: ref mut i,
+                    current_state: ref mut cursor,
+                },
+            ) => {
                 // println!("In SequenceState: {:?}", seq);
                 let select = false;
                 sequence(SequenceArgs {
