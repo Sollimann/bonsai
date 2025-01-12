@@ -40,10 +40,17 @@ pub enum State<A> {
     /// Waits forever.
     WaitForeverState,
     /// Keeps track of an `If` behavior.
-    /// If status is `Running`, then it evaluates the condition.
-    /// If status is `Success`, then it evaluates the success behavior.
-    /// If status is `Failure`, then it evaluates the failure behavior.
-    IfState(Box<Behavior<A>>, Box<Behavior<A>>, Status, Box<State<A>>),
+    IfState {
+        /// The behavior to run if the status is a success.
+        on_success: Box<Behavior<A>>,
+        /// The behavior to run if the status is a failure.
+        on_failure: Box<Behavior<A>>,
+        /// The status of the condition. The `If` behavior will resolve to one
+        /// of `on_success` or `on_failure` once the status is not `Running`.
+        status: Status,
+        /// The current state to execute.
+        current_state: Box<State<A>>,
+    },
     /// Keeps track of a `Select` behavior.
     SelectState(Vec<Behavior<A>>, usize, Box<State<A>>),
     /// Keeps track of an `Sequence` behavior.
@@ -78,9 +85,14 @@ impl<A: Clone> State<A> {
                 elapsed_time: 0.0,
             },
             Behavior::WaitForever => State::WaitForeverState,
-            Behavior::If(condition, success, failure) => {
+            Behavior::If(condition, on_success, on_failure) => {
                 let state = State::new(*condition);
-                State::IfState(success, failure, Status::Running, Box::new(state))
+                State::IfState {
+                    on_success,
+                    on_failure,
+                    status: Status::Running,
+                    current_state: Box::new(state),
+                }
             }
             Behavior::Select(sel) => {
                 let state = State::new(sel[0].clone());
@@ -173,7 +185,15 @@ impl<A: Clone> State<A> {
                     RUNNING
                 }
             }
-            (_, &mut IfState(ref success, ref failure, ref mut status, ref mut state)) => {
+            (
+                _,
+                &mut IfState {
+                    ref on_success,
+                    ref on_failure,
+                    ref mut status,
+                    ref mut current_state,
+                },
+            ) => {
                 // println!("In IfState: {:?}", success);
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let remaining_e;
@@ -181,23 +201,23 @@ impl<A: Clone> State<A> {
                 // remaining delta time after condition.
                 loop {
                     *status = match *status {
-                        Running => match state.tick(e, blackboard, f) {
+                        Running => match current_state.tick(e, blackboard, f) {
                             (Running, dt) => {
                                 return (Running, dt);
                             }
                             (Success, dt) => {
-                                **state = State::new((**success).clone());
+                                **current_state = State::new((**on_success).clone());
                                 remaining_dt = dt;
                                 Success
                             }
                             (Failure, dt) => {
-                                **state = State::new((**failure).clone());
+                                **current_state = State::new((**on_failure).clone());
                                 remaining_dt = dt;
                                 Failure
                             }
                         },
                         _ => {
-                            return state.tick(
+                            return current_state.tick(
                                 match upd {
                                     Some(_) => {
                                         remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
