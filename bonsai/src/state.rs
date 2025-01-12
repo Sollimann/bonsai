@@ -101,7 +101,13 @@ pub enum State<A> {
     /// Keeps track of a `WhenAny` behavior.
     WhenAnyState(Vec<Option<State<A>>>),
     /// Keeps track of an `After` behavior.
-    AfterState(usize, Vec<State<A>>),
+    AfterState {
+        /// The index of the next state that must succeed.
+        next_success_index: usize,
+        /// The states for the behaviors currently executing. All the states
+        /// before `next_success_index` must have finished with success.
+        states: Vec<State<A>>,
+    },
 }
 
 impl<A: Clone> State<A> {
@@ -158,7 +164,10 @@ impl<A: Clone> State<A> {
             }
             Behavior::WhenAll(all) => State::WhenAllState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::WhenAny(any) => State::WhenAnyState(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
-            Behavior::After(after_all) => State::AfterState(0, after_all.into_iter().map(State::new).collect()),
+            Behavior::After(after_all) => State::AfterState {
+                next_success_index: 0,
+                states: after_all.into_iter().map(State::new).collect(),
+            },
             Behavior::WhileAll(condition, loop_body) => {
                 let state = State::new(
                     loop_body
@@ -394,19 +403,25 @@ impl<A: Clone> State<A> {
                 let any = true;
                 when_all(any, upd, cursors, e, f, blackboard)
             }
-            (_, &mut AfterState(ref mut i, ref mut cursors)) => {
-                // println!("In AfterState: {}", i);
+            (
+                _,
+                &mut AfterState {
+                    ref mut next_success_index,
+                    ref mut states,
+                },
+            ) => {
+                // println!("In AfterState: {}", next_success_index);
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
-                for (j, item) in cursors.iter_mut().enumerate().skip(*i) {
+                for (j, item) in states.iter_mut().enumerate().skip(*next_success_index) {
                     match item.tick(e, blackboard, f) {
                         (Running, _) => {
                             min_dt = 0.0;
                         }
                         (Success, new_dt) => {
                             // Remaining delta time must be less to succeed.
-                            if *i == j && new_dt < min_dt {
-                                *i += 1;
+                            if *next_success_index == j && new_dt < min_dt {
+                                *next_success_index += 1;
                                 min_dt = new_dt;
                             } else {
                                 // Return least delta time because
@@ -419,7 +434,7 @@ impl<A: Clone> State<A> {
                         }
                     };
                 }
-                if *i == cursors.len() {
+                if *next_success_index == states.len() {
                     (Success, min_dt)
                 } else {
                     RUNNING
