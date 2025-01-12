@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::visualizer::NodeType;
-use crate::{ActionArgs, Behavior, State, Status, UpdateEvent};
+use crate::{state::State, ActionArgs, Behavior, Status, UpdateEvent};
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
 
@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BT<A, B> {
     /// constructed behavior tree
-    pub state: State<A>,
+    state: State<A>,
     /// keep the initial state
     initial_behavior: Behavior<A>,
     /// The data storage shared by all nodes in the tree. This is generally
@@ -60,12 +60,6 @@ impl<A: Clone, B> BT<A, B> {
     /// this Behavior Tree
     pub fn get_blackboard(&mut self) -> &mut B {
         &mut self.bb
-    }
-
-    /// Retrieve a mutable reference to the internal state
-    /// of the Behavior Tree
-    pub fn get_state(bt: &mut BT<A, B>) -> &mut State<A> {
-        &mut bt.state
     }
 
     /// The behavior tree is a stateful data structure in which the immediate

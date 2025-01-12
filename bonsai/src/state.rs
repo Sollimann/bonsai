@@ -28,7 +28,7 @@ pub struct ActionArgs<'a, E: 'a, A: 'a> {
 /// Keeps track of a behavior.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum State<A> {
+pub(crate) enum State<A> {
     /// Executes an action.
     ActionState(A),
     /// Converts `Success` into `Failure` and vice versa.
