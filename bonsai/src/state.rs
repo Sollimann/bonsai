@@ -70,7 +70,17 @@ pub enum State<A> {
         current_state: Box<State<A>>,
     },
     /// Keeps track of a `While` behavior.
-    WhileState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
+    WhileState {
+        /// The state of the condition of the loop. The loop continues to run
+        /// while this state is running.
+        condition_state: Box<State<A>>,
+        /// The behaviors that compose the loop body in order.
+        loop_body: Vec<Behavior<A>>,
+        /// The index of the behavior in the loop body currently being executed.
+        loop_body_index: usize,
+        /// The state of the behavior in the loop body currently being executed.
+        loop_body_state: Box<State<A>>,
+    },
     /// Keeps track of a `WhileAll` behavior.
     WhileAllState(Box<State<A>>, Vec<Behavior<A>>, usize, bool, Box<State<A>>),
     /// Keeps track of a `WhenAll` behavior.
@@ -124,9 +134,14 @@ impl<A: Clone> State<A> {
                     current_state: Box::new(state),
                 }
             }
-            Behavior::While(ev, rep) => {
-                let state = State::new(rep[0].clone());
-                State::WhileState(Box::new(State::new(*ev)), rep, 0, Box::new(state))
+            Behavior::While(condition, loop_body) => {
+                let state = State::new(loop_body[0].clone());
+                State::WhileState {
+                    condition_state: Box::new(State::new(*condition)),
+                    loop_body,
+                    loop_body_index: 0,
+                    loop_body_state: Box::new(state),
+                }
             }
             Behavior::WhenAll(all) => State::WhenAllState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::WhenAny(any) => State::WhenAnyState(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
@@ -296,14 +311,22 @@ impl<A: Clone> State<A> {
                     blackboard,
                 })
             }
-            (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
-                // println!("In WhileState: {:?}", ev_cursor);
-                // If the event terminates, do not execute the loop.
-                match ev_cursor.tick(e, blackboard, f) {
+            (
+                _,
+                &mut WhileState {
+                    ref mut condition_state,
+                    ref loop_body,
+                    ref mut loop_body_index,
+                    ref mut loop_body_state,
+                },
+            ) => {
+                // println!("In WhileState: {:?}", condition_state);
+                // If the condition behavior terminates, do not execute the loop.
+                match condition_state.tick(e, blackboard, f) {
                     (Running, _) => {}
                     x => return x,
                 };
-                let cur = cursor;
+                let cur = loop_body_state;
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let mut remaining_e;
                 loop {
@@ -329,15 +352,15 @@ impl<A: Clone> State<A> {
                             }
                         }
                     };
-                    *i += 1;
+                    *loop_body_index += 1;
                     // If end of repeated events,
                     // start over from the first one.
-                    if *i >= rep.len() {
-                        *i = 0;
+                    if *loop_body_index >= loop_body.len() {
+                        *loop_body_index = 0;
                     }
                     // Create a new cursor for next event.
                     // Use the same pointer to avoid allocation.
-                    **cur = State::new(rep[*i].clone());
+                    **cur = State::new(loop_body[*loop_body_index].clone());
                 }
                 RUNNING
             }
