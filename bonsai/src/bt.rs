@@ -8,8 +8,8 @@ use petgraph::Graph;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// The BT struct contains a compiled (immutable) version
-/// of the behavior and a blackboard key/value storage
+/// The execution state of a behavior tree, along with a "blackboard" (state
+/// shared between all nodes in the tree).
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BT<A, B> {
@@ -17,7 +17,9 @@ pub struct BT<A, B> {
     pub state: State<A>,
     /// keep the initial state
     initial_behavior: Behavior<A>,
-    /// blackboard
+    /// The data storage shared by all nodes in the tree. This is generally
+    /// referred to as a "blackboard". State is written to and read from a
+    /// blackboard, allowing nodes to share state and communicate each other.
     bb: B,
 }
 
