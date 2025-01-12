@@ -14,15 +14,13 @@ use serde::{Deserialize, Serialize};
 pub const RUNNING: (Status, f64) = (Running, 0.0);
 
 /// The arguments in the action callback.
-pub struct ActionArgs<'a, E: 'a, A: 'a> {
+pub struct ActionArgs<'a, E: 'a> {
     /// The event.
     pub event: &'a E,
     /// The remaining delta time. When one action terminates,
     /// it can consume some of dt and the remaining is passed
     /// onto the next action.
     pub dt: f64,
-    /// The action running.
-    pub action: &'a A,
 }
 
 /// Keeps track of a behavior.
@@ -203,7 +201,7 @@ impl<A: Clone> State<A> {
     pub fn tick<E, F, B>(&mut self, e: &E, blackboard: &mut B, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
-        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
+        F: FnMut(&A, &mut B, ActionArgs<E>) -> (Status, f64),
     {
         let upd = e.update(|args| Some(args.dt)).unwrap_or(None);
 
@@ -212,12 +210,12 @@ impl<A: Clone> State<A> {
             (_, &mut ActionState(ref action)) => {
                 // println!("In ActionState: {:?}", action);
                 f(
+                    action,
+                    blackboard,
                     ActionArgs {
                         event: e,
                         dt: upd.unwrap_or(0.0),
-                        action,
                     },
-                    blackboard,
                 )
             }
             (_, &mut InvertState(ref mut cur)) => {

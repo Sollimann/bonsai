@@ -51,7 +51,7 @@ impl<A: Clone, B> BT<A, B> {
     pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
     where
         E: UpdateEvent,
-        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
+        F: FnMut(&A, &mut B, ActionArgs<E>) -> (Status, f64),
     {
         self.state.tick(e, &mut self.bb, f)
     }

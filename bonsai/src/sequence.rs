@@ -20,7 +20,7 @@ pub fn sequence<A, E, F, B>(args: SequenceArgs<A, E, F, B>) -> (Status, f64)
 where
     A: Clone,
     E: UpdateEvent,
-    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
+    F: FnMut(&A, &mut B, ActionArgs<E>) -> (Status, f64),
 {
     let SequenceArgs {
         select,

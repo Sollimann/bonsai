@@ -17,7 +17,7 @@ pub fn when_all<A, E, F, B>(
 where
     A: Clone,
     E: UpdateEvent,
-    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
+    F: FnMut(&A, &mut B, ActionArgs<E>) -> (Status, f64),
 {
     let (status, inv_status) = if any {
         // `WhenAny`

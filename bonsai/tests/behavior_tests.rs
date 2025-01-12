@@ -21,40 +21,36 @@ enum TestActions {
 fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> (i32, bonsai_bt::Status, f64) {
     let e: Event = UpdateArgs { dt }.into();
     println!("acc {}", acc);
-    let (s, t) = state.tick(
-        &e,
-        &mut (),
-        &mut |args: ActionArgs<Event, TestActions>, _| match *args.action {
-            Inc => {
-                acc += 1;
+    let (s, t) = state.tick(&e, &mut (), &mut |action, _, args: ActionArgs<Event>| match *action {
+        Inc => {
+            acc += 1;
+            (Success, args.dt)
+        }
+        Dec => {
+            acc -= 1;
+            (Success, args.dt)
+        }
+        LessThan(v) => {
+            println!("inside less than with acc: {}", acc);
+            if acc < v {
+                println!("success {}<{}", acc, v);
+                (Success, args.dt)
+            } else {
+                println!("failure {}>={}", acc, v);
+                (Failure, args.dt)
+            }
+        }
+        TestActions::LessThanRunningSuccess(v) => {
+            println!("inside LessThanRunningSuccess with acc: {}", acc);
+            if acc < v {
+                println!("success {}<{}", acc, v);
+                (Running, args.dt)
+            } else {
+                println!("failure {}>={}", acc, v);
                 (Success, args.dt)
             }
-            Dec => {
-                acc -= 1;
-                (Success, args.dt)
-            }
-            LessThan(v) => {
-                println!("inside less than with acc: {}", acc);
-                if acc < v {
-                    println!("success {}<{}", acc, v);
-                    (Success, args.dt)
-                } else {
-                    println!("failure {}>={}", acc, v);
-                    (Failure, args.dt)
-                }
-            }
-            TestActions::LessThanRunningSuccess(v) => {
-                println!("inside LessThanRunningSuccess with acc: {}", acc);
-                if acc < v {
-                    println!("success {}<{}", acc, v);
-                    (Running, args.dt)
-                } else {
-                    println!("failure {}>={}", acc, v);
-                    (Success, args.dt)
-                }
-            }
-        },
-    );
+        }
+    });
     println!("status: {:?} dt: {}", s, t);
 
     (acc, s, t)
@@ -64,21 +60,17 @@ fn tick(mut acc: i32, dt: f64, state: &mut State<TestActions>) -> (i32, bonsai_b
 fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut State<TestActions>) {
     let e: Event = UpdateArgs { dt }.into();
 
-    state.tick(
-        &e,
-        &mut (),
-        &mut |args: ActionArgs<Event, TestActions>, _| match *args.action {
-            Inc => {
-                *acc += 1;
-                (Success, args.dt)
-            }
-            Dec => {
-                *acc -= 1;
-                (Success, args.dt)
-            }
-            TestActions::LessThanRunningSuccess(_) | LessThan(_) => todo!(),
-        },
-    );
+    state.tick(&e, &mut (), &mut |action, _, args: ActionArgs<Event>| match *action {
+        Inc => {
+            *acc += 1;
+            (Success, args.dt)
+        }
+        Dec => {
+            *acc -= 1;
+            (Success, args.dt)
+        }
+        TestActions::LessThanRunningSuccess(_) | LessThan(_) => todo!(),
+    });
 }
 
 // Each action that terminates immediately
