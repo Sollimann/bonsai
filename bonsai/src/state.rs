@@ -96,9 +96,11 @@ pub enum State<A> {
         /// The state of the behavior in the loop body currently being executed.
         loop_body_state: Box<State<A>>,
     },
-    /// Keeps track of a `WhenAll` behavior.
+    /// Keeps track of a `WhenAll` behavior. As the states finish, they are set
+    /// to [`None`].
     WhenAllState(Vec<Option<State<A>>>),
-    /// Keeps track of a `WhenAny` behavior.
+    /// Keeps track of a `WhenAny` behavior. As the states finish, they are set
+    /// to [`None`].
     WhenAnyState(Vec<Option<State<A>>>),
     /// Keeps track of an `After` behavior.
     AfterState {
