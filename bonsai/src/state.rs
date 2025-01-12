@@ -82,7 +82,20 @@ pub enum State<A> {
         loop_body_state: Box<State<A>>,
     },
     /// Keeps track of a `WhileAll` behavior.
-    WhileAllState(Box<State<A>>, Vec<Behavior<A>>, usize, bool, Box<State<A>>),
+    WhileAllState {
+        /// The state of the condition of the loop. The loop continues to run
+        /// while this state is running, though this is only checked once at the
+        /// start of each loop.
+        condition_state: Box<State<A>>,
+        /// Whether to check the condition on the next tick.
+        check_condition: bool,
+        /// The behaviors that compose the loop body in order.
+        loop_body: Vec<Behavior<A>>,
+        /// The index of the behavior in the loop body currently being executed.
+        loop_body_index: usize,
+        /// The state of the behavior in the loop body currently being executed.
+        loop_body_state: Box<State<A>>,
+    },
     /// Keeps track of a `WhenAll` behavior.
     WhenAllState(Vec<Option<State<A>>>),
     /// Keeps track of a `WhenAny` behavior.
@@ -146,13 +159,20 @@ impl<A: Clone> State<A> {
             Behavior::WhenAll(all) => State::WhenAllState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::WhenAny(any) => State::WhenAnyState(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::After(after_all) => State::AfterState(0, after_all.into_iter().map(State::new).collect()),
-            Behavior::WhileAll(ev, rep) => {
+            Behavior::WhileAll(condition, loop_body) => {
                 let state = State::new(
-                    rep.first()
+                    loop_body
+                        .first()
                         .expect("WhileAll's sequence of behaviors to run cannot be empty!")
                         .clone(),
                 );
-                State::WhileAllState(Box::new(State::new(*ev)), rep, 0, true, Box::new(state))
+                State::WhileAllState {
+                    condition_state: Box::new(State::new(*condition)),
+                    check_condition: true,
+                    loop_body,
+                    loop_body_index: 0,
+                    loop_body_state: Box::new(state),
+                }
             }
         }
     }
@@ -407,24 +427,24 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut WhileAllState(
-                    ref mut condition_behavior,
-                    ref all_sequence_behaviors,
-                    ref mut cur_seq_idx,
-                    ref mut can_check_condition,
-                    ref mut current_sequence_behavior,
-                ),
+                &mut WhileAllState {
+                    ref mut condition_state,
+                    ref mut check_condition,
+                    ref loop_body,
+                    ref mut loop_body_index,
+                    ref mut loop_body_state,
+                },
             ) => {
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 loop {
                     // check run condition only if allowed at this time:
-                    if *can_check_condition {
-                        *can_check_condition = false;
+                    if *check_condition {
+                        *check_condition = false;
                         debug_assert!(
-                            *cur_seq_idx == 0,
+                            *loop_body_index == 0,
                             "sequence index should always be 0 when condition is checked!"
                         );
-                        match condition_behavior.tick(e, blackboard, f) {
+                        match condition_state.tick(e, blackboard, f) {
                             // if running, move to sequence:
                             (Running, _) => {}
                             // if success or failure, get out:
@@ -441,26 +461,26 @@ impl<A: Clone> State<A> {
                         _ => e,
                     };
 
-                    match current_sequence_behavior.tick(ev, blackboard, f) {
+                    match loop_body_state.tick(ev, blackboard, f) {
                         (Failure, x) => return (Failure, x),
                         (Running, _) => {
                             break;
                         }
                         (Success, new_dt) => {
                             // only success moves the sequence cursor forward:
-                            *cur_seq_idx += 1;
+                            *loop_body_index += 1;
 
                             // If end of repeated events,
                             // start over from the first one
                             // and allow run condition check to happen:
-                            if *cur_seq_idx >= all_sequence_behaviors.len() {
-                                *can_check_condition = true;
-                                *cur_seq_idx = 0;
+                            if *loop_body_index >= loop_body.len() {
+                                *check_condition = true;
+                                *loop_body_index = 0;
                             }
 
                             // Create a new cursor for next event.
                             // Use the same pointer to avoid allocation.
-                            **current_sequence_behavior = State::new(all_sequence_behaviors[*cur_seq_idx].clone());
+                            **loop_body_state = State::new(loop_body[*loop_body_index].clone());
                             remaining_dt = new_dt;
                         }
                     };
