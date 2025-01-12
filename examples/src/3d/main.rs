@@ -96,8 +96,8 @@ fn game_tick(
     let mut last_pos = mouse_pos(0.0, 0.0);
     // update state of behaviosuccessr tree
     #[rustfmt::skip]
-    bt.tick(&e,&mut |args: bonsai_bt::ActionArgs<Event, Animation>, _|
-        match *args.action {
+    bt.tick(&e,&mut |action, _, args: bonsai_bt::ActionArgs<Event>|
+        match *action {
             Animation::LongerThan(dur) => {
                 if t > dur {
                     (Status::Success, args.dt)
