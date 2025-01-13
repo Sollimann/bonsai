@@ -36,32 +36,80 @@ pub enum State<A> {
     /// Ignores failures and always return `Success`.
     AlwaysSucceedState(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
-    ///
-    /// f64: Total time in seconds to wait
-    ///
-    /// f64: Time elapsed in seconds
-    WaitState(f64, f64),
+    WaitState { time_to_wait: f64, elapsed_time: f64 },
     /// Waits forever.
     WaitForeverState,
     /// Keeps track of an `If` behavior.
-    /// If status is `Running`, then it evaluates the condition.
-    /// If status is `Success`, then it evaluates the success behavior.
-    /// If status is `Failure`, then it evaluates the failure behavior.
-    IfState(Box<Behavior<A>>, Box<Behavior<A>>, Status, Box<State<A>>),
+    IfState {
+        /// The behavior to run if the status is a success.
+        on_success: Box<Behavior<A>>,
+        /// The behavior to run if the status is a failure.
+        on_failure: Box<Behavior<A>>,
+        /// The status of the condition. The `If` behavior will resolve to one
+        /// of `on_success` or `on_failure` once the status is not `Running`.
+        status: Status,
+        /// The current state to execute.
+        current_state: Box<State<A>>,
+    },
     /// Keeps track of a `Select` behavior.
-    SelectState(Vec<Behavior<A>>, usize, Box<State<A>>),
+    SelectState {
+        /// The behaviors that will be selected across in order.
+        behaviors: Vec<Behavior<A>>,
+        /// The index of the behavior currently being executed.
+        current_index: usize,
+        /// The state of the behavior currently being executed.
+        current_state: Box<State<A>>,
+    },
     /// Keeps track of an `Sequence` behavior.
-    SequenceState(Vec<Behavior<A>>, usize, Box<State<A>>),
+    SequenceState {
+        /// The behaviors that will be executed in order.
+        behaviors: Vec<Behavior<A>>,
+        /// The index of the behavior currently being executed.
+        current_index: usize,
+        /// The state of the behavior currently being executed.
+        current_state: Box<State<A>>,
+    },
     /// Keeps track of a `While` behavior.
-    WhileState(Box<State<A>>, Vec<Behavior<A>>, usize, Box<State<A>>),
+    WhileState {
+        /// The state of the condition of the loop. The loop continues to run
+        /// while this state is running.
+        condition_state: Box<State<A>>,
+        /// The behaviors that compose the loop body in order.
+        loop_body: Vec<Behavior<A>>,
+        /// The index of the behavior in the loop body currently being executed.
+        loop_body_index: usize,
+        /// The state of the behavior in the loop body currently being executed.
+        loop_body_state: Box<State<A>>,
+    },
     /// Keeps track of a `WhileAll` behavior.
-    WhileAllState(Box<State<A>>, Vec<Behavior<A>>, usize, bool, Box<State<A>>),
-    /// Keeps track of a `WhenAll` behavior.
+    WhileAllState {
+        /// The state of the condition of the loop. The loop continues to run
+        /// while this state is running, though this is only checked once at the
+        /// start of each loop.
+        condition_state: Box<State<A>>,
+        /// Whether to check the condition on the next tick.
+        check_condition: bool,
+        /// The behaviors that compose the loop body in order.
+        loop_body: Vec<Behavior<A>>,
+        /// The index of the behavior in the loop body currently being executed.
+        loop_body_index: usize,
+        /// The state of the behavior in the loop body currently being executed.
+        loop_body_state: Box<State<A>>,
+    },
+    /// Keeps track of a `WhenAll` behavior. As the states finish, they are set
+    /// to [`None`].
     WhenAllState(Vec<Option<State<A>>>),
-    /// Keeps track of a `WhenAny` behavior.
+    /// Keeps track of a `WhenAny` behavior. As the states finish, they are set
+    /// to [`None`].
     WhenAnyState(Vec<Option<State<A>>>),
     /// Keeps track of an `After` behavior.
-    AfterState(usize, Vec<State<A>>),
+    AfterState {
+        /// The index of the next state that must succeed.
+        next_success_index: usize,
+        /// The states for the behaviors currently executing. All the states
+        /// before `next_success_index` must have finished with success.
+        states: Vec<State<A>>,
+    },
 }
 
 impl<A: Clone> State<A> {
@@ -77,34 +125,65 @@ impl<A: Clone> State<A> {
             Behavior::Action(action) => State::ActionState(action),
             Behavior::Invert(ev) => State::InvertState(Box::new(State::new(*ev))),
             Behavior::AlwaysSucceed(ev) => State::AlwaysSucceedState(Box::new(State::new(*ev))),
-            Behavior::Wait(dt) => State::WaitState(dt, 0.0),
+            Behavior::Wait(dt) => State::WaitState {
+                time_to_wait: dt,
+                elapsed_time: 0.0,
+            },
             Behavior::WaitForever => State::WaitForeverState,
-            Behavior::If(condition, success, failure) => {
+            Behavior::If(condition, on_success, on_failure) => {
                 let state = State::new(*condition);
-                State::IfState(success, failure, Status::Running, Box::new(state))
+                State::IfState {
+                    on_success,
+                    on_failure,
+                    status: Status::Running,
+                    current_state: Box::new(state),
+                }
             }
-            Behavior::Select(sel) => {
-                let state = State::new(sel[0].clone());
-                State::SelectState(sel, 0, Box::new(state))
+            Behavior::Select(behaviors) => {
+                let state = State::new(behaviors[0].clone());
+                State::SelectState {
+                    behaviors,
+                    current_index: 0,
+                    current_state: Box::new(state),
+                }
             }
-            Behavior::Sequence(seq) => {
-                let state = State::new(seq[0].clone());
-                State::SequenceState(seq, 0, Box::new(state))
+            Behavior::Sequence(behaviors) => {
+                let state = State::new(behaviors[0].clone());
+                State::SequenceState {
+                    behaviors,
+                    current_index: 0,
+                    current_state: Box::new(state),
+                }
             }
-            Behavior::While(ev, rep) => {
-                let state = State::new(rep[0].clone());
-                State::WhileState(Box::new(State::new(*ev)), rep, 0, Box::new(state))
+            Behavior::While(condition, loop_body) => {
+                let state = State::new(loop_body[0].clone());
+                State::WhileState {
+                    condition_state: Box::new(State::new(*condition)),
+                    loop_body,
+                    loop_body_index: 0,
+                    loop_body_state: Box::new(state),
+                }
             }
             Behavior::WhenAll(all) => State::WhenAllState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::WhenAny(any) => State::WhenAnyState(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
-            Behavior::After(after_all) => State::AfterState(0, after_all.into_iter().map(State::new).collect()),
-            Behavior::WhileAll(ev, rep) => {
+            Behavior::After(after_all) => State::AfterState {
+                next_success_index: 0,
+                states: after_all.into_iter().map(State::new).collect(),
+            },
+            Behavior::WhileAll(condition, loop_body) => {
                 let state = State::new(
-                    rep.first()
+                    loop_body
+                        .first()
                         .expect("WhileAll's sequence of behaviors to run cannot be empty!")
                         .clone(),
                 );
-                State::WhileAllState(Box::new(State::new(*ev)), rep, 0, true, Box::new(state))
+                State::WhileAllState {
+                    condition_state: Box::new(State::new(*condition)),
+                    check_condition: true,
+                    loop_body,
+                    loop_body_index: 0,
+                    loop_body_state: Box::new(state),
+                }
             }
         }
     }
@@ -156,18 +235,32 @@ impl<A: Clone> State<A> {
                     (_, dt) => (Success, dt),
                 }
             }
-            (Some(dt), &mut WaitState(wait_t, ref mut t)) => {
-                // println!("In WaitState: {}", wait_t);
-                if *t + dt >= wait_t {
-                    let time_overdue = *t + dt - wait_t;
-                    *t = wait_t;
+            (
+                Some(dt),
+                &mut WaitState {
+                    time_to_wait,
+                    ref mut elapsed_time,
+                },
+            ) => {
+                // println!("In WaitState: {}", time_to_wait);
+                *elapsed_time += dt;
+                if *elapsed_time >= time_to_wait {
+                    let time_overdue = *elapsed_time - time_to_wait;
+                    *elapsed_time = time_to_wait;
                     (Success, time_overdue)
                 } else {
-                    *t += dt;
                     RUNNING
                 }
             }
-            (_, &mut IfState(ref success, ref failure, ref mut status, ref mut state)) => {
+            (
+                _,
+                &mut IfState {
+                    ref on_success,
+                    ref on_failure,
+                    ref mut status,
+                    ref mut current_state,
+                },
+            ) => {
                 // println!("In IfState: {:?}", success);
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let remaining_e;
@@ -175,23 +268,23 @@ impl<A: Clone> State<A> {
                 // remaining delta time after condition.
                 loop {
                     *status = match *status {
-                        Running => match state.tick(e, blackboard, f) {
+                        Running => match current_state.tick(e, blackboard, f) {
                             (Running, dt) => {
                                 return (Running, dt);
                             }
                             (Success, dt) => {
-                                **state = State::new((**success).clone());
+                                **current_state = State::new((**on_success).clone());
                                 remaining_dt = dt;
                                 Success
                             }
                             (Failure, dt) => {
-                                **state = State::new((**failure).clone());
+                                **current_state = State::new((**on_failure).clone());
                                 remaining_dt = dt;
                                 Failure
                             }
                         },
                         _ => {
-                            return state.tick(
+                            return current_state.tick(
                                 match upd {
                                     Some(_) => {
                                         remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
@@ -206,7 +299,14 @@ impl<A: Clone> State<A> {
                     }
                 }
             }
-            (_, &mut SelectState(ref seq, ref mut i, ref mut cursor)) => {
+            (
+                _,
+                &mut SelectState {
+                    behaviors: ref seq,
+                    current_index: ref mut i,
+                    current_state: ref mut cursor,
+                },
+            ) => {
                 // println!("In SelectState: {:?}", seq);
                 let select = true;
                 sequence(SequenceArgs {
@@ -220,7 +320,14 @@ impl<A: Clone> State<A> {
                     blackboard,
                 })
             }
-            (_, &mut SequenceState(ref seq, ref mut i, ref mut cursor)) => {
+            (
+                _,
+                &mut SequenceState {
+                    behaviors: ref seq,
+                    current_index: ref mut i,
+                    current_state: ref mut cursor,
+                },
+            ) => {
                 // println!("In SequenceState: {:?}", seq);
                 let select = false;
                 sequence(SequenceArgs {
@@ -234,14 +341,22 @@ impl<A: Clone> State<A> {
                     blackboard,
                 })
             }
-            (_, &mut WhileState(ref mut ev_cursor, ref rep, ref mut i, ref mut cursor)) => {
-                // println!("In WhileState: {:?}", ev_cursor);
-                // If the event terminates, do not execute the loop.
-                match ev_cursor.tick(e, blackboard, f) {
+            (
+                _,
+                &mut WhileState {
+                    ref mut condition_state,
+                    ref loop_body,
+                    ref mut loop_body_index,
+                    ref mut loop_body_state,
+                },
+            ) => {
+                // println!("In WhileState: {:?}", condition_state);
+                // If the condition behavior terminates, do not execute the loop.
+                match condition_state.tick(e, blackboard, f) {
                     (Running, _) => {}
                     x => return x,
                 };
-                let cur = cursor;
+                let cur = loop_body_state;
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let mut remaining_e;
                 loop {
@@ -267,15 +382,15 @@ impl<A: Clone> State<A> {
                             }
                         }
                     };
-                    *i += 1;
+                    *loop_body_index += 1;
                     // If end of repeated events,
                     // start over from the first one.
-                    if *i >= rep.len() {
-                        *i = 0;
+                    if *loop_body_index >= loop_body.len() {
+                        *loop_body_index = 0;
                     }
                     // Create a new cursor for next event.
                     // Use the same pointer to avoid allocation.
-                    **cur = State::new(rep[*i].clone());
+                    **cur = State::new(loop_body[*loop_body_index].clone());
                 }
                 RUNNING
             }
@@ -289,19 +404,25 @@ impl<A: Clone> State<A> {
                 let any = true;
                 when_all(any, upd, cursors, e, f, blackboard)
             }
-            (_, &mut AfterState(ref mut i, ref mut cursors)) => {
-                // println!("In AfterState: {}", i);
+            (
+                _,
+                &mut AfterState {
+                    ref mut next_success_index,
+                    ref mut states,
+                },
+            ) => {
+                // println!("In AfterState: {}", next_success_index);
                 // Get the least delta time left over.
                 let mut min_dt = f64::MAX;
-                for (j, item) in cursors.iter_mut().enumerate().skip(*i) {
+                for (j, item) in states.iter_mut().enumerate().skip(*next_success_index) {
                     match item.tick(e, blackboard, f) {
                         (Running, _) => {
                             min_dt = 0.0;
                         }
                         (Success, new_dt) => {
                             // Remaining delta time must be less to succeed.
-                            if *i == j && new_dt < min_dt {
-                                *i += 1;
+                            if *next_success_index == j && new_dt < min_dt {
+                                *next_success_index += 1;
                                 min_dt = new_dt;
                             } else {
                                 // Return least delta time because
@@ -314,7 +435,7 @@ impl<A: Clone> State<A> {
                         }
                     };
                 }
-                if *i == cursors.len() {
+                if *next_success_index == states.len() {
                     (Success, min_dt)
                 } else {
                     RUNNING
@@ -322,24 +443,24 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut WhileAllState(
-                    ref mut condition_behavior,
-                    ref all_sequence_behaviors,
-                    ref mut cur_seq_idx,
-                    ref mut can_check_condition,
-                    ref mut current_sequence_behavior,
-                ),
+                &mut WhileAllState {
+                    ref mut condition_state,
+                    ref mut check_condition,
+                    ref loop_body,
+                    ref mut loop_body_index,
+                    ref mut loop_body_state,
+                },
             ) => {
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 loop {
                     // check run condition only if allowed at this time:
-                    if *can_check_condition {
-                        *can_check_condition = false;
+                    if *check_condition {
+                        *check_condition = false;
                         debug_assert!(
-                            *cur_seq_idx == 0,
+                            *loop_body_index == 0,
                             "sequence index should always be 0 when condition is checked!"
                         );
-                        match condition_behavior.tick(e, blackboard, f) {
+                        match condition_state.tick(e, blackboard, f) {
                             // if running, move to sequence:
                             (Running, _) => {}
                             // if success or failure, get out:
@@ -356,26 +477,26 @@ impl<A: Clone> State<A> {
                         _ => e,
                     };
 
-                    match current_sequence_behavior.tick(ev, blackboard, f) {
+                    match loop_body_state.tick(ev, blackboard, f) {
                         (Failure, x) => return (Failure, x),
                         (Running, _) => {
                             break;
                         }
                         (Success, new_dt) => {
                             // only success moves the sequence cursor forward:
-                            *cur_seq_idx += 1;
+                            *loop_body_index += 1;
 
                             // If end of repeated events,
                             // start over from the first one
                             // and allow run condition check to happen:
-                            if *cur_seq_idx >= all_sequence_behaviors.len() {
-                                *can_check_condition = true;
-                                *cur_seq_idx = 0;
+                            if *loop_body_index >= loop_body.len() {
+                                *check_condition = true;
+                                *loop_body_index = 0;
                             }
 
                             // Create a new cursor for next event.
                             // Use the same pointer to avoid allocation.
-                            **current_sequence_behavior = State::new(all_sequence_behaviors[*cur_seq_idx].clone());
+                            **loop_body_state = State::new(loop_body[*loop_body_index].clone());
                             remaining_dt = new_dt;
                         }
                     };
