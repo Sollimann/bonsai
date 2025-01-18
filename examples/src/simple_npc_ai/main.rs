@@ -58,7 +58,7 @@ fn game_tick(bt: &mut BT<EnemyNPC, BlackBoardData>, state: &mut EnemyNPCState) -
                 (Success, 0.0)
             }
         }
-    });
+    }).unwrap();
 
     // return status:
     status.0

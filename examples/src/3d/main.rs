@@ -194,7 +194,7 @@ fn game_tick(
             },
 
         },
-    );
+    ).unwrap();
 
     // update blackboard
     let db = bt.get_blackboard();
