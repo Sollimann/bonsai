@@ -51,7 +51,7 @@
 //! fn tick(mut acc: i32, dt: f64, bt: &mut BT<Actions, HashMap<String, i32>>) -> i32 {
 //! let e: Event = UpdateArgs { dt }.into();
 //!
-//!     let (_status, _dt) = bt.tick(&e, &mut |args, blackboard| match *args.action {
+//!     let (_status, _dt) = bt.tick(&e, &mut |action, blackboard, args| match *action {
 //!         Actions::Inc => {
 //!             acc += 1;
 //!             (Success, args.dt)

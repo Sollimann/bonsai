@@ -15,8 +15,8 @@ fn game_tick(bt: &mut BT<EnemyNPC, BlackBoardData>, state: &mut EnemyNPCState) -
     let e: Event = UpdateArgs { dt: 0.0 }.into();
 
     #[rustfmt::skip]
-    let status = bt.tick(&e, &mut |args: bonsai_bt::ActionArgs<Event, EnemyNPC>, blackboard| {
-        match *args.action {
+    let status = bt.tick(&e, &mut |action, blackboard, _| {
+        match *action {
             EnemyNPC::Run => {
                 state.perform_action("run");
                 (Success, 0.0)
