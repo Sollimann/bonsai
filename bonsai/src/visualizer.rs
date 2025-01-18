@@ -132,7 +132,6 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bt::BlackBoard;
     use crate::visualizer::tests::TestActions::{Dec, Inc};
     use crate::Behavior::{
         Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
