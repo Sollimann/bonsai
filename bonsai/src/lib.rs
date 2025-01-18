@@ -60,7 +60,7 @@
 //!             acc -= 1;
 //!             (Success, args.dt)
 //!         }
-//!     });
+//!     }).unwrap();
 //!
 //!     // update counter in blackboard
 //!     let bb = bt.get_blackboard();
