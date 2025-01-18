@@ -15,30 +15,32 @@ enum TestActions {
 fn tick(mut acc: usize, dt: f64, t: &mut f64, counter: &mut usize, state: &mut BT<TestActions, ()>) -> usize {
     let e: Event = UpdateArgs { dt }.into();
 
-    let (_s, _t) = state.tick(&e, &mut |args: ActionArgs<Event, TestActions>, _| match args.action {
-        Inc => {
-            acc += 1;
-            (Success, args.dt)
-        }
-        DynamicWait(times) => {
-            // reset dynamic timer
-            if *counter >= times.len() {
-                *counter = 0
+    let (_s, _t) = state
+        .tick(&e, &mut |args: ActionArgs<Event, TestActions>, _| match args.action {
+            Inc => {
+                acc += 1;
+                (Success, args.dt)
             }
+            DynamicWait(times) => {
+                // reset dynamic timer
+                if *counter >= times.len() {
+                    *counter = 0
+                }
 
-            let wait_t = times[counter.to_owned()];
+                let wait_t = times[counter.to_owned()];
 
-            if *t + dt >= wait_t {
-                let time_overdue = *t + dt - wait_t;
-                *counter += 1;
-                *t = -dt;
-                (Success, time_overdue)
-            } else {
-                *t += dt;
-                RUNNING
+                if *t + dt >= wait_t {
+                    let time_overdue = *t + dt - wait_t;
+                    *counter += 1;
+                    *t = -dt;
+                    (Success, time_overdue)
+                } else {
+                    *t += dt;
+                    RUNNING
+                }
             }
-        }
-    });
+        })
+        .unwrap();
 
     acc
 }
