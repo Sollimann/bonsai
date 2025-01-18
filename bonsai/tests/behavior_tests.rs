@@ -85,8 +85,9 @@ fn test_immediate_termination() {
     let mut state = BT::new(seq, ());
     tick_with_ref(&mut a, 0.0, &mut state);
     assert_eq!(a, 2);
+    // The tree reset since it finished, so it will re-execute.
     tick_with_ref(&mut a, 1.0, &mut state);
-    assert_eq!(a, 2)
+    assert_eq!(a, 4)
 }
 
 // Tree terminates after 2.001 seconds
@@ -215,6 +216,7 @@ fn test_if_less_than() {
 
     let mut state = BT::new(_if, ());
 
+    // The tree resets after each tick.
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 2);
     assert_eq!(s, Success);
@@ -225,7 +227,7 @@ fn test_if_less_than() {
     assert_eq!(a, 0);
     assert_eq!(s, Success);
     let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, -1);
+    assert_eq!(a, 1);
     assert_eq!(s, Success);
 }
 
@@ -275,7 +277,7 @@ fn test_select_succeed_on_first() {
 }
 
 #[test]
-fn test_select_no_state_reset() {
+fn test_select_auto_reset_state() {
     let a: i32 = 3;
     let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
     let mut state = BT::new(sel, ());
@@ -289,31 +291,6 @@ fn test_select_no_state_reset() {
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 0);
     assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, -1);
-    assert_eq!(s, Success);
-}
-
-#[test]
-fn test_select_with_state_reset() {
-    let a: i32 = 3;
-    let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
-    let sel_clone = sel.clone();
-    let mut state = BT::new(sel, ());
-
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 2);
-    assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 1);
-    assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 0);
-    assert_eq!(s, Success);
-
-    // reset state
-    state = BT::new(sel_clone, ());
-
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 0);
     assert_eq!(s, Success);
@@ -338,10 +315,8 @@ fn test_select_and_when_all() {
 fn test_select_and_invert() {
     let a: i32 = 3;
     let sel = Invert(Box::new(Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)])));
-    let whenall = WhenAll(vec![Wait(0.35), sel]);
-    let mut state = BT::new(whenall, ());
+    let mut state = BT::new(sel, ());
 
-    // Running + Failure = Failure
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 2);
     assert_eq!(s, Failure);
@@ -352,12 +327,12 @@ fn test_select_and_invert() {
     assert_eq!(a, 0);
     assert_eq!(s, Failure);
     let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, -1);
+    assert_eq!(a, 0);
     assert_eq!(s, Failure);
 }
 
 #[test]
-fn test_allways_succeed() {
+fn test_always_succeed() {
     let a: i32 = 3;
     let sel = Sequence(vec![
         Wait(0.5),
@@ -375,12 +350,14 @@ fn test_allways_succeed() {
     let (a, s, _) = tick(a, 0.7, &mut state);
     assert_eq!(a, 3);
     assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.4, &mut state);
+    // The tree was automatically reset since it completed.
+    let (a, s, _) = tick(a, 0.5, &mut state);
     assert_eq!(a, 3);
     assert_eq!(s, Success);
+    // The tree was reset again.
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 3);
-    assert_eq!(s, Success);
+    assert_eq!(s, Running);
 }
 
 #[test]
