@@ -7,6 +7,7 @@ use petgraph::Graph;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 /// The execution state of a behavior tree, along with a "blackboard" (state
 /// shared between all nodes in the tree).
@@ -21,6 +22,8 @@ pub struct BT<A, B> {
     /// referred to as a "blackboard". State is written to and read from a
     /// blackboard, allowing nodes to share state and communicate each other.
     bb: B,
+    /// Whether the tree has been finished before.
+    finished: bool,
 }
 
 impl<A: Clone, B> BT<A, B> {
@@ -32,10 +35,13 @@ impl<A: Clone, B> BT<A, B> {
             state: bt,
             initial_behavior: backup_behavior,
             bb: blackboard,
+            finished: false,
         }
     }
 
-    /// Updates the cursor that tracks an event.
+    /// Updates the cursor that tracks an event. Returns an error if attempting
+    /// to tick after this tree has already returned [`Status::Success`] or
+    /// [`Status::Failure`].
     ///
     /// The action need to return status and remaining delta time.
     /// Returns status and the remaining delta time.
@@ -48,12 +54,21 @@ impl<A: Clone, B> BT<A, B> {
     /// it actually took to complete the traversal and propagate the
     /// results back up to the root node
     #[inline]
-    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
+    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> Result<(Status, f64), TickTreeError>
     where
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
     {
-        self.state.tick(e, &mut self.bb, f)
+        if self.finished {
+            return Err(TickTreeError::AlreadyFinished);
+        }
+        match self.state.tick(e, &mut self.bb, f) {
+            result @ (Status::Success | Status::Failure, _) => {
+                self.finished = true;
+                Ok(result)
+            }
+            result => Ok(result),
+        }
     }
 
     /// Retrieve a mutable reference to the blackboard for
@@ -75,7 +90,8 @@ impl<A: Clone, B> BT<A, B> {
     /// PS! invoking reset_bt does not reset the Blackboard.
     pub fn reset_bt(&mut self) {
         let initial_behavior = self.initial_behavior.to_owned();
-        self.state = State::new(initial_behavior)
+        self.state = State::new(initial_behavior);
+        self.finished = false;
     }
 }
 
@@ -124,4 +140,11 @@ impl<A: Clone + Debug, B: Debug> BT<A, B> {
         let digraph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
         (format!("{:?}", digraph), graph)
     }
+}
+
+/// Error for ticking a [`BT`].
+#[derive(Error, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TickTreeError {
+    #[error("the BT has already finished so cannot be ticked any more")]
+    AlreadyFinished,
 }
