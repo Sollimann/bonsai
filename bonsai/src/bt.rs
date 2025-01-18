@@ -35,7 +35,8 @@ impl<A: Clone, B> BT<A, B> {
         }
     }
 
-    /// Updates the cursor that tracks an event.
+    /// Updates the cursor that tracks an event. If the behavior tree previously
+    /// finished (either success or failure), it will automatically be restarted.
     ///
     /// The action need to return status and remaining delta time.
     /// Returns status and the remaining delta time.
@@ -53,7 +54,13 @@ impl<A: Clone, B> BT<A, B> {
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
     {
-        self.state.tick(e, &mut self.bb, f)
+        match self.state.tick(e, &mut self.bb, f) {
+            result @ (Status::Success | Status::Failure, _) => {
+                self.reset_bt();
+                result
+            }
+            result => result,
+        }
     }
 
     /// Retrieve a mutable reference to the blackboard for
