@@ -93,6 +93,12 @@ impl<A: Clone, B> BT<A, B> {
         self.state = State::new(initial_behavior);
         self.finished = false;
     }
+
+    /// Whether this behavior tree is in a completed state (the last tick returned
+    /// [`Status::Success`] or [`Status::Failure`]).
+    pub fn is_finished(&self) -> bool {
+        self.finished
+    }
 }
 
 impl<A: Clone + Debug, B: Debug> BT<A, B> {
