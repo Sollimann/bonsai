@@ -7,7 +7,6 @@ use petgraph::Graph;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 /// The execution state of a behavior tree, along with a "blackboard" (state
 /// shared between all nodes in the tree).
@@ -39,7 +38,7 @@ impl<A: Clone, B> BT<A, B> {
         }
     }
 
-    /// Updates the cursor that tracks an event. Returns an error if attempting
+    /// Updates the cursor that tracks an event. Returns [`None`] if attempting
     /// to tick after this tree has already returned [`Status::Success`] or
     /// [`Status::Failure`].
     ///
@@ -54,20 +53,20 @@ impl<A: Clone, B> BT<A, B> {
     /// it actually took to complete the traversal and propagate the
     /// results back up to the root node
     #[inline]
-    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> Result<(Status, f64), TickTreeError>
+    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> Option<(Status, f64)>
     where
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
     {
         if self.finished {
-            return Err(TickTreeError::AlreadyFinished);
+            return None;
         }
         match self.state.tick(e, &mut self.bb, f) {
             result @ (Status::Success | Status::Failure, _) => {
                 self.finished = true;
-                Ok(result)
+                Some(result)
             }
-            result => Ok(result),
+            result => Some(result),
         }
     }
 
@@ -146,11 +145,4 @@ impl<A: Clone + Debug, B: Debug> BT<A, B> {
         let digraph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
         (format!("{:?}", digraph), graph)
     }
-}
-
-/// Error for ticking a [`BT`].
-#[derive(Error, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TickTreeError {
-    #[error("the BT has already finished so cannot be ticked any more")]
-    AlreadyFinished,
 }
