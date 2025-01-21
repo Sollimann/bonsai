@@ -1,9 +1,6 @@
 use std::fmt::Debug;
 
-use crate::visualizer::NodeType;
 use crate::{state::State, ActionArgs, Behavior, Status, UpdateEvent};
-use petgraph::dot::{Config, Dot};
-use petgraph::Graph;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -79,6 +76,7 @@ impl<A: Clone, B> BT<A, B> {
     }
 }
 
+#[cfg(feature = "visualize")]
 impl<A: Clone + Debug, B: Debug> BT<A, B> {
     /// Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
     ///
@@ -113,7 +111,13 @@ impl<A: Clone + Debug, B: Debug> BT<A, B> {
         self.get_graphviz_with_graph_instance().0
     }
 
-    pub(crate) fn get_graphviz_with_graph_instance(&mut self) -> (String, Graph<NodeType<A>, u32>) {
+    pub(crate) fn get_graphviz_with_graph_instance(
+        &mut self,
+    ) -> (String, petgraph::Graph<crate::visualizer::NodeType<A>, u32>) {
+        use crate::visualizer::NodeType;
+        use petgraph::dot::{Config, Dot};
+        use petgraph::Graph;
+
         let behavior = self.initial_behavior.to_owned();
 
         let mut graph = Graph::<NodeType<A>, u32, petgraph::Directed>::new();
