@@ -19,8 +19,11 @@ name = "bonsai_bt"
 path = "src/lib.rs"
 
 [dependencies]
-petgraph = "0.6.2"
+petgraph = { version = "0.6.2", optional = true }
 serde = { version = "1.0.137", features = ["derive"], optional = true }
+
+[features]
+visualize = ["dep:petgraph"]
 
 [dev-dependencies]
 serde_json = { version = "1.0.81" }
