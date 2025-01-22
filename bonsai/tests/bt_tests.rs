@@ -18,26 +18,28 @@ enum TestActions {
 fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, HashMap<String, i32>>) -> (i32, bonsai_bt::Status, f64) {
     let e: Event = UpdateArgs { dt }.into();
     println!("acc {}", acc);
-    let (s, t) = bt.tick(&e, &mut |args, _| match *args.action {
-        Inc => {
-            acc += 1;
-            (Success, args.dt)
-        }
-        Dec => {
-            acc -= 1;
-            (Success, args.dt)
-        }
-        LessThan(v) => {
-            println!("inside less than with acc: {}", acc);
-            if acc < v {
-                println!("success {}<{}", acc, v);
+    let (s, t) = bt
+        .tick(&e, &mut |args, _| match *args.action {
+            Inc => {
+                acc += 1;
                 (Success, args.dt)
-            } else {
-                println!("failure {}>={}", acc, v);
-                (Failure, args.dt)
             }
-        }
-    });
+            Dec => {
+                acc -= 1;
+                (Success, args.dt)
+            }
+            LessThan(v) => {
+                println!("inside less than with acc: {}", acc);
+                if acc < v {
+                    println!("success {}<{}", acc, v);
+                    (Success, args.dt)
+                } else {
+                    println!("failure {}>={}", acc, v);
+                    (Failure, args.dt)
+                }
+            }
+        })
+        .unwrap();
     println!("status: {:?} dt: {}", s, t);
 
     (acc, s, t)
@@ -54,14 +56,14 @@ fn test_select_succeed_on_second_last() {
     let (a, s, _) = tick(a, 0.1, &mut bt);
     assert_eq!(a, 2);
     assert_eq!(s, Success);
+    bt.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut bt);
     assert_eq!(a, 1);
     assert_eq!(s, Success);
+    bt.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut bt);
     assert_eq!(a, 0);
     assert_eq!(s, Success);
-
-    // reset bt
     bt.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut bt);
     assert_eq!(a, 0);

@@ -180,7 +180,7 @@ async fn drone_tick(
                 }
             },
         }
-    );
+    ).unwrap();
 }
 
 #[tokio::main]

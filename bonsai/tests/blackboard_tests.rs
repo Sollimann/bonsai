@@ -17,16 +17,18 @@ pub enum TestActions {
 fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, HashMap<String, i32>>) -> i32 {
     let e: Event = UpdateArgs { dt }.into();
 
-    let (_s, _t) = bt.tick(&e, &mut |args, _| match *args.action {
-        Inc => {
-            acc += 1;
-            (Success, args.dt)
-        }
-        Dec => {
-            acc -= 1;
-            (Success, args.dt)
-        }
-    });
+    let (_s, _t) = bt
+        .tick(&e, &mut |args, _| match *args.action {
+            Inc => {
+                acc += 1;
+                (Success, args.dt)
+            }
+            Dec => {
+                acc -= 1;
+                (Success, args.dt)
+            }
+        })
+        .unwrap();
 
     // update counter in blackboard
     let bb = bt.get_blackboard();

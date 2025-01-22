@@ -172,5 +172,5 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
             },
         }
 
-    });
+    }).unwrap();
 }

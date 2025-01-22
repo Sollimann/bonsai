@@ -18,6 +18,8 @@ pub struct BT<A, B> {
     /// referred to as a "blackboard". State is written to and read from a
     /// blackboard, allowing nodes to share state and communicate each other.
     bb: B,
+    /// Whether the tree has been finished before.
+    finished: bool,
 }
 
 impl<A: Clone, B> BT<A, B> {
@@ -29,10 +31,13 @@ impl<A: Clone, B> BT<A, B> {
             state: bt,
             initial_behavior: backup_behavior,
             bb: blackboard,
+            finished: false,
         }
     }
 
-    /// Updates the cursor that tracks an event.
+    /// Updates the cursor that tracks an event. Returns [`None`] if attempting
+    /// to tick after this tree has already returned [`Status::Success`] or
+    /// [`Status::Failure`].
     ///
     /// The action need to return status and remaining delta time.
     /// Returns status and the remaining delta time.
@@ -45,12 +50,21 @@ impl<A: Clone, B> BT<A, B> {
     /// it actually took to complete the traversal and propagate the
     /// results back up to the root node
     #[inline]
-    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, f64)
+    pub fn tick<E, F>(&mut self, e: &E, f: &mut F) -> Option<(Status, f64)>
     where
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
     {
-        self.state.tick(e, &mut self.bb, f)
+        if self.finished {
+            return None;
+        }
+        match self.state.tick(e, &mut self.bb, f) {
+            result @ (Status::Success | Status::Failure, _) => {
+                self.finished = true;
+                Some(result)
+            }
+            result => Some(result),
+        }
     }
 
     /// Retrieve a mutable reference to the blackboard for
@@ -72,7 +86,14 @@ impl<A: Clone, B> BT<A, B> {
     /// PS! invoking reset_bt does not reset the Blackboard.
     pub fn reset_bt(&mut self) {
         let initial_behavior = self.initial_behavior.to_owned();
-        self.state = State::new(initial_behavior)
+        self.state = State::new(initial_behavior);
+        self.finished = false;
+    }
+
+    /// Whether this behavior tree is in a completed state (the last tick returned
+    /// [`Status::Success`] or [`Status::Failure`]).
+    pub fn is_finished(&self) -> bool {
+        self.finished
     }
 }
 

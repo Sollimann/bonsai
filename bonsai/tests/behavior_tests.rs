@@ -21,36 +21,38 @@ enum TestActions {
 fn tick(mut acc: i32, dt: f64, state: &mut BT<TestActions, ()>) -> (i32, bonsai_bt::Status, f64) {
     let e: Event = UpdateArgs { dt }.into();
     println!("acc {}", acc);
-    let (s, t) = state.tick(&e, &mut |args: ActionArgs<Event, TestActions>, _| match *args.action {
-        Inc => {
-            acc += 1;
-            (Success, args.dt)
-        }
-        Dec => {
-            acc -= 1;
-            (Success, args.dt)
-        }
-        LessThan(v) => {
-            println!("inside less than with acc: {}", acc);
-            if acc < v {
-                println!("success {}<{}", acc, v);
-                (Success, args.dt)
-            } else {
-                println!("failure {}>={}", acc, v);
-                (Failure, args.dt)
-            }
-        }
-        TestActions::LessThanRunningSuccess(v) => {
-            println!("inside LessThanRunningSuccess with acc: {}", acc);
-            if acc < v {
-                println!("success {}<{}", acc, v);
-                (Running, args.dt)
-            } else {
-                println!("failure {}>={}", acc, v);
+    let (s, t) = state
+        .tick(&e, &mut |args: ActionArgs<Event, TestActions>, _| match *args.action {
+            Inc => {
+                acc += 1;
                 (Success, args.dt)
             }
-        }
-    });
+            Dec => {
+                acc -= 1;
+                (Success, args.dt)
+            }
+            LessThan(v) => {
+                println!("inside less than with acc: {}", acc);
+                if acc < v {
+                    println!("success {}<{}", acc, v);
+                    (Success, args.dt)
+                } else {
+                    println!("failure {}>={}", acc, v);
+                    (Failure, args.dt)
+                }
+            }
+            TestActions::LessThanRunningSuccess(v) => {
+                println!("inside LessThanRunningSuccess with acc: {}", acc);
+                if acc < v {
+                    println!("success {}<{}", acc, v);
+                    (Running, args.dt)
+                } else {
+                    println!("failure {}>={}", acc, v);
+                    (Success, args.dt)
+                }
+            }
+        })
+        .unwrap();
     println!("status: {:?} dt: {}", s, t);
 
     (acc, s, t)
@@ -60,17 +62,19 @@ fn tick(mut acc: i32, dt: f64, state: &mut BT<TestActions, ()>) -> (i32, bonsai_
 fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut BT<TestActions, ()>) {
     let e: Event = UpdateArgs { dt }.into();
 
-    state.tick(&e, &mut |args: ActionArgs<Event, TestActions>, _| match *args.action {
-        Inc => {
-            *acc += 1;
-            (Success, args.dt)
-        }
-        Dec => {
-            *acc -= 1;
-            (Success, args.dt)
-        }
-        TestActions::LessThanRunningSuccess(_) | LessThan(_) => todo!(),
-    });
+    state
+        .tick(&e, &mut |args: ActionArgs<Event, TestActions>, _| match *args.action {
+            Inc => {
+                *acc += 1;
+                (Success, args.dt)
+            }
+            Dec => {
+                *acc -= 1;
+                (Success, args.dt)
+            }
+            TestActions::LessThanRunningSuccess(_) | LessThan(_) => todo!(),
+        })
+        .unwrap();
 }
 
 // Each action that terminates immediately
@@ -85,8 +89,12 @@ fn test_immediate_termination() {
     let mut state = BT::new(seq, ());
     tick_with_ref(&mut a, 0.0, &mut state);
     assert_eq!(a, 2);
+    assert!(state.is_finished());
+    state.reset_bt();
     tick_with_ref(&mut a, 1.0, &mut state);
-    assert_eq!(a, 2)
+    assert_eq!(a, 4);
+    assert!(state.is_finished());
+    state.reset_bt();
 }
 
 // Tree terminates after 2.001 seconds
@@ -218,14 +226,17 @@ fn test_if_less_than() {
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 2);
     assert_eq!(s, Success);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 1);
     assert_eq!(s, Success);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 0);
     assert_eq!(s, Success);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, -1);
+    assert_eq!(a, 1);
     assert_eq!(s, Success);
 }
 
@@ -270,12 +281,13 @@ fn test_select_succeed_on_first() {
 
     let (a, _, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 1);
+    state.reset_bt();
     let (a, _, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 2);
 }
 
 #[test]
-fn test_select_no_state_reset() {
+fn test_select_needs_reset() {
     let a: i32 = 3;
     let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
     let mut state = BT::new(sel, ());
@@ -283,37 +295,15 @@ fn test_select_no_state_reset() {
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 2);
     assert_eq!(s, Success);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 1);
     assert_eq!(s, Success);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 0);
     assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, -1);
-    assert_eq!(s, Success);
-}
-
-#[test]
-fn test_select_with_state_reset() {
-    let a: i32 = 3;
-    let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
-    let sel_clone = sel.clone();
-    let mut state = BT::new(sel, ());
-
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 2);
-    assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 1);
-    assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, 0);
-    assert_eq!(s, Success);
-
-    // reset state
-    state = BT::new(sel_clone, ());
-
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 0);
     assert_eq!(s, Success);
@@ -338,26 +328,28 @@ fn test_select_and_when_all() {
 fn test_select_and_invert() {
     let a: i32 = 3;
     let sel = Invert(Box::new(Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)])));
-    let whenall = WhenAll(vec![Wait(0.35), sel]);
-    let mut state = BT::new(whenall, ());
+    let mut state = BT::new(sel, ());
 
     // Running + Failure = Failure
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 2);
     assert_eq!(s, Failure);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.3, &mut state);
     assert_eq!(a, 1);
     assert_eq!(s, Failure);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 0);
     assert_eq!(s, Failure);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
-    assert_eq!(a, -1);
+    assert_eq!(a, 0);
     assert_eq!(s, Failure);
 }
 
 #[test]
-fn test_allways_succeed() {
+fn test_always_succeed() {
     let a: i32 = 3;
     let sel = Sequence(vec![
         Wait(0.5),
@@ -375,12 +367,14 @@ fn test_allways_succeed() {
     let (a, s, _) = tick(a, 0.7, &mut state);
     assert_eq!(a, 3);
     assert_eq!(s, Success);
-    let (a, s, _) = tick(a, 0.4, &mut state);
+    state.reset_bt();
+    let (a, s, _) = tick(a, 0.5, &mut state);
     assert_eq!(a, 3);
     assert_eq!(s, Success);
+    state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 3);
-    assert_eq!(s, Success);
+    assert_eq!(s, Running);
 }
 
 #[test]
