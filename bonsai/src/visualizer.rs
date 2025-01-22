@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-use crate::{Behavior, Select, Sequence, State, BT};
+use crate::{state::State, Behavior, Select, Sequence, BT};
 use petgraph::{graph::Graph, stable_graph::NodeIndex, Direction::Outgoing};
 use std::{collections::VecDeque, fmt::Debug};
 

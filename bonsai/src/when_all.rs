@@ -1,5 +1,5 @@
 use crate::status::Status::*;
-use crate::{event::UpdateEvent, ActionArgs, State, Status, RUNNING};
+use crate::{event::UpdateEvent, state::State, ActionArgs, Status, RUNNING};
 
 // `WhenAll` and `WhenAny` share same algorithm.
 //

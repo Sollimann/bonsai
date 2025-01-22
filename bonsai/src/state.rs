@@ -28,19 +28,19 @@ pub struct ActionArgs<'a, E: 'a, A: 'a> {
 /// Keeps track of a behavior.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum State<A> {
+pub(crate) enum State<A> {
     /// Executes an action.
-    ActionState(A),
+    Action(A),
     /// Converts `Success` into `Failure` and vice versa.
-    InvertState(Box<State<A>>),
+    Invert(Box<State<A>>),
     /// Ignores failures and always return `Success`.
-    AlwaysSucceedState(Box<State<A>>),
+    AlwaysSucceed(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
-    WaitState { time_to_wait: f64, elapsed_time: f64 },
+    Wait { time_to_wait: f64, elapsed_time: f64 },
     /// Waits forever.
-    WaitForeverState,
+    WaitForever,
     /// Keeps track of an `If` behavior.
-    IfState {
+    If {
         /// The behavior to run if the status is a success.
         on_success: Box<Behavior<A>>,
         /// The behavior to run if the status is a failure.
@@ -52,7 +52,7 @@ pub enum State<A> {
         current_state: Box<State<A>>,
     },
     /// Keeps track of a `Select` behavior.
-    SelectState {
+    Select {
         /// The behaviors that will be selected across in order.
         behaviors: Vec<Behavior<A>>,
         /// The index of the behavior currently being executed.
@@ -61,7 +61,7 @@ pub enum State<A> {
         current_state: Box<State<A>>,
     },
     /// Keeps track of an `Sequence` behavior.
-    SequenceState {
+    Sequence {
         /// The behaviors that will be executed in order.
         behaviors: Vec<Behavior<A>>,
         /// The index of the behavior currently being executed.
@@ -70,7 +70,7 @@ pub enum State<A> {
         current_state: Box<State<A>>,
     },
     /// Keeps track of a `While` behavior.
-    WhileState {
+    While {
         /// The state of the condition of the loop. The loop continues to run
         /// while this state is running.
         condition_state: Box<State<A>>,
@@ -82,7 +82,7 @@ pub enum State<A> {
         loop_body_state: Box<State<A>>,
     },
     /// Keeps track of a `WhileAll` behavior.
-    WhileAllState {
+    WhileAll {
         /// The state of the condition of the loop. The loop continues to run
         /// while this state is running, though this is only checked once at the
         /// start of each loop.
@@ -98,12 +98,12 @@ pub enum State<A> {
     },
     /// Keeps track of a `WhenAll` behavior. As the states finish, they are set
     /// to [`None`].
-    WhenAllState(Vec<Option<State<A>>>),
+    WhenAll(Vec<Option<State<A>>>),
     /// Keeps track of a `WhenAny` behavior. As the states finish, they are set
     /// to [`None`].
-    WhenAnyState(Vec<Option<State<A>>>),
+    WhenAny(Vec<Option<State<A>>>),
     /// Keeps track of an `After` behavior.
-    AfterState {
+    After {
         /// The index of the next state that must succeed.
         next_success_index: usize,
         /// The states for the behaviors currently executing. All the states
@@ -122,17 +122,17 @@ impl<A: Clone> State<A> {
     /// the executing instance of that behavior.
     pub fn new(behavior: Behavior<A>) -> Self {
         match behavior {
-            Behavior::Action(action) => State::ActionState(action),
-            Behavior::Invert(ev) => State::InvertState(Box::new(State::new(*ev))),
-            Behavior::AlwaysSucceed(ev) => State::AlwaysSucceedState(Box::new(State::new(*ev))),
-            Behavior::Wait(dt) => State::WaitState {
+            Behavior::Action(action) => State::Action(action),
+            Behavior::Invert(ev) => State::Invert(Box::new(State::new(*ev))),
+            Behavior::AlwaysSucceed(ev) => State::AlwaysSucceed(Box::new(State::new(*ev))),
+            Behavior::Wait(dt) => State::Wait {
                 time_to_wait: dt,
                 elapsed_time: 0.0,
             },
-            Behavior::WaitForever => State::WaitForeverState,
+            Behavior::WaitForever => State::WaitForever,
             Behavior::If(condition, on_success, on_failure) => {
                 let state = State::new(*condition);
-                State::IfState {
+                State::If {
                     on_success,
                     on_failure,
                     status: Status::Running,
@@ -141,7 +141,7 @@ impl<A: Clone> State<A> {
             }
             Behavior::Select(behaviors) => {
                 let state = State::new(behaviors[0].clone());
-                State::SelectState {
+                State::Select {
                     behaviors,
                     current_index: 0,
                     current_state: Box::new(state),
@@ -149,7 +149,7 @@ impl<A: Clone> State<A> {
             }
             Behavior::Sequence(behaviors) => {
                 let state = State::new(behaviors[0].clone());
-                State::SequenceState {
+                State::Sequence {
                     behaviors,
                     current_index: 0,
                     current_state: Box::new(state),
@@ -157,16 +157,16 @@ impl<A: Clone> State<A> {
             }
             Behavior::While(condition, loop_body) => {
                 let state = State::new(loop_body[0].clone());
-                State::WhileState {
+                State::While {
                     condition_state: Box::new(State::new(*condition)),
                     loop_body,
                     loop_body_index: 0,
                     loop_body_state: Box::new(state),
                 }
             }
-            Behavior::WhenAll(all) => State::WhenAllState(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
-            Behavior::WhenAny(any) => State::WhenAnyState(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
-            Behavior::After(after_all) => State::AfterState {
+            Behavior::WhenAll(all) => State::WhenAll(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
+            Behavior::WhenAny(any) => State::WhenAny(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
+            Behavior::After(after_all) => State::After {
                 next_success_index: 0,
                 states: after_all.into_iter().map(State::new).collect(),
             },
@@ -177,7 +177,7 @@ impl<A: Clone> State<A> {
                         .expect("WhileAll's sequence of behaviors to run cannot be empty!")
                         .clone(),
                 );
-                State::WhileAllState {
+                State::WhileAll {
                     condition_state: Box::new(State::new(*condition)),
                     check_condition: true,
                     loop_body,
@@ -209,7 +209,7 @@ impl<A: Clone> State<A> {
 
         // double match statements
         match (upd, self) {
-            (_, &mut ActionState(ref action)) => {
+            (_, &mut Action(ref action)) => {
                 // println!("In ActionState: {:?}", action);
                 f(
                     ActionArgs {
@@ -220,7 +220,7 @@ impl<A: Clone> State<A> {
                     blackboard,
                 )
             }
-            (_, &mut InvertState(ref mut cur)) => {
+            (_, &mut Invert(ref mut cur)) => {
                 // println!("In InvertState: {:?}", cur);
                 match cur.tick(e, blackboard, f) {
                     (Running, dt) => (Running, dt),
@@ -228,7 +228,7 @@ impl<A: Clone> State<A> {
                     (Success, dt) => (Failure, dt),
                 }
             }
-            (_, &mut AlwaysSucceedState(ref mut cur)) => {
+            (_, &mut AlwaysSucceed(ref mut cur)) => {
                 // println!("In AlwaysSucceedState: {:?}", cur);
                 match cur.tick(e, blackboard, f) {
                     (Running, dt) => (Running, dt),
@@ -237,7 +237,7 @@ impl<A: Clone> State<A> {
             }
             (
                 Some(dt),
-                &mut WaitState {
+                &mut Wait {
                     time_to_wait,
                     ref mut elapsed_time,
                 },
@@ -254,7 +254,7 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut IfState {
+                &mut If {
                     ref on_success,
                     ref on_failure,
                     ref mut status,
@@ -301,7 +301,7 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut SelectState {
+                &mut Select {
                     behaviors: ref seq,
                     current_index: ref mut i,
                     current_state: ref mut cursor,
@@ -322,7 +322,7 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut SequenceState {
+                &mut Sequence {
                     behaviors: ref seq,
                     current_index: ref mut i,
                     current_state: ref mut cursor,
@@ -343,7 +343,7 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut WhileState {
+                &mut While {
                     ref mut condition_state,
                     ref loop_body,
                     ref mut loop_body_index,
@@ -394,19 +394,19 @@ impl<A: Clone> State<A> {
                 }
                 RUNNING
             }
-            (_, &mut WhenAllState(ref mut cursors)) => {
+            (_, &mut WhenAll(ref mut cursors)) => {
                 // println!("In WhenAllState: {:?}", cursors);
                 let any = false;
                 when_all(any, upd, cursors, e, f, blackboard)
             }
-            (_, &mut WhenAnyState(ref mut cursors)) => {
+            (_, &mut WhenAny(ref mut cursors)) => {
                 // println!("In WhenAnyState: {:?}", cursors);
                 let any = true;
                 when_all(any, upd, cursors, e, f, blackboard)
             }
             (
                 _,
-                &mut AfterState {
+                &mut After {
                     ref mut next_success_index,
                     ref mut states,
                 },
@@ -443,7 +443,7 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut WhileAllState {
+                &mut WhileAll {
                     ref mut condition_state,
                     ref mut check_condition,
                     ref loop_body,

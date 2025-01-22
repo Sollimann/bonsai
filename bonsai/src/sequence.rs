@@ -1,5 +1,5 @@
 use crate::status::Status::*;
-use crate::{event::UpdateEvent, ActionArgs, Behavior, State, Status, RUNNING};
+use crate::{event::UpdateEvent, state::State, ActionArgs, Behavior, Status, RUNNING};
 
 pub struct SequenceArgs<'a, A, E, F, B> {
     pub select: bool,
