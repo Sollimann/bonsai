@@ -174,7 +174,7 @@ fn main() {
     }
     println!(
         "NPC shot {} times during the simulation.",
-        bt.get_blackboard().times_shot
+        bt.blackboard_mut().times_shot
     );
 }
 
