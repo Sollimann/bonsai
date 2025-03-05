@@ -1,7 +1,7 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, If, Invert, Select, Sequence, Status::Running, Success,
-    UpdateArgs, Wait, WaitForever, WhenAll, While, WhileAll, BT,
+    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Select, Sequence, Status::Running,
+    Success, UpdateArgs, Wait, WaitForever, WhenAll, While, WhileAll, BT,
 };
 
 /// Some test actions.
@@ -18,7 +18,7 @@ enum TestActions {
 }
 
 // A test state machine that can increment and decrement.
-fn tick(mut acc: i32, dt: f64, state: &mut BT<TestActions, ()>) -> (i32, bonsai_bt::Status, f64) {
+fn tick(mut acc: i32, dt: Float, state: &mut BT<TestActions, ()>) -> (i32, bonsai_bt::Status, Float) {
     let e: Event = UpdateArgs { dt }.into();
     println!("acc {}", acc);
     let (s, t) = state
@@ -59,7 +59,7 @@ fn tick(mut acc: i32, dt: f64, state: &mut BT<TestActions, ()>) -> (i32, bonsai_
 }
 
 // A test state machine that can increment and decrement.
-fn tick_with_ref(acc: &mut i32, dt: f64, state: &mut BT<TestActions, ()>) {
+fn tick_with_ref(acc: &mut i32, dt: Float, state: &mut BT<TestActions, ()>) {
     let e: Event = UpdateArgs { dt }.into();
 
     state

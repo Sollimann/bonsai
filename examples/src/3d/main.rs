@@ -1,6 +1,6 @@
 use bonsai_bt::Behavior::{If, Invert, Wait, WhenAny, While};
 use bonsai_bt::Status::{self};
-use bonsai_bt::{Action, RUNNING};
+use bonsai_bt::{Action, Float, RUNNING};
 use bonsai_bt::{Event, Status::Failure, Status::Success, UpdateArgs};
 use bonsai_bt::{Timer, BT};
 use kiss3d::event::EventManager;
@@ -24,7 +24,7 @@ pub enum Animation {
     /// check for events with the mouse
     MouseCallback,
     /// time has passed longer than
-    LongerThan(f64),
+    LongerThan(Float),
     /// counter
     ///
     /// Random complex condition

@@ -1,12 +1,12 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-use crate::{state::State, Behavior, Select, Sequence, BT};
+use crate::{state::State, Behavior, Float, Select, Sequence, BT};
 use petgraph::{graph::Graph, stable_graph::NodeIndex, Direction::Outgoing};
 use std::{collections::VecDeque, fmt::Debug};
 
 #[derive(Debug, Clone)]
 pub(crate) enum NodeType<A> {
     Root,
-    Wait(f64),
+    Wait(Float),
     WaitForever,
     Action(A),
     Invert,
@@ -152,7 +152,7 @@ mod tests {
     }
 
     // A test state machine that can increment and decrement.
-    fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, HashMap<String, i32>>) -> (i32, Status, f64) {
+    fn tick(mut acc: i32, dt: Float, bt: &mut BT<TestActions, HashMap<String, i32>>) -> (i32, Status, Float) {
         let e: Event = UpdateArgs { dt }.into();
         let (s, t) = bt
             .tick(&e, &mut |args, blackboard| match args.action {

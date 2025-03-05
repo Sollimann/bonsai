@@ -1,7 +1,7 @@
 mod boid;
 
 use boid::{game_tick, Action};
-use bonsai_bt::BT;
+use bonsai_bt::{Float, BT};
 use ggez::{conf, event, graphics, input, timer, Context, ContextBuilder, GameResult};
 use std::collections::HashMap;
 
@@ -86,7 +86,18 @@ impl event::EventHandler for GameState {
                 for i in 0..(self.boids).len() {
                     let boids_vec = self.boids.to_vec();
                     let b = &mut self.boids[i];
-                    game_tick(self.dt.as_secs_f32(), input::mouse::position(ctx), b, boids_vec);
+
+                    let dt: Float = {
+                        #[cfg(feature = "f32")]
+                        {
+                            self.dt.as_secs_f32()
+                        }
+                        #[cfg(not(feature = "f32"))]
+                        {
+                            self.dt.as_secs_f64()
+                        }
+                    };
+                    game_tick(dt, input::mouse::position(ctx), b, boids_vec);
 
                     //Convert new velocity to postion change
                     b.x += b.dx * tick;

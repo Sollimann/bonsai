@@ -1,7 +1,7 @@
 use crate::dynamic_behavior_tests::TestActions::{DynamicWait, Inc};
-use bonsai_bt::{Action, ActionArgs, Event, Success, UpdateArgs, Wait, While, BT, RUNNING};
+use bonsai_bt::{Action, ActionArgs, Event, Float, Success, UpdateArgs, Wait, While, BT, RUNNING};
 
-type Times = Vec<f64>;
+type Times = Vec<Float>;
 /// Some test actions.
 #[derive(Clone, Debug)]
 enum TestActions {
@@ -12,7 +12,7 @@ enum TestActions {
 }
 
 // A test state machine that can increment and decrement.
-fn tick(mut acc: usize, dt: f64, t: &mut f64, counter: &mut usize, state: &mut BT<TestActions, ()>) -> usize {
+fn tick(mut acc: usize, dt: Float, t: &mut Float, counter: &mut usize, state: &mut BT<TestActions, ()>) -> usize {
     let e: Event = UpdateArgs { dt }.into();
 
     let (_s, _t) = state
@@ -49,7 +49,7 @@ fn tick(mut acc: usize, dt: f64, t: &mut f64, counter: &mut usize, state: &mut B
 fn test_alter_wait_time() {
     let a: usize = 0;
     let mut counter = 0;
-    let mut timer: f64 = 0.0;
+    let mut timer: Float = 0.0;
     let rep = While(
         Box::new(Wait(50.0)),
         vec![Action(DynamicWait(vec![1.0, 2.0, 3.0])), Action(Inc)],

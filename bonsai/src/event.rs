@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct UpdateArgs {
     /// Delta time in seconds.
-    pub dt: f64,
+    pub dt: Float,
 }
 
 impl UpdateArgs {
@@ -54,7 +54,7 @@ pub trait UpdateEvent: Sized {
     /// Creates an update event.
     fn from_update_args(args: &UpdateArgs, old_event: &Self) -> Option<Self>;
     /// Creates an update event with delta time.
-    fn from_dt(dt: f64, old_event: &Self) -> Option<Self> {
+    fn from_dt(dt: Float, old_event: &Self) -> Option<Self> {
         UpdateEvent::from_update_args(&UpdateArgs { dt }, old_event)
     }
     /// Calls closure if this is an update event.
@@ -84,6 +84,8 @@ impl UpdateEvent for Event {
 
 use std::time::Instant;
 
+use crate::Float;
+
 /// A monotonic clock/timer that can be used to keep track
 /// of the time increments (delta time) between tick/tree traversals
 /// and the total duration since the behavior tree was first invoked/traversed
@@ -101,18 +103,24 @@ impl Timer {
     }
 
     /// Compute duration since timer started
-    pub fn duration_since_start(&self) -> f64 {
+    pub fn duration_since_start(&self) -> Float {
         let new_now: Instant = Instant::now();
         let duration = new_now.duration_since(self.start);
-        duration.as_secs_f64()
+        #[cfg(feature = "f32")]
+        return duration.as_secs_f32();
+        #[cfg(not(feature = "f32"))]
+        return duration.as_secs_f64();
     }
 
     /// Compute time difference last invocation of `get_dt()` function
-    pub fn get_dt(&mut self) -> f64 {
+    pub fn get_dt(&mut self) -> Float {
         let new_now: Instant = Instant::now();
         let duration = new_now.duration_since(self.now);
         self.now = new_now;
-        duration.as_secs_f64()
+        #[cfg(feature = "f32")]
+        return duration.as_secs_f32();
+        #[cfg(not(feature = "f32"))]
+        return duration.as_secs_f64();
     }
 }
 

@@ -24,6 +24,7 @@ serde = { version = "1.0.137", features = ["derive"], optional = true }
 
 [features]
 visualize = ["dep:petgraph"]
+f32 = []
 
 [dev-dependencies]
 serde_json = { version = "1.0.81" }

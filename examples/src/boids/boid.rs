@@ -1,4 +1,4 @@
-use bonsai_bt::{Event, Status::Success, UpdateArgs, BT, RUNNING};
+use bonsai_bt::{Event, Float, Status::Success, UpdateArgs, BT, RUNNING};
 use ggez::mint;
 use std::collections::HashMap;
 
@@ -54,9 +54,9 @@ impl Boid {
     }
 }
 
-pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boids: Vec<Boid>) {
+pub fn game_tick(dt: Float, cursor: mint::Point2<f32>, boid: &mut Boid, other_boids: Vec<Boid>) {
     // proceed to next iteration in event loop
-    let e: Event = UpdateArgs { dt: dt.into() }.into();
+    let e: Event = UpdateArgs { dt }.into();
 
     // unwrap bt for boid
     let mut bt = boid.bt.clone();

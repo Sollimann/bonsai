@@ -1,4 +1,5 @@
 use crate::status::Status::*;
+use crate::Float;
 use crate::{event::UpdateEvent, state::State, ActionArgs, Status, RUNNING};
 
 // `WhenAll` and `WhenAny` share same algorithm.
@@ -8,16 +9,16 @@ use crate::{event::UpdateEvent, state::State, ActionArgs, Status, RUNNING};
 #[rustfmt::skip]
 pub fn when_all<A, E, F, B>(
     any: bool,
-    upd: Option<f64>,
+    upd: Option<Float>,
     cursors: &mut [Option<State<A>>],
     e: &E,
     f: &mut F,
     blackboard: &mut B,
-) -> (Status, f64)
+) -> (Status, Float)
 where
     A: Clone,
     E: UpdateEvent,
-    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
+    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
 {
     let (status, inv_status) = if any {
         // `WhenAny`
@@ -27,7 +28,7 @@ where
         (Status::Success, Status::Failure)
     };
     // Get the least delta time left over.
-    let mut min_dt = f64::MAX;
+    let mut min_dt = Float::MAX;
     // Count number of terminated events.
     let mut terminated = 0;
     for cur in cursors.iter_mut() {
