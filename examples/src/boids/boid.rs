@@ -60,7 +60,7 @@ pub fn game_tick(dt: f32, cursor: mint::Point2<f32>, boid: &mut Boid, other_boid
 
     // unwrap bt for boid
     let mut bt = boid.bt.clone();
-    let db = bt.get_blackboard();
+    let db = bt.blackboard_mut();
     let win_width: f32 = *db.get("win_width").unwrap();
     let win_height: f32 = *db.get("win_height").unwrap();
 
