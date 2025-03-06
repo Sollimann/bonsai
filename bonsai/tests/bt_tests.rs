@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::bt_tests::TestActions::{Dec, Inc, LessThan};
-use bonsai_bt::{Action, Behavior::Select, Event, Failure, Success, UpdateArgs, BT};
+use bonsai_bt::{Action, Behavior::Select, Event, Failure, Float, Success, UpdateArgs, BT};
 
 /// Some test actions.
 #[derive(Clone, Debug)]
@@ -15,7 +15,7 @@ enum TestActions {
 }
 
 // A test state machine that can increment and decrement.
-fn tick(mut acc: i32, dt: f64, bt: &mut BT<TestActions, HashMap<String, i32>>) -> (i32, bonsai_bt::Status, f64) {
+fn tick(mut acc: i32, dt: Float, bt: &mut BT<TestActions, HashMap<String, i32>>) -> (i32, bonsai_bt::Status, Float) {
     let e: Event = UpdateArgs { dt }.into();
     println!("acc {}", acc);
     let (s, t) = bt

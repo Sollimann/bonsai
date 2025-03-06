@@ -1,9 +1,10 @@
 use crate::status::Status::*;
+use crate::Float;
 use crate::{event::UpdateEvent, state::State, ActionArgs, Behavior, Status, RUNNING};
 
 pub struct SequenceArgs<'a, A, E, F, B> {
     pub select: bool,
-    pub upd: Option<f64>,
+    pub upd: Option<Float>,
     pub seq: &'a [Behavior<A>],
     pub i: &'a mut usize,
     pub cursor: &'a mut Box<State<A>>,
@@ -16,11 +17,11 @@ pub struct SequenceArgs<'a, A, E, F, B> {
 //
 // `Sequence` fails if any fails and succeeds when all succeeds.
 // `Select` succeeds if any succeeds and fails when all fails.
-pub fn sequence<A, E, F, B>(args: SequenceArgs<A, E, F, B>) -> (Status, f64)
+pub fn sequence<A, E, F, B>(args: SequenceArgs<A, E, F, B>) -> (Status, Float)
 where
     A: Clone,
     E: UpdateEvent,
-    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
+    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
 {
     let SequenceArgs {
         select,

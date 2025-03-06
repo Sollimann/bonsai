@@ -3,7 +3,7 @@ use crate::sequence::{sequence, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::when_all::when_all;
-use crate::{Behavior, Status};
+use crate::{Behavior, Float, Status};
 use std::fmt::Debug;
 
 #[cfg(feature = "serde")]
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// The action is still running, and thus the action consumes
 /// all the remaining delta time for the tick
-pub const RUNNING: (Status, f64) = (Running, 0.0);
+pub const RUNNING: (Status, Float) = (Running, 0.0);
 
 /// The arguments in the action callback.
 pub struct ActionArgs<'a, E: 'a, A: 'a> {
@@ -20,7 +20,7 @@ pub struct ActionArgs<'a, E: 'a, A: 'a> {
     /// The remaining delta time. When one action terminates,
     /// it can consume some of dt and the remaining is passed
     /// onto the next action.
-    pub dt: f64,
+    pub dt: Float,
     /// The action running.
     pub action: &'a A,
 }
@@ -36,7 +36,7 @@ pub(crate) enum State<A> {
     /// Ignores failures and always return `Success`.
     AlwaysSucceed(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
-    Wait { time_to_wait: f64, elapsed_time: f64 },
+    Wait { time_to_wait: Float, elapsed_time: Float },
     /// Waits forever.
     WaitForever,
     /// Keeps track of an `If` behavior.
@@ -196,14 +196,14 @@ impl<A: Clone> State<A> {
     /// Passes event, delta time in seconds, action and state to closure.
     /// The closure should return a status and remaining delta time.
     ///
-    /// return: (Status, f64)
+    /// return: (Status, Float)
     /// function returns the result of the tree traversal, and how long
     /// it actually took to complete the traversal and propagate the
     /// results back up to the root node
-    pub fn tick<E, F, B>(&mut self, e: &E, blackboard: &mut B, f: &mut F) -> (Status, f64)
+    pub fn tick<E, F, B>(&mut self, e: &E, blackboard: &mut B, f: &mut F) -> (Status, Float)
     where
         E: UpdateEvent,
-        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, f64),
+        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
     {
         let upd = e.update(|args| Some(args.dt)).unwrap_or(None);
 
@@ -413,7 +413,7 @@ impl<A: Clone> State<A> {
             ) => {
                 // println!("In AfterState: {}", next_success_index);
                 // Get the least delta time left over.
-                let mut min_dt = f64::MAX;
+                let mut min_dt = Float::MAX;
                 for (j, item) in states.iter_mut().enumerate().skip(*next_success_index) {
                     match item.tick(e, blackboard, f) {
                         (Running, _) => {

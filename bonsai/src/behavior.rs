@@ -1,6 +1,8 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::Float;
+
 /// Describes a behavior.
 ///
 /// This is used for more complex event logic.
@@ -10,8 +12,8 @@ use serde::{Deserialize, Serialize};
 pub enum Behavior<A> {
     /// Waits an amount of time before continuing
     ///
-    /// f64: Time in seconds
-    Wait(f64),
+    /// Float: Time in seconds
+    Wait(Float),
     /// Wait forever.
     WaitForever,
     /// A high level description of an action.
@@ -131,20 +133,23 @@ pub enum Behavior<A> {
 #[cfg(test)]
 #[cfg(feature = "serde")]
 mod tests {
-    use crate::Behavior::{self, Action, Sequence, Wait, WaitForever, WhenAny, While};
+    use crate::{
+        Behavior::{self, Action, Sequence, Wait, WaitForever, WhenAny, While},
+        Float,
+    };
 
     #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
     pub(crate) enum EnemyAction {
         /// Circles forever around target pos.
         Circling,
         /// Waits until player is within distance.
-        PlayerWithinDistance(f64),
+        PlayerWithinDistance(Float),
         /// Fly toward player.
         FlyTowardPlayer,
         /// Waits until player is far away from target.
-        PlayerFarAwayFromTarget(f64),
+        PlayerFarAwayFromTarget(Float),
         /// Makes player loose more blood.
-        AttackPlayer(f64),
+        AttackPlayer(Float),
     }
 
     #[test]
