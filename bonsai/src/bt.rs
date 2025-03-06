@@ -67,7 +67,7 @@ impl<A: Clone, B> BT<A, B> {
         }
     }
 
-    /// Retrieve a immutable reference to the blackboard for
+    /// Retrieve an immutable reference to the blackboard for
     /// this Behavior Tree
     pub fn blackboard(&self) -> &B {
         &self.bb
