@@ -13,9 +13,9 @@ jobs:
     steps:
       - name: Install libudev
         run: sudo apt-get update && sudo apt-get install libudev-dev pkg-config librust-alsa-sys-dev
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - uses: pre-commit/action@v2.0.3
+      - uses: actions/checkout@v6.0.2
+      - uses: actions/setup-python@v6.2.0
+      - uses: pre-commit/action@v3.0.1
   build:
     runs-on: ubuntu-latest
     steps:

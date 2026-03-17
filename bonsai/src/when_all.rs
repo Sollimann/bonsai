@@ -55,6 +55,7 @@ where
         terminated += 1;
         *cur = None;
     }
+    #[allow(clippy::manual_unwrap_or)]
     match terminated {
         // If there are no events, there is a whole 'dt' left.
         0 if cursors.is_empty() => (

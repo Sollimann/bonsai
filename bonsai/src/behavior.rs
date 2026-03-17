@@ -128,6 +128,12 @@ pub enum Behavior<A> {
     /// Succeeds if all behaviors succeed, but only if succeeding in sequence.
     /// Fails if one behavior fails.
     After(Vec<Behavior<A>>),
+    /// Runs all behaviors in parallel until one completes (succeeds or fails).
+    ///
+    /// Returns the status of the first behavior to complete,
+    /// whether that is `Success` or `Failure`.
+    /// If all behaviors remain `Running`, returns `Running`.
+    Race(Vec<Behavior<A>>),
 }
 
 #[cfg(test)]

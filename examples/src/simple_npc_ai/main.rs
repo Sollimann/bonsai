@@ -124,12 +124,12 @@ impl EnemyNPCState {
 /// 6. check if action points are available (yes)
 /// 7. run
 /// 8. shoot (notice that we don't have action points
-///           here but we try anyway and move on the sequence)
+///    here but we try anyway and move on the sequence)
 /// 9. check if action points are available (no)
 /// 10. exit the subprogram
 /// 11. rest and regain action points
-///         (this action returns [Running] until fully rested
-///          so control flow is returned to main loop)
+///     (this action returns [Running] until fully rested
+///     so control flow is returned to main loop)
 /// 12. kill the NPC
 /// 13. check if the NPC is dead (yes)
 /// 14. quit

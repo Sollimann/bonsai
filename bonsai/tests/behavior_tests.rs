@@ -1,7 +1,7 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Select, Sequence, Status::Running,
-    Success, UpdateArgs, Wait, WaitForever, WhenAll, While, WhileAll, BT,
+    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Select, Sequence,
+    Status::Running, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
 };
 
 /// Some test actions.
@@ -609,4 +609,96 @@ fn test_repeat_sequence_empty() {
     let after = WhileAll(Box::new(Action(LessThanRunningSuccess(0))), vec![]);
     // panics because no behaviors...
     let _state = BT::new(after, ());
+}
+
+#[test]
+fn race_returns_first_success() {
+    let a: i32 = 0;
+    // Inc succeeds immediately, Wait is still running
+    let behavior = Race(vec![Action(Inc), Wait(10.0)]);
+    let mut state = BT::new(behavior, ());
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 1);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn race_returns_first_failure() {
+    let a: i32 = 5;
+    // LessThan(1) fails immediately since 5 >= 1, Wait is still running
+    let behavior = Race(vec![Action(LessThan(1)), Wait(10.0)]);
+    let mut state = BT::new(behavior, ());
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 5);
+    assert_eq!(s, Failure);
+}
+
+#[test]
+fn race_running_until_first_completes() {
+    let a: i32 = 0;
+    // Both children are time-based, neither completes on first tick
+    let behavior = Race(vec![Wait(1.0), Wait(2.0)]);
+    let mut state = BT::new(behavior, ());
+
+    // After 0.5s, both still running
+    let (_a, s, _) = tick(a, 0.5, &mut state);
+    assert_eq!(s, Running);
+
+    // After another 0.5s (total 1.0s), first Wait completes with Success
+    let (_a, s, _) = tick(_a, 0.5, &mut state);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn race_second_child_wins_if_first_is_running() {
+    let a: i32 = 0;
+    let behavior = Race(vec![WaitForever, Action(Inc)]);
+    let mut state = BT::new(behavior, ());
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(a, 1);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn race_failure_short_circuits_unlike_when_any() {
+    // the main difference from WhenAny:
+    // WhenAny would swallow the failure and keep running.
+    // Race returns the failure immediately.
+    let a: i32 = 5;
+    // LessThan(1) fails immediately (5 >= 1), Wait(10.0) is still running
+    let behavior = Race(vec![Action(LessThan(1)), Wait(10.0)]);
+    let mut state = BT::new(behavior, ());
+    let (a, s, _) = tick(a, 0.1, &mut state);
+    assert_eq!(s, Failure);
+
+    // for WhenAny: same children, but failure is swallowed
+    let behavior_any = WhenAny(vec![Action(LessThan(1)), Wait(10.0)]);
+    let mut state_any = BT::new(behavior_any, ());
+    let (_, s_any, _) = tick(a, 0.1, &mut state_any);
+    assert_eq!(s_any, Running);
+}
+
+#[test]
+fn race_timeout_pattern() {
+    let a: i32 = 0;
+    // Simulate a "slow action" using WaitForever with a 1-second timeout.
+    // The timeout (Wait) fires first.
+    let behavior = Race(vec![WaitForever, Wait(1.0)]);
+    let mut state = BT::new(behavior, ());
+
+    let (_, s, _) = tick(a, 0.5, &mut state);
+    assert_eq!(s, Running);
+
+    let (_, s, _) = tick(a, 0.5, &mut state);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn race_empty() {
+    let a: i32 = 0;
+    let behavior = Race(vec![]);
+    let mut state = BT::new(behavior, ());
+    let (_, s, _) = tick(a, 0.1, &mut state);
+    // No children means nothing can complete, stays Running
+    assert_eq!(s, Running);
 }

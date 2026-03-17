@@ -19,6 +19,7 @@ pub(crate) enum NodeType<A> {
     WhenAll,
     WhenAny,
     After,
+    Race,
 }
 
 impl<A: Clone + Debug, K: Debug> BT<A, K> {
@@ -122,6 +123,13 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
                 let node_id = graph.add_node(NodeType::After);
                 graph.add_edge(parent_node, node_id, 1);
                 for b in after_all {
+                    Self::dfs_recursive(graph, b, node_id)
+                }
+            }
+            Behavior::Race(behaviors) => {
+                let node_id = graph.add_node(NodeType::Race);
+                graph.add_edge(parent_node, node_id, 1);
+                for b in behaviors {
                     Self::dfs_recursive(graph, b, node_id)
                 }
             }

@@ -47,3 +47,7 @@ path = "src/graphviz/main.rs"
 [[bin]]
 name = "simple_npc_ai"
 path = "src/simple_npc_ai/main.rs"
+
+[[bin]]
+name = "race_timeout"
+path = "src/race_timeout/main.rs"

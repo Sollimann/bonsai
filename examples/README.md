@@ -65,3 +65,13 @@ Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [D
 <p align="center">
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/attack_drone.png" width="700">
 </p>
+
+## Behavior Timeout (example for Race behavior and long-running jobs)
+
+This simple example shows an example of using the Race behavior to time out a long-running job that takes a random amount of time to complete.
+
+`cargo run --bin race_timeout`
+
+<p align="center">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/race_timeout.png" width="700">
+</p>

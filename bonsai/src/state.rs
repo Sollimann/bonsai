@@ -102,6 +102,8 @@ pub(crate) enum State<A> {
     /// Keeps track of a `WhenAny` behavior. As the states finish, they are set
     /// to [`None`].
     WhenAny(Vec<Option<State<A>>>),
+    /// Keeps track of a `Race` behavior.
+    Race(Vec<Option<State<A>>>),
     /// Keeps track of an `After` behavior.
     After {
         /// The index of the next state that must succeed.
@@ -166,6 +168,7 @@ impl<A: Clone> State<A> {
             }
             Behavior::WhenAll(all) => State::WhenAll(all.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::WhenAny(any) => State::WhenAny(any.into_iter().map(|ev| Some(State::new(ev))).collect()),
+            Behavior::Race(behaviors) => State::Race(behaviors.into_iter().map(|ev| Some(State::new(ev))).collect()),
             Behavior::After(after_all) => State::After {
                 next_success_index: 0,
                 states: after_all.into_iter().map(State::new).collect(),
@@ -403,6 +406,20 @@ impl<A: Clone> State<A> {
                 // println!("In WhenAnyState: {:?}", cursors);
                 let any = true;
                 when_all(any, upd, cursors, e, f, blackboard)
+            }
+            (_, &mut Race(ref mut cursors)) => {
+                // return the result of the first child to complete,
+                // regardless of whether it succeeds or fails.
+                for cur in cursors.iter_mut() {
+                    match *cur {
+                        None => {}
+                        Some(ref mut state) => match state.tick(e, blackboard, f) {
+                            (Running, _) => continue,
+                            (status, dt) => return (status, dt),
+                        },
+                    }
+                }
+                RUNNING
             }
             (
                 _,

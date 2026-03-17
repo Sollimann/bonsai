@@ -24,6 +24,7 @@
 //! - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 //! - Run `A` and `B` in parallell and wait for both to succeed: `WhenAll([A, B])`
 //! - Run `A` and `B` in parallell and wait for any to succeed: `WhenAny([A, B])`
+//! - Run `A` and `B` in parallell and wait for any to complete regardless of success or failure: `Race([A, B])`
 //! - Run `A` and `B` in parallell, but `A` has to succeed before `B`: `After([A, B])`
 //!
 //! See the `Behavior` enum for more information.
@@ -118,7 +119,7 @@
 //! ```
 
 pub use behavior::Behavior::{
-    self, Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
+    self, Action, After, AlwaysSucceed, If, Invert, Race, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
     WhileAll,
 };
 
