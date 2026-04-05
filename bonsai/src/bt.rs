@@ -104,6 +104,108 @@ impl<A: Clone, B> BT<A, B> {
 }
 
 #[cfg(feature = "visualize")]
+pub mod telemetry {
+    use crate::Behavior;
+    use serde::Serialize;
+    use std::collections::HashMap;
+    use std::fmt::Debug;
+
+    /// The immutable structure of the tree, sent once upon connection.
+    #[derive(Serialize, Debug, Clone)]
+    pub struct TreeDefinition {
+        pub root: TreeNode,
+    }
+
+    /// A single node in the visualizer.
+    #[derive(Serialize, Debug, Clone)]
+    pub struct TreeNode {
+        pub id: usize,
+        pub node_type: String,
+        pub label: String,
+        pub children: Vec<TreeNode>,
+    }
+
+    /// The lightweight, continuous payload sent during `tick()`.
+    #[derive(Serialize, Debug, Clone)]
+    pub struct TreeStateUpdate {
+        /// Map of Node ID -> Status (e.g., "Running", "Success", "Failure")
+        pub states: HashMap<usize, String>,
+    }
+
+    impl TreeDefinition {
+        /// Consumes a Behavior tree and produces a serialized definition.
+        pub fn build<A: Debug>(behavior: &Behavior<A>) -> Self {
+            let mut id_counter = 0;
+            let root = Self::traverse(behavior, &mut id_counter);
+            Self { root }
+        }
+
+        /// Recursively walks the tree to assign IDs and map types.
+        fn traverse<A: Debug>(behavior: &Behavior<A>, id_counter: &mut usize) -> TreeNode {
+            let id = *id_counter;
+            *id_counter += 1;
+
+            match behavior {
+                Behavior::Action(action) => TreeNode {
+                    id,
+                    node_type: "Action".to_string(),
+                    label: format!("{:?}", action), // Requires A: Debug
+                    children: vec![],
+                },
+                Behavior::Sequence(children) => TreeNode {
+                    id,
+                    node_type: "Sequence".to_string(),
+                    label: "Sequence".to_string(),
+                    children: children.iter().map(|c| Self::traverse(c, id_counter)).collect(),
+                },
+                Behavior::Select(children) => TreeNode {
+                    id,
+                    node_type: "Selector".to_string(),
+                    label: "Selector".to_string(),
+                    children: children.iter().map(|c| Self::traverse(c, id_counter)).collect(),
+                },
+                Behavior::Wait(time) => TreeNode {
+                    id,
+                    node_type: "Wait".to_string(),
+                    label: format!("Wait({:.2}s)", time),
+                    children: vec![],
+                },
+                Behavior::WaitForever => TreeNode {
+                    id,
+                    node_type: "WaitForever".to_string(),
+                    label: "WaitForever".to_string(),
+                    children: vec![],
+                },
+                Behavior::Invert(child) => TreeNode {
+                    id,
+                    node_type: "Inverter".to_string(),
+                    label: "Inverter".to_string(),
+                    children: vec![Self::traverse(child, id_counter)],
+                },
+                Behavior::While(condition, body) => {
+                    // While has a condition node and a body of nodes
+                    let mut children = vec![Self::traverse(condition, id_counter)];
+                    children.extend(body.iter().map(|c| Self::traverse(c, id_counter)));
+                    TreeNode {
+                        id,
+                        node_type: "While".to_string(),
+                        label: "While".to_string(),
+                        children,
+                    }
+                },
+                // Catch-all for any other bonsai-bt variants (If, WhenAll, etc.)
+                _ => TreeNode {
+                    id,
+                    node_type: "Decorator/Other".to_string(),
+                    label: "Unknown".to_string(),
+                    children: vec![],
+                }
+            }
+        }
+    }
+}
+
+#[cfg(feature = "visualize")]
 impl<A: Clone + Debug, B: Debug> BT<A, B> {
     /// Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
     ///
@@ -154,5 +256,15 @@ impl<A: Clone + Debug, B: Debug> BT<A, B> {
 
         let digraph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
         (format!("{:?}", digraph), graph)
+    }
+
+    /// Compiles the behavior tree into a Groot-compatible JSON string
+    /// representing the static hierarchy of the tree.
+    pub fn get_telemetry_definition(&self) -> String {
+        let definition = telemetry::TreeDefinition::build(&self.initial_behavior);
+        
+        // Serialize to a formatted JSON string (or use to_string() for minified)
+        serde_json::to_string_pretty(&definition)
+            .unwrap_or_else(|_| "{\"error\": \"Failed to serialize tree\"}".to_string())
     }
 }

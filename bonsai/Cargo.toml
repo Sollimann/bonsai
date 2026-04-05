@@ -22,9 +22,10 @@ path = "src/lib.rs"
 petgraph = { version = "0.6.2", optional = true }
 serde = { version = "1.0.137", features = ["derive"], optional = true }
 serde_json = { version = "1.0.81", optional = true }
+tungstenite = { version = "0.21", optional = true }
 
 [features]
-visualize = ["dep:petgraph", "serde", "serde_json"]
+visualize = ["dep:petgraph", "serde", "serde_json", "tungstenite"]
 f32 = []
 
 [dev-dependencies]
