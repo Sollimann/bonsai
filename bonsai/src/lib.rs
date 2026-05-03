@@ -137,7 +137,7 @@ mod status;
 mod when_all;
 
 #[cfg(feature = "visualize")]
-mod telemetry;
+pub mod telemetry;
 
 #[cfg(feature = "visualize")]
 mod visualizer;

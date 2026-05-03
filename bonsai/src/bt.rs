@@ -20,6 +20,12 @@ pub struct BT<A, B> {
     bb: B,
     /// Whether the tree has been finished before.
     finished: bool,
+    /// Preorder node metadata — populated by `with_telemetry`, used by
+    /// `RecordingTracer::skip_subtree` during instrumented ticks.
+    #[cfg(feature = "visualize")]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    #[allow(dead_code)] // read by RecordingTracer in future step
+    pub(crate) node_metas: Vec<crate::telemetry::NodeMeta>,
 }
 
 impl<A: Clone, B> BT<A, B> {
@@ -32,6 +38,8 @@ impl<A: Clone, B> BT<A, B> {
             initial_behavior: backup_behavior,
             bb: blackboard,
             finished: false,
+            #[cfg(feature = "visualize")]
+            node_metas: Vec::new(),
         }
     }
 

@@ -27,6 +27,34 @@ pub struct TreeNode {
     pub children: Vec<TreeNode>,
 }
 
+/// Preorder metadata for one node — computed once at `BT::new`, used by step-2
+/// tracers to cheaply advance the id counter past unvisited subtrees.
+#[derive(Clone, Debug)]
+pub struct NodeMeta {
+    /// Number of nodes in this subtree, including the root (self).
+    pub subtree_size: usize,
+}
+
+/// Walk `behavior` in DFS preorder and build a flat `Vec<NodeMeta>` indexed by
+/// preorder ID.  The ordering matches `TreeDefinition::traverse` exactly because
+/// both call `children_of`.
+pub fn build_node_metas<A>(behavior: &Behavior<A>) -> Vec<NodeMeta> {
+    let mut metas = Vec::new();
+    fill(behavior, &mut metas);
+    metas
+}
+
+fn fill<A>(b: &Behavior<A>, out: &mut Vec<NodeMeta>) -> usize {
+    let my_idx = out.len();
+    out.push(NodeMeta { subtree_size: 0 }); // placeholder, updated below
+    let mut size = 1;
+    for c in children_of(b) {
+        size += fill(c, out);
+    }
+    out[my_idx].subtree_size = size;
+    size
+}
+
 /// Returns the ordered children of a behavior node.
 ///
 /// This is the **single source of truth** for preorder ID assignment order.
