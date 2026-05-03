@@ -161,6 +161,6 @@ impl<A: Clone + Debug, B: Debug> BT<A, B> {
     pub fn get_telemetry_definition(&self) -> String {
         let definition = crate::telemetry::TreeDefinition::build(&self.initial_behavior);
         serde_json::to_string_pretty(&definition)
-            .unwrap_or_else(|_| "{\"error\": \"Failed to serialize tree\"}".to_string())
+            .expect("TreeDefinition is always serializable")
     }
 }

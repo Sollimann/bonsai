@@ -13,18 +13,65 @@ pub struct TickTrace {
 }
 
 /// The immutable structure of the tree, sent once upon WebSocket connection.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct TreeDefinition {
     pub root: TreeNode,
 }
 
 /// A single node in the static tree layout.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct TreeNode {
     pub id: usize,
-    pub node_type: String,
+    pub node_type: &'static str,
     pub label: String,
     pub children: Vec<TreeNode>,
+}
+
+/// Returns the ordered children of a behavior node.
+///
+/// This is the **single source of truth** for preorder ID assignment order.
+/// `build_node_metas` (step 1) and `RecordingTracer::skip_subtree` (step 2)
+/// must call this rather than re-implementing the ordering independently.
+pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
+    use Behavior::*;
+    match b {
+        Action(_) | Wait(_) | WaitForever => vec![],
+        Invert(c) | AlwaysSucceed(c) => vec![c.as_ref()],
+        // [condition, on_success, on_failure] — must match skip_subtree logic in step 2.
+        If(cond, ok, ko) => vec![cond.as_ref(), ok.as_ref(), ko.as_ref()],
+        While(cond, body) | WhileAll(cond, body) => {
+            let mut v = Vec::with_capacity(1 + body.len());
+            v.push(cond.as_ref());
+            v.extend(body.iter());
+            v
+        }
+        Select(xs) | Sequence(xs) | WhenAll(xs) | WhenAny(xs) | After(xs) | Race(xs) => {
+            xs.iter().collect()
+        }
+    }
+}
+
+/// Returns the static node-type name and an optional dynamic label.
+/// Dynamic label is `Some` only for variants with runtime data worth displaying
+/// (Action debug repr, Wait duration); composites fall back to `node_type`.
+fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String>) {
+    use Behavior::*;
+    match b {
+        Action(a)        => ("Action",        Some(format!("{a:?}"))),
+        Wait(t)          => ("Wait",          Some(format!("Wait({t:.2}s)"))),
+        WaitForever      => ("WaitForever",   None),
+        Invert(_)        => ("Inverter",      None),
+        AlwaysSucceed(_) => ("AlwaysSucceed", None),
+        Select(_)        => ("Selector",      None),
+        Sequence(_)      => ("Sequence",      None),
+        If(..)           => ("If",            None),
+        While(..)        => ("While",         None),
+        WhileAll(..)     => ("WhileAll",      None),
+        WhenAll(_)       => ("WhenAll",       None),
+        WhenAny(_)       => ("WhenAny",       None),
+        After(_)         => ("After",         None),
+        Race(_)          => ("Race",          None),
+    }
 }
 
 impl TreeDefinition {
@@ -38,106 +85,16 @@ impl TreeDefinition {
     pub(crate) fn traverse<A: std::fmt::Debug>(behavior: &Behavior<A>, id_counter: &mut usize) -> TreeNode {
         let id = *id_counter;
         *id_counter += 1;
-
-        match behavior {
-            Behavior::Action(action) => TreeNode {
-                id,
-                node_type: "Action".to_string(),
-                label: format!("{:?}", action),
-                children: vec![],
-            },
-            Behavior::Wait(time) => TreeNode {
-                id,
-                node_type: "Wait".to_string(),
-                label: format!("Wait({:.2}s)", time),
-                children: vec![],
-            },
-            Behavior::WaitForever => TreeNode {
-                id,
-                node_type: "WaitForever".to_string(),
-                label: "WaitForever".to_string(),
-                children: vec![],
-            },
-            Behavior::Invert(child) => TreeNode {
-                id,
-                node_type: "Inverter".to_string(),
-                label: "Inverter".to_string(),
-                children: vec![Self::traverse(child, id_counter)],
-            },
-            Behavior::AlwaysSucceed(child) => TreeNode {
-                id,
-                node_type: "AlwaysSucceed".to_string(),
-                label: "AlwaysSucceed".to_string(),
-                children: vec![Self::traverse(child, id_counter)],
-            },
-            Behavior::Select(children) => TreeNode {
-                id,
-                node_type: "Selector".to_string(),
-                label: "Selector".to_string(),
-                children: children.iter().map(|c| Self::traverse(c, id_counter)).collect(),
-            },
-            Behavior::Sequence(children) => TreeNode {
-                id,
-                node_type: "Sequence".to_string(),
-                label: "Sequence".to_string(),
-                children: children.iter().map(|c| Self::traverse(c, id_counter)).collect(),
-            },
-            // Traverse as [condition, on_success, on_failure] — order must match skip_subtree logic.
-            Behavior::If(condition, on_success, on_failure) => TreeNode {
-                id,
-                node_type: "If".to_string(),
-                label: "If".to_string(),
-                children: vec![
-                    Self::traverse(condition, id_counter),
-                    Self::traverse(on_success, id_counter),
-                    Self::traverse(on_failure, id_counter),
-                ],
-            },
-            // Condition node first, then body — matches State::While execution order.
-            Behavior::While(condition, body) => {
-                let mut children = vec![Self::traverse(condition, id_counter)];
-                children.extend(body.iter().map(|c| Self::traverse(c, id_counter)));
-                TreeNode {
-                    id,
-                    node_type: "While".to_string(),
-                    label: "While".to_string(),
-                    children,
-                }
-            }
-            Behavior::WhileAll(condition, body) => {
-                let mut children = vec![Self::traverse(condition, id_counter)];
-                children.extend(body.iter().map(|c| Self::traverse(c, id_counter)));
-                TreeNode {
-                    id,
-                    node_type: "WhileAll".to_string(),
-                    label: "WhileAll".to_string(),
-                    children,
-                }
-            }
-            Behavior::WhenAll(children) => TreeNode {
-                id,
-                node_type: "WhenAll".to_string(),
-                label: "WhenAll".to_string(),
-                children: children.iter().map(|c| Self::traverse(c, id_counter)).collect(),
-            },
-            Behavior::WhenAny(children) => TreeNode {
-                id,
-                node_type: "WhenAny".to_string(),
-                label: "WhenAny".to_string(),
-                children: children.iter().map(|c| Self::traverse(c, id_counter)).collect(),
-            },
-            Behavior::After(children) => TreeNode {
-                id,
-                node_type: "After".to_string(),
-                label: "After".to_string(),
-                children: children.iter().map(|c| Self::traverse(c, id_counter)).collect(),
-            },
-            Behavior::Race(children) => TreeNode {
-                id,
-                node_type: "Race".to_string(),
-                label: "Race".to_string(),
-                children: children.iter().map(|c| Self::traverse(c, id_counter)).collect(),
-            },
+        let (node_type, label) = classify(behavior);
+        let children = children_of(behavior)
+            .iter()
+            .map(|c| Self::traverse(c, id_counter))
+            .collect();
+        TreeNode {
+            id,
+            node_type,
+            label: label.unwrap_or_else(|| node_type.to_string()),
+            children,
         }
     }
 }
