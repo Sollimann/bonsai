@@ -137,6 +137,9 @@ mod status;
 mod when_all;
 
 #[cfg(feature = "visualize")]
+mod telemetry;
+
+#[cfg(feature = "visualize")]
 mod visualizer;
 
 #[cfg(feature = "f32")]
