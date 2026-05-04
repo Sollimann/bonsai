@@ -126,3 +126,80 @@ impl TreeDefinition {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::children_of;
+    use crate::Behavior::{self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, While};
+
+    #[derive(Clone, Debug)]
+    enum Act {
+        A,
+        B,
+        C,
+    }
+
+    fn ptrs<A>(xs: &[&Behavior<A>]) -> Vec<*const Behavior<A>> {
+        xs.iter().map(|b| *b as *const _).collect()
+    }
+
+    #[test]
+    fn children_of_leaves_yield_empty() {
+        assert!(children_of(&Action(Act::A)).is_empty());
+        assert!(children_of(&Wait::<Act>(1.0)).is_empty());
+        assert!(children_of(&WaitForever::<Act>).is_empty());
+    }
+
+    #[test]
+    fn children_of_if_is_cond_ok_ko() {
+        let cond: Box<Behavior<Act>> = Box::new(Action(Act::A));
+        let ok = Box::new(Action(Act::B));
+        let ko = Box::new(Action(Act::C));
+        let (cp, op, kp) = (&*cond as *const _, &*ok as *const _, &*ko as *const _);
+        let b = If(cond, ok, ko);
+        assert_eq!(ptrs(&children_of(&b)), vec![cp, op, kp], "If must be [cond, ok, ko]");
+    }
+
+    #[test]
+    fn children_of_while_is_cond_then_body() {
+        let cond: Box<Behavior<Act>> = Box::new(Action(Act::A));
+        let body0 = Action(Act::B);
+        let body1 = Action(Act::C);
+        let cp = &*cond as *const _;
+        let b = While(cond, vec![body0, body1]);
+        let kids = children_of(&b);
+        assert_eq!(kids.len(), 3, "While(cond, [B, C]) has 3 children");
+        assert_eq!(kids[0] as *const _, cp, "first child must be the condition");
+    }
+
+    #[test]
+    fn children_of_decorators_yield_single_child() {
+        // Move the Box into the variant so the heap address is preserved.
+        let inner = Box::new(Action(Act::A));
+        let ip = &*inner as *const _;
+        let b = Invert(inner);
+        assert_eq!(ptrs(&children_of(&b)), vec![ip]);
+
+        let inner2 = Box::new(Action(Act::A));
+        let ip2 = &*inner2 as *const _;
+        let b2 = AlwaysSucceed(inner2);
+        assert_eq!(ptrs(&children_of(&b2)), vec![ip2]);
+    }
+
+    #[test]
+    fn children_of_composites_preserve_order() {
+        // Vec elements live on the heap at addresses unknown until after construction,
+        // so compare by debug representation rather than pointer identity.
+        let items = vec![Action(Act::A), Action(Act::B), Action(Act::C)];
+        let seq = Sequence(items.clone());
+        let sel = Select(items.clone());
+        let seq_kids = children_of(&seq);
+        let sel_kids = children_of(&sel);
+        assert_eq!(seq_kids.len(), 3);
+        assert_eq!(sel_kids.len(), 3);
+        for i in 0..3 {
+            assert_eq!(format!("{:?}", seq_kids[i]), format!("{:?}", &items[i]), "Sequence child {i}");
+            assert_eq!(format!("{:?}", sel_kids[i]), format!("{:?}", &items[i]), "Select child {i}");
+        }
+    }
+}

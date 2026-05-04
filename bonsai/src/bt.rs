@@ -20,11 +20,12 @@ pub struct BT<A, B> {
     bb: B,
     /// Whether the tree has been finished before.
     finished: bool,
-    /// Preorder node metadata — populated by `with_telemetry`, used by
-    /// `RecordingTracer::skip_subtree` during instrumented ticks.
+    /// Preorder node metadata, computed once at `BT::new`.
+    /// Read by `RecordingTracer::skip_subtree` (step 2) to advance past
+    /// unvisited subtrees in O(1).
     #[cfg(feature = "visualize")]
     #[cfg_attr(feature = "serde", serde(skip))]
-    #[allow(dead_code)] // read by RecordingTracer in future step
+    #[allow(dead_code)] // TODO(step 2): remove once RecordingTracer reads this
     pub(crate) node_metas: Vec<crate::telemetry::NodeMeta>,
 }
 
@@ -33,13 +34,16 @@ impl<A: Clone, B> BT<A, B> {
         let backup_behavior = behavior.clone();
         let bt = State::new(behavior);
 
+        #[cfg(feature = "visualize")]
+        let node_metas = crate::telemetry::build_node_metas(&backup_behavior);
+
         Self {
             state: bt,
             initial_behavior: backup_behavior,
             bb: blackboard,
             finished: false,
             #[cfg(feature = "visualize")]
-            node_metas: Vec::new(),
+            node_metas,
         }
     }
 

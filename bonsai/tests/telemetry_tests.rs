@@ -1,4 +1,4 @@
-use bonsai_bt::Behavior::Sequence;
+use bonsai_bt::Behavior::{self, Action, AlwaysSucceed, If, Invert, Sequence, Wait, WaitForever, While, WhileAll};
 
 #[derive(Clone, Debug)]
 enum Act {
@@ -72,5 +72,57 @@ fn node_metas_ids_match_tree_definition() {
     assert_eq!(ids.len(), metas.len(), "same number of nodes");
     for (idx, id) in ids.iter().enumerate() {
         assert_eq!(*id, idx, "preorder index {idx} must equal TreeDefinition id");
+    }
+}
+
+/// Parameterized coverage of `build_node_metas` subtree sizes for all
+/// structurally distinct `Behavior` variants, including the subtle cases
+/// (`If` ordering, `While` condition-first, decorators, leaves, empty composites).
+#[test]
+fn node_metas_subtree_sizes_all_variants() {
+    use bonsai_bt::telemetry::build_node_metas;
+    use Act::*;
+
+    let cases: Vec<(Behavior<Act>, Vec<usize>)> = vec![
+        // --- leaves ---
+        // A single Action: root only.
+        (Action(A), vec![1]),
+        // Wait and WaitForever are also leaves.
+        (Wait(0.5), vec![1]),
+        (WaitForever, vec![1]),
+        // --- empty composite ---
+        // Root node with no children: still counts as 1.
+        (Sequence(vec![]), vec![1]),
+        // --- single-child decorators ---
+        // Invert(A): root(2) + leaf(1)
+        (Invert(Box::new(Action(A))), vec![2, 1]),
+        // AlwaysSucceed(A): same shape
+        (AlwaysSucceed(Box::new(Action(A))), vec![2, 1]),
+        // --- If: [condition, on_success, on_failure] ---
+        // If(A, B, C): root(4) + cond(1) + ok(1) + ko(1)
+        (If(Box::new(Action(A)), Box::new(Action(B)), Box::new(Action(C))), vec![4, 1, 1, 1]),
+        // If with a Sequence on the success branch:
+        //   root(6) + cond(1) + ok_seq(3) + ok_B(1) + ok_C(1) + ko(1)
+        (
+            If(
+                Box::new(Action(A)),
+                Box::new(Sequence(vec![Action(B), Action(C)])),
+                Box::new(Action(D)),
+            ),
+            vec![6, 1, 3, 1, 1, 1],
+        ),
+        // --- While: condition first, then body elements ---
+        // While(A, [B]): root(3) + cond(1) + body0(1)
+        (While(Box::new(Action(A)), vec![Action(B)]), vec![3, 1, 1]),
+        // While(A, [B, C]): root(4) + cond(1) + B(1) + C(1)
+        (While(Box::new(Action(A)), vec![Action(B), Action(C)]), vec![4, 1, 1, 1]),
+        // WhileAll has the same child layout as While.
+        (WhileAll(Box::new(Action(A)), vec![Action(B)]), vec![3, 1, 1]),
+    ];
+
+    for (i, (behavior, expected)) in cases.into_iter().enumerate() {
+        let metas = build_node_metas(&behavior);
+        let got: Vec<usize> = metas.iter().map(|m| m.subtree_size).collect();
+        assert_eq!(got, expected, "case {i}");
     }
 }
