@@ -1,10 +1,42 @@
+#[cfg(feature = "visualize")]
 use std::collections::HashMap;
 
+#[cfg(feature = "visualize")]
 use serde::{Deserialize, Serialize};
 
 use crate::{Behavior, Status};
 
+/// Tracer is monomorphized away in the noop path. The const `IS_RECORDING`
+/// lets composite arms cheaply skip child-id arithmetic when telemetry is off.
+pub trait Tracer {
+    const IS_RECORDING: bool;
+    fn record(&mut self, id: usize, status: Status);
+}
+
+pub struct NoopTracer;
+impl Tracer for NoopTracer {
+    const IS_RECORDING: bool = false;
+    #[inline(always)]
+    fn record(&mut self, _id: usize, _status: Status) {}
+}
+
+#[cfg(feature = "visualize")]
+pub struct RecordingTracer<'a> {
+    pub trace: &'a mut TickTrace,
+    pub metas: &'a [NodeMeta],
+}
+
+#[cfg(feature = "visualize")]
+impl Tracer for RecordingTracer<'_> {
+    const IS_RECORDING: bool = true;
+    #[inline]
+    fn record(&mut self, id: usize, status: Status) {
+        self.trace.states.insert(id, status);
+    }
+}
+
 /// The per-tick payload: maps each visited node's preorder ID to its returned Status.
+#[cfg(feature = "visualize")]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TickTrace {
     pub tick_id: u64,
@@ -13,12 +45,14 @@ pub struct TickTrace {
 }
 
 /// The immutable structure of the tree, sent once upon WebSocket connection.
+#[cfg(feature = "visualize")]
 #[derive(Serialize, Debug, Clone)]
 pub struct TreeDefinition {
     pub root: TreeNode,
 }
 
 /// A single node in the static tree layout.
+#[cfg(feature = "visualize")]
 #[derive(Serialize, Debug, Clone)]
 pub struct TreeNode {
     pub id: usize,
@@ -82,6 +116,7 @@ pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
 /// Returns the static node-type name and an optional dynamic label.
 /// Dynamic label is `Some` only for variants with runtime data worth displaying
 /// (Action debug repr, Wait duration); composites fall back to `node_type`.
+#[cfg(feature = "visualize")]
 fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String>) {
     use Behavior::*;
     match b {
@@ -102,6 +137,7 @@ fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String
     }
 }
 
+#[cfg(feature = "visualize")]
 impl TreeDefinition {
     /// Walk the behavior tree in DFS preorder, assigning stable integer IDs.
     pub fn build<A: std::fmt::Debug>(behavior: &Behavior<A>) -> Self {

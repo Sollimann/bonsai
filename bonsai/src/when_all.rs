@@ -1,4 +1,5 @@
 use crate::status::Status::*;
+use crate::telemetry::{NodeMeta, Tracer};
 use crate::Float;
 use crate::{event::UpdateEvent, state::State, ActionArgs, Status, RUNNING};
 
@@ -7,18 +8,23 @@ use crate::{event::UpdateEvent, state::State, ActionArgs, Status, RUNNING};
 // `WhenAll` fails if any fails and succeeds when all succeeds.
 // `WhenAny` succeeds if any succeeds and fails when all fails.
 #[rustfmt::skip]
-pub fn when_all<A, E, F, B>(
+#[allow(clippy::too_many_arguments)]
+pub fn when_all<A, E, F, B, T>(
     any: bool,
     upd: Option<Float>,
     cursors: &mut [Option<State<A>>],
     e: &E,
     f: &mut F,
     blackboard: &mut B,
+    parent_id: usize,
+    metas: &[NodeMeta],
+    tracer: &mut T,
 ) -> (Status, Float)
 where
     A: Clone,
     E: UpdateEvent,
     F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
+    T: Tracer,
 {
     let (status, inv_status) = if any {
         // `WhenAny`
@@ -31,11 +37,16 @@ where
     let mut min_dt = Float::MAX;
     // Count number of terminated events.
     let mut terminated = 0;
+    let mut child_id = if T::IS_RECORDING { parent_id + 1 } else { 0 };
     for cur in cursors.iter_mut() {
+        let this_id = child_id;
+        if T::IS_RECORDING {
+            child_id += metas[this_id].subtree_size;
+        }
         match *cur {
             None => {}
             Some(ref mut cur) => {
-                match cur.tick(e, blackboard, f) {
+                match cur.tick(this_id, metas, e, blackboard, f, tracer) {
                     (Running, _) => {
                         continue;
                     }

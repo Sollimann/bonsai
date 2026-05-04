@@ -70,7 +70,12 @@ impl<A: Clone, B> BT<A, B> {
         if self.finished {
             return None;
         }
-        match self.state.tick(e, &mut self.bb, f) {
+        let mut tracer = crate::telemetry::NoopTracer;
+        #[cfg(feature = "visualize")]
+        let metas: &[crate::telemetry::NodeMeta] = &self.node_metas;
+        #[cfg(not(feature = "visualize"))]
+        let metas: &[crate::telemetry::NodeMeta] = &[];
+        match self.state.tick(0, metas, e, &mut self.bb, f, &mut tracer) {
             result @ (Status::Success | Status::Failure, _) => {
                 self.finished = true;
                 Some(result)
@@ -115,6 +120,45 @@ impl<A: Clone, B> BT<A, B> {
     }
 }
 
+
+#[cfg(feature = "visualize")]
+impl<A: Clone, B> BT<A, B> {
+    /// Tick the tree once and return both the standard tick result and a
+    /// [`TickTrace`](crate::telemetry::TickTrace) recording every node visited
+    /// this frame. Used by the in-process telemetry channel and by integration
+    /// tests.
+    ///
+    /// Returns `None` if the tree has already finished (mirroring [`tick`](Self::tick)).
+    pub fn tick_recording<E, F>(
+        &mut self,
+        e: &E,
+        f: &mut F,
+    ) -> Option<((Status, Float), crate::telemetry::TickTrace)>
+    where
+        E: UpdateEvent,
+        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
+    {
+        if self.finished {
+            return None;
+        }
+        let mut trace = crate::telemetry::TickTrace {
+            tick_id: 0,
+            states: std::collections::HashMap::new(),
+        };
+        let result = {
+            let mut tracer = crate::telemetry::RecordingTracer {
+                trace: &mut trace,
+                metas: &self.node_metas,
+            };
+            self.state
+                .tick(0, &self.node_metas, e, &mut self.bb, f, &mut tracer)
+        };
+        if matches!(result, (Status::Success | Status::Failure, _)) {
+            self.finished = true;
+        }
+        Some((result, trace))
+    }
+}
 
 #[cfg(feature = "visualize")]
 impl<A: Clone + Debug, B: Debug> BT<A, B> {

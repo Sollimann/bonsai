@@ -1,8 +1,9 @@
 use crate::status::Status::*;
+use crate::telemetry::{NodeMeta, Tracer};
 use crate::Float;
 use crate::{event::UpdateEvent, state::State, ActionArgs, Behavior, Status, RUNNING};
 
-pub struct SequenceArgs<'a, A, E, F, B> {
+pub struct SequenceArgs<'a, A, E, F, B, T> {
     pub select: bool,
     pub upd: Option<Float>,
     pub seq: &'a [Behavior<A>],
@@ -11,17 +12,21 @@ pub struct SequenceArgs<'a, A, E, F, B> {
     pub e: &'a E,
     pub blackboard: &'a mut B,
     pub f: &'a mut F,
+    pub parent_id: usize,
+    pub metas: &'a [NodeMeta],
+    pub tracer: &'a mut T,
 }
 
 // `Sequence` and `Select` share same algorithm.
 //
 // `Sequence` fails if any fails and succeeds when all succeeds.
 // `Select` succeeds if any succeeds and fails when all fails.
-pub fn sequence<A, E, F, B>(args: SequenceArgs<A, E, F, B>) -> (Status, Float)
+pub fn sequence<A, E, F, B, T>(args: SequenceArgs<A, E, F, B, T>) -> (Status, Float)
 where
     A: Clone,
     E: UpdateEvent,
     F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
+    T: Tracer,
 {
     let SequenceArgs {
         select,
@@ -32,6 +37,9 @@ where
         e,
         blackboard,
         f,
+        parent_id,
+        metas,
+        tracer,
     } = args;
 
     let (status, inv_status) = if select {
@@ -41,10 +49,18 @@ where
         // `Sequence`
         (Status::Success, Status::Failure)
     };
+    let mut child_id = if T::IS_RECORDING { parent_id + 1 } else { 0 };
+    if T::IS_RECORDING {
+        for _ in 0..*i {
+            child_id += metas[child_id].subtree_size;
+        }
+    }
     let mut remaining_dt = upd.unwrap_or(0.0);
     let mut remaining_e;
     while *i < seq.len() {
         match cursor.tick(
+            child_id,
+            metas,
             match upd {
                 Some(_) => {
                     remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
@@ -54,6 +70,7 @@ where
             },
             blackboard,
             f,
+            tracer,
         ) {
             (Running, _) => {
                 break;
@@ -83,6 +100,9 @@ where
             _ => unreachable!(),
         };
         *i += 1;
+        if T::IS_RECORDING {
+            child_id += metas[child_id].subtree_size;
+        }
         // If end of sequence,
         // return the 'dt' that is left.
         if *i >= seq.len() {
