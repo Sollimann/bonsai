@@ -5,3 +5,6 @@ mod dynamic_behavior_tests;
 
 #[cfg(feature = "visualize")]
 mod telemetry_tests;
+
+#[cfg(feature = "visualize")]
+mod telemetry_tracer_tests;
