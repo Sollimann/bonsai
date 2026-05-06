@@ -2,8 +2,8 @@ use crate::event::UpdateEvent;
 use crate::sequence::{sequence, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
-use crate::telemetry::{NodeMeta, Tracer};
-use crate::when_all::when_all;
+use crate::telemetry::{first_child_id, next_sibling_id, NodeMeta, Tracer};
+use crate::when_all::{when_all, WhenAllArgs};
 use crate::{Behavior, Float, Status};
 use std::fmt::Debug;
 
@@ -204,7 +204,7 @@ impl<A: Clone> State<A> {
     /// function returns the result of the tree traversal, and how long
     /// it actually took to complete the traversal and propagate the
     /// results back up to the root node
-    pub fn tick<E, F, B, T>(
+    pub(crate) fn tick<E, F, B, T>(
         &mut self,
         self_id: usize,
         metas: &[NodeMeta],
@@ -223,7 +223,6 @@ impl<A: Clone> State<A> {
         // double match statements
         match (upd, self) {
             (_, &mut Action(ref action)) => {
-                // println!("In ActionState: {:?}", action);
                 let result = f(
                     ActionArgs {
                         event: e,
@@ -236,8 +235,7 @@ impl<A: Clone> State<A> {
                 result
             }
             (_, &mut Invert(ref mut cur)) => {
-                // println!("In InvertState: {:?}", cur);
-                let child_id = if T::IS_RECORDING { self_id + 1 } else { 0 };
+                let child_id = first_child_id::<T>(self_id);
                 let result = match cur.tick(child_id, metas, e, blackboard, f, tracer) {
                     (Running, dt) => (Running, dt),
                     (Failure, dt) => (Success, dt),
@@ -247,8 +245,7 @@ impl<A: Clone> State<A> {
                 result
             }
             (_, &mut AlwaysSucceed(ref mut cur)) => {
-                // println!("In AlwaysSucceedState: {:?}", cur);
-                let child_id = if T::IS_RECORDING { self_id + 1 } else { 0 };
+                let child_id = first_child_id::<T>(self_id);
                 let result = match cur.tick(child_id, metas, e, blackboard, f, tracer) {
                     (Running, dt) => (Running, dt),
                     (_, dt) => (Success, dt),
@@ -263,7 +260,6 @@ impl<A: Clone> State<A> {
                     ref mut elapsed_time,
                 },
             ) => {
-                // println!("In WaitState: {}", time_to_wait);
                 *elapsed_time += dt;
                 let result = if *elapsed_time >= time_to_wait {
                     let time_overdue = *elapsed_time - time_to_wait;
@@ -284,15 +280,9 @@ impl<A: Clone> State<A> {
                     ref mut current_state,
                 },
             ) => {
-                // println!("In IfState: {:?}", success);
-                let (cond_id, on_success_id, on_failure_id) = if T::IS_RECORDING {
-                    let cond_id = self_id + 1;
-                    let on_success_id = cond_id + metas[cond_id].subtree_size;
-                    let on_failure_id = on_success_id + metas[on_success_id].subtree_size;
-                    (cond_id, on_success_id, on_failure_id)
-                } else {
-                    (0, 0, 0)
-                };
+                let cond_id = first_child_id::<T>(self_id);
+                let on_success_id = next_sibling_id::<T>(metas, cond_id);
+                let on_failure_id = next_sibling_id::<T>(metas, on_success_id);
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let remaining_e;
                 // Run in a loop to evaluate success or failure with
@@ -336,7 +326,6 @@ impl<A: Clone> State<A> {
                     current_state: ref mut cursor,
                 },
             ) => {
-                // println!("In SelectState: {:?}", seq);
                 let select = true;
                 let result = sequence(SequenceArgs {
                     select,
@@ -362,7 +351,6 @@ impl<A: Clone> State<A> {
                     current_state: ref mut cursor,
                 },
             ) => {
-                // println!("In SequenceState: {:?}", seq);
                 let select = false;
                 let result = sequence(SequenceArgs {
                     select,
@@ -389,17 +377,16 @@ impl<A: Clone> State<A> {
                     ref mut loop_body_state,
                 },
             ) => {
-                // println!("In WhileState: {:?}", condition_state);
-                let cond_id = if T::IS_RECORDING { self_id + 1 } else { 0 };
-                let body_0_id = if T::IS_RECORDING { cond_id + metas[cond_id].subtree_size } else { 0 };
+                let cond_id = first_child_id::<T>(self_id);
+                let body_0_id = next_sibling_id::<T>(metas, cond_id);
                 let mut current_body_id = if T::IS_RECORDING {
                     let mut id = body_0_id;
                     for _ in 0..*loop_body_index {
-                        id += metas[id].subtree_size;
+                        id = next_sibling_id::<T>(metas, id);
                     }
                     id
                 } else {
-                    0
+                    usize::MAX
                 };
                 // If the condition behavior terminates, do not execute the loop.
                 match condition_state.tick(cond_id, metas, e, blackboard, f, tracer) {
@@ -434,7 +421,7 @@ impl<A: Clone> State<A> {
                     };
                     *loop_body_index += 1;
                     if T::IS_RECORDING {
-                        current_body_id += metas[current_body_id].subtree_size;
+                        current_body_id = next_sibling_id::<T>(metas, current_body_id);
                     }
                     // If end of repeated events,
                     // start over from the first one.
@@ -452,28 +439,42 @@ impl<A: Clone> State<A> {
                 result
             }
             (_, &mut WhenAll(ref mut cursors)) => {
-                // println!("In WhenAllState: {:?}", cursors);
-                let any = false;
-                let result = when_all(any, upd, cursors, e, f, blackboard, self_id, metas, tracer);
+                let result = when_all(WhenAllArgs {
+                    any: false,
+                    upd,
+                    cursors,
+                    e,
+                    blackboard,
+                    f,
+                    parent_id: self_id,
+                    metas,
+                    tracer,
+                });
                 tracer.record(self_id, result.0);
                 result
             }
             (_, &mut WhenAny(ref mut cursors)) => {
-                // println!("In WhenAnyState: {:?}", cursors);
-                let any = true;
-                let result = when_all(any, upd, cursors, e, f, blackboard, self_id, metas, tracer);
+                let result = when_all(WhenAllArgs {
+                    any: true,
+                    upd,
+                    cursors,
+                    e,
+                    blackboard,
+                    f,
+                    parent_id: self_id,
+                    metas,
+                    tracer,
+                });
                 tracer.record(self_id, result.0);
                 result
             }
             (_, &mut Race(ref mut cursors)) => {
                 // return the result of the first child to complete,
                 // regardless of whether it succeeds or fails.
-                let mut child_id = if T::IS_RECORDING { self_id + 1 } else { 0 };
+                let mut child_id = first_child_id::<T>(self_id);
                 for cur in cursors.iter_mut() {
                     let this_id = child_id;
-                    if T::IS_RECORDING {
-                        child_id += metas[this_id].subtree_size;
-                    }
+                    child_id = next_sibling_id::<T>(metas, this_id);
                     match *cur {
                         None => {}
                         Some(ref mut state) => match state.tick(this_id, metas, e, blackboard, f, tracer) {
@@ -495,20 +496,17 @@ impl<A: Clone> State<A> {
                     ref mut states,
                 },
             ) => {
-                // println!("In AfterState: {}", next_success_index);
                 // Get the least delta time left over.
                 let mut min_dt = Float::MAX;
-                let mut child_id = if T::IS_RECORDING { self_id + 1 } else { 0 };
+                let mut child_id = first_child_id::<T>(self_id);
                 if T::IS_RECORDING {
                     for _ in 0..*next_success_index {
-                        child_id += metas[child_id].subtree_size;
+                        child_id = next_sibling_id::<T>(metas, child_id);
                     }
                 }
                 for (j, item) in states.iter_mut().enumerate().skip(*next_success_index) {
                     let this_id = child_id;
-                    if T::IS_RECORDING {
-                        child_id += metas[this_id].subtree_size;
-                    }
+                    child_id = next_sibling_id::<T>(metas, this_id);
                     match item.tick(this_id, metas, e, blackboard, f, tracer) {
                         (Running, _) => {
                             min_dt = 0.0;
@@ -549,16 +547,16 @@ impl<A: Clone> State<A> {
                     ref mut loop_body_state,
                 },
             ) => {
-                let cond_id = if T::IS_RECORDING { self_id + 1 } else { 0 };
-                let body_0_id = if T::IS_RECORDING { cond_id + metas[cond_id].subtree_size } else { 0 };
+                let cond_id = first_child_id::<T>(self_id);
+                let body_0_id = next_sibling_id::<T>(metas, cond_id);
                 let mut current_body_id = if T::IS_RECORDING {
                     let mut id = body_0_id;
                     for _ in 0..*loop_body_index {
-                        id += metas[id].subtree_size;
+                        id = next_sibling_id::<T>(metas, id);
                     }
                     id
                 } else {
-                    0
+                    usize::MAX
                 };
                 let mut remaining_dt = upd.unwrap_or(0.0);
                 let mut remaining_e;
@@ -593,7 +591,7 @@ impl<A: Clone> State<A> {
                             // only success moves the sequence cursor forward:
                             *loop_body_index += 1;
                             if T::IS_RECORDING {
-                                current_body_id += metas[current_body_id].subtree_size;
+                                current_body_id = next_sibling_id::<T>(metas, current_body_id);
                             }
 
                             // If end of repeated events,

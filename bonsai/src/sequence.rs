@@ -1,5 +1,5 @@
 use crate::status::Status::*;
-use crate::telemetry::{NodeMeta, Tracer};
+use crate::telemetry::{first_child_id, next_sibling_id, NodeMeta, Tracer};
 use crate::Float;
 use crate::{event::UpdateEvent, state::State, ActionArgs, Behavior, Status, RUNNING};
 
@@ -49,10 +49,10 @@ where
         // `Sequence`
         (Status::Success, Status::Failure)
     };
-    let mut child_id = if T::IS_RECORDING { parent_id + 1 } else { 0 };
+    let mut child_id = first_child_id::<T>(parent_id);
     if T::IS_RECORDING {
         for _ in 0..*i {
-            child_id += metas[child_id].subtree_size;
+            child_id = next_sibling_id::<T>(metas, child_id);
         }
     }
     let mut remaining_dt = upd.unwrap_or(0.0);
@@ -101,7 +101,7 @@ where
         };
         *i += 1;
         if T::IS_RECORDING {
-            child_id += metas[child_id].subtree_size;
+            child_id = next_sibling_id::<T>(metas, child_id);
         }
         // If end of sequence,
         // return the 'dt' that is left.

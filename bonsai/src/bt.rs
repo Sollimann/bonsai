@@ -20,12 +20,14 @@ pub struct BT<A, B> {
     bb: B,
     /// Whether the tree has been finished before.
     finished: bool,
+    /// Monotonically increasing per-tick counter. Starts at 0; first completed
+    /// `tick`/`tick_recording` call increments to 1. Survives `reset_bt`
+    /// (the counter is global to the BT instance, not the current run).
+    tick_count: u64,
     /// Preorder node metadata, computed once at `BT::new`.
-    /// Read by `RecordingTracer::skip_subtree` (step 2) to advance past
-    /// unvisited subtrees in O(1).
+    /// Used by `RecordingTracer` to advance past unvisited subtrees in O(1).
     #[cfg(feature = "visualize")]
     #[cfg_attr(feature = "serde", serde(skip))]
-    #[allow(dead_code)] // TODO(step 2): remove once RecordingTracer reads this
     pub(crate) node_metas: Vec<crate::telemetry::NodeMeta>,
 }
 
@@ -42,6 +44,7 @@ impl<A: Clone, B> BT<A, B> {
             initial_behavior: backup_behavior,
             bb: blackboard,
             finished: false,
+            tick_count: 0,
             #[cfg(feature = "visualize")]
             node_metas,
         }
@@ -70,6 +73,7 @@ impl<A: Clone, B> BT<A, B> {
         if self.finished {
             return None;
         }
+        self.tick_count += 1;
         let mut tracer = crate::telemetry::NoopTracer;
         #[cfg(feature = "visualize")]
         let metas: &[crate::telemetry::NodeMeta] = &self.node_metas;
@@ -111,6 +115,13 @@ impl<A: Clone, B> BT<A, B> {
         let initial_behavior = self.initial_behavior.to_owned();
         self.state = State::new(initial_behavior);
         self.finished = false;
+        // tick_count is intentionally NOT reset — it identifies tick events
+        // across the BT's lifetime, including across reset_bt boundaries.
+    }
+
+    /// Returns the total number of ticks this BT has completed (across resets).
+    pub fn tick_count(&self) -> u64 {
+        self.tick_count
     }
 
     /// Whether this behavior tree is in a completed state (the last tick returned
@@ -141,8 +152,9 @@ impl<A: Clone, B> BT<A, B> {
         if self.finished {
             return None;
         }
+        self.tick_count += 1;
         let mut trace = crate::telemetry::TickTrace {
-            tick_id: 0,
+            tick_id: self.tick_count,
             states: std::collections::HashMap::new(),
         };
         let result = {
