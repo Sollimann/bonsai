@@ -141,6 +141,9 @@ pub mod telemetry;
 #[cfg(feature = "visualize")]
 mod visualizer;
 
+#[cfg(feature = "visualize")]
+mod visualizer_server;
+
 #[cfg(feature = "f32")]
 pub type Float = f32;
 

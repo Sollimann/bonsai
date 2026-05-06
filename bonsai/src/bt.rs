@@ -29,6 +29,16 @@ pub struct BT<A, B> {
     #[cfg(feature = "visualize")]
     #[cfg_attr(feature = "serde", serde(skip))]
     pub(crate) node_metas: Vec<crate::telemetry::NodeMeta>,
+    /// Channel sender for shipping `TickTrace`s to the broadcaster thread.
+    /// `None` when telemetry is not active or after the broadcaster has exited.
+    #[cfg(feature = "visualize")]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub(crate) telemetry_sender: Option<std::sync::mpsc::SyncSender<crate::telemetry::TickTrace>>,
+    /// Number of `TickTrace`s dropped because the channel was full.
+    /// Reset on `reset_bt`. Useful for diagnosing slow clients.
+    #[cfg(feature = "visualize")]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub(crate) dropped_traces: u64,
 }
 
 impl<A: Clone, B> BT<A, B> {
@@ -47,6 +57,10 @@ impl<A: Clone, B> BT<A, B> {
             tick_count: 0,
             #[cfg(feature = "visualize")]
             node_metas,
+            #[cfg(feature = "visualize")]
+            telemetry_sender: None,
+            #[cfg(feature = "visualize")]
+            dropped_traces: 0,
         }
     }
 
@@ -117,6 +131,11 @@ impl<A: Clone, B> BT<A, B> {
         self.finished = false;
         // tick_count is intentionally NOT reset — it identifies tick events
         // across the BT's lifetime, including across reset_bt boundaries.
+        // dropped_traces resets per-run: it's a diagnostic for the current session.
+        #[cfg(feature = "visualize")]
+        {
+            self.dropped_traces = 0;
+        }
     }
 
     /// Returns the total number of ticks this BT has completed (across resets).
@@ -167,6 +186,16 @@ impl<A: Clone, B> BT<A, B> {
         };
         if matches!(result, (Status::Success | Status::Failure, _)) {
             self.finished = true;
+        }
+        // Try to ship the trace to the broadcaster thread. Uses as_ref().map() to
+        // release the immutable borrow before the match arms take mutable borrows.
+        if let Some(outcome) = self.telemetry_sender.as_ref().map(|tx| tx.try_send(trace.clone())) {
+            use std::sync::mpsc::TrySendError;
+            match outcome {
+                Ok(()) => {}
+                Err(TrySendError::Full(_)) => self.dropped_traces += 1,
+                Err(TrySendError::Disconnected(_)) => self.telemetry_sender = None,
+            }
         }
         Some((result, trace))
     }

@@ -1,0 +1,140 @@
+// All items in this module become live in Step 5 (BT::with_telemetry).
+// Until then, suppress dead-code warnings so clippy -D warnings stays clean.
+#![allow(dead_code)]
+
+use std::io::{self, Write};
+use std::net::{TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::Receiver;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use crate::telemetry::{TickTrace, VISUALIZER_HTML};
+
+struct Client {
+    ws: tungstenite::WebSocket<TcpStream>,
+    addr: std::net::SocketAddr,
+}
+
+/// Spawn the broadcaster thread + accept loop. Returns once the listener is
+/// bound (so the caller can fail fast on `EADDRINUSE`); the actual loops run
+/// detached on background threads.
+///
+/// `tree_definition_json` is cloned for each new WS handshake so late-joining
+/// clients get the static layout before any tick frames.
+///
+/// `rx` is moved into the broadcaster thread; dropping the matching `Sender`
+/// causes the broadcaster to exit cleanly.
+pub(crate) fn spawn_server(
+    port: u16,
+    tree_definition_json: String,
+    rx: Receiver<TickTrace>,
+) -> io::Result<()> {
+    let listener = TcpListener::bind(("127.0.0.1", port))?;
+    listener.set_nonblocking(false)?; // blocking accept is fine — dedicated thread
+
+    let clients: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
+    // Shared shutdown flag: broadcaster sets it on exit; acceptor checks it between
+    // connections. The acceptor will not terminate until the NEXT connection arrives
+    // after shutdown — this is a known, documented limitation (see §3.10).
+    let shutdown = Arc::new(AtomicBool::new(false));
+
+    // Acceptor thread
+    let clients_acceptor = Arc::clone(&clients);
+    let shutdown_acceptor = Arc::clone(&shutdown);
+    let tree_json = tree_definition_json.clone();
+    std::thread::Builder::new()
+        .name("bonsai-viz-acceptor".into())
+        .spawn(move || {
+            for stream in listener.incoming() {
+                let stream = match stream {
+                    Ok(s) => s,
+                    Err(_) => continue,
+                };
+                if shutdown_acceptor.load(Ordering::Relaxed) {
+                    break; // drop stream — connection closes immediately on our side
+                }
+                stream.set_nodelay(true).ok();
+                stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
+                stream.set_write_timeout(Some(Duration::from_secs(2))).ok();
+                handle_connection(stream, &clients_acceptor, &tree_json);
+            }
+        })?;
+
+    // Broadcaster thread
+    let clients_broadcaster = Arc::clone(&clients);
+    std::thread::Builder::new()
+        .name("bonsai-viz-broadcaster".into())
+        .spawn(move || {
+            while let Ok(trace) = rx.recv() {
+                let json = match serde_json::to_string(&trace) {
+                    Ok(s) => s,
+                    Err(_) => continue,
+                };
+                let mut guard = clients_broadcaster.lock().expect("clients mutex poisoned");
+                let mut i = 0;
+                while i < guard.len() {
+                    // Clone the String once per client — with 0–2 clients typical this is fine.
+                    match guard[i].ws.send(tungstenite::Message::Text(json.clone())) {
+                        Ok(()) => i += 1,
+                        Err(_) => {
+                            // Client dropped or write timed out — evict O(1).
+                            let _ = guard.swap_remove(i);
+                        }
+                    }
+                }
+            }
+            // All senders dropped — signal acceptor to stop on its next wakeup.
+            shutdown.store(true, Ordering::Relaxed);
+        })?;
+
+    Ok(())
+}
+
+fn handle_connection(stream: TcpStream, clients: &Mutex<Vec<Client>>, tree_json: &str) {
+    // Peek without consuming — tungstenite::accept needs to re-read the headers.
+    let mut peek = [0u8; 1024];
+    let n = match stream.peek(&mut peek) {
+        Ok(n) => n,
+        Err(_) => return,
+    };
+    let head = std::str::from_utf8(&peek[..n]).unwrap_or("");
+    let is_ws = head.lines().any(|l| {
+        let lower = l.to_ascii_lowercase();
+        lower.starts_with("upgrade:") && lower.contains("websocket")
+    });
+
+    if is_ws {
+        if let Ok(mut ws) = tungstenite::accept(stream) {
+            // First frame: the static tree definition.
+            if ws.send(tungstenite::Message::Text(tree_json.to_owned())).is_err() {
+                return;
+            }
+            let addr = ws
+                .get_ref()
+                .peer_addr()
+                .unwrap_or_else(|_| ([0u8, 0, 0, 0], 0u16).into());
+            let mut guard = clients.lock().expect("clients mutex poisoned");
+            guard.push(Client { ws, addr });
+        }
+    } else {
+        serve_http(stream, head);
+    }
+}
+
+fn serve_http(mut stream: TcpStream, head: &str) {
+    let path = head.split_whitespace().nth(1).unwrap_or("/");
+    let is_root = path == "/" || path.starts_with("/?");
+    let body: &[u8] = if is_root { VISUALIZER_HTML.as_bytes() } else { b"not found" };
+    let status = if is_root { "200 OK" } else { "404 Not Found" };
+    let header = format!(
+        "HTTP/1.1 {status}\r\n\
+         Content-Type: text/html; charset=utf-8\r\n\
+         Content-Length: {}\r\n\
+         Cache-Control: no-store\r\n\
+         Connection: close\r\n\r\n",
+        body.len()
+    );
+    let _ = stream.write_all(header.as_bytes());
+    let _ = stream.write_all(body);
+}

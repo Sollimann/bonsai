@@ -190,6 +190,13 @@ impl TreeDefinition {
     }
 }
 
+/// Embedded HTML payload served by the visualizer's HTTP fallback.
+/// Replaced with `include_str!("index.html")` in Step 4.
+#[cfg(feature = "visualize")]
+#[allow(dead_code)] // used by visualizer_server::serve_http, which is live in Step 5
+pub(crate) const VISUALIZER_HTML: &str =
+    "<!doctype html><meta charset=utf-8><title>bonsai-bt visualizer</title><p>placeholder — Step 4 will replace this.</p>";
+
 #[cfg(test)]
 mod tests {
     use super::children_of;
