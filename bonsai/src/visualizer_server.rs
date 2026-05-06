@@ -67,21 +67,28 @@ pub(crate) fn spawn_server(
         .name("bonsai-viz-broadcaster".into())
         .spawn(move || {
             while let Ok(trace) = rx.recv() {
-                let json = match serde_json::to_string(&trace) {
-                    Ok(s) => s,
-                    Err(_) => continue,
-                };
-                let mut guard = clients_broadcaster.lock().expect("clients mutex poisoned");
-                let mut i = 0;
-                while i < guard.len() {
-                    // Clone the String once per client — with 0–2 clients typical this is fine.
-                    match guard[i].ws.send(tungstenite::Message::Text(json.clone())) {
-                        Ok(()) => i += 1,
-                        Err(_) => {
-                            // Client dropped or write timed out — evict O(1).
-                            let _ = guard.swap_remove(i);
+                // Wrap the per-trace work in catch_unwind so a malformed trace
+                // (or a tungstenite bug) can't kill the broadcaster thread and
+                // silently starve all connected clients.
+                let clients = &clients_broadcaster;
+                if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    let Ok(json) = serde_json::to_string(&trace) else { return };
+                    let mut guard = clients.lock().expect("clients mutex poisoned");
+                    let mut i = 0;
+                    while i < guard.len() {
+                        // Clone the String once per client — with 0–2 clients typical this is fine.
+                        match guard[i].ws.send(tungstenite::Message::Text(json.clone())) {
+                            Ok(()) => i += 1,
+                            Err(_) => {
+                                // Client dropped or write timed out — evict O(1).
+                                let _ = guard.swap_remove(i);
+                            }
                         }
                     }
+                }))
+                .is_err()
+                {
+                    eprintln!("bonsai-viz broadcaster: panic while broadcasting tick trace; continuing");
                 }
             }
             // All senders dropped — signal acceptor to stop on its next wakeup.
