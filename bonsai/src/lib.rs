@@ -134,8 +134,10 @@ mod event;
 mod sequence;
 mod state;
 mod status;
+mod tracer;
 mod when_all;
 
+#[cfg(feature = "visualize")]
 pub mod telemetry;
 
 #[cfg(feature = "visualize")]

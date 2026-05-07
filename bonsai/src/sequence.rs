@@ -1,5 +1,5 @@
 use crate::status::Status::*;
-use crate::telemetry::{first_child_id, next_sibling_id, NodeMeta, Tracer};
+use crate::tracer::{first_child_id, next_sibling_id, NodeMeta, Tracer};
 use crate::Float;
 use crate::{event::UpdateEvent, state::State, ActionArgs, Behavior, Status, RUNNING};
 

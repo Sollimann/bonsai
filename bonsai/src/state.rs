@@ -2,7 +2,7 @@ use crate::event::UpdateEvent;
 use crate::sequence::{sequence, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
-use crate::telemetry::{first_child_id, next_sibling_id, NodeMeta, Tracer};
+use crate::tracer::{first_child_id, next_sibling_id, NodeMeta, Tracer};
 use crate::when_all::{when_all, WhenAllArgs};
 use crate::{Behavior, Float, Status};
 use std::fmt::Debug;
