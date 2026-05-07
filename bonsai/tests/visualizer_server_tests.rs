@@ -1,4 +1,4 @@
-//! Acceptance tests for the WebSocket visualizer server (viz_plan.md §3.11).
+//! Acceptance tests for the WebSocket visualizer server
 //!
 //! Gated on `feature = "visualize"`. Registered in `tests.rs`.
 
@@ -175,7 +175,7 @@ fn broadcaster_evicts_dead_client() {
 }
 
 #[test]
-#[ignore = "fragile under load — see viz_plan.md §3.11.2.7 edge cases"]
+#[ignore = "fragile under load"]
 fn channel_full_drop_semantics() {
     let (port, tx) = start_server();
     let _slow = ws_connect(port); // never reads from this client

@@ -41,7 +41,7 @@ pub struct BT<A, B> {
     pub(crate) dropped_traces: u64,
     /// Reusable buffer for the recording trace. Held for the BT's lifetime;
     /// `tick_recording` clears it on entry, preserving capacity. Avoids one
-    /// `HashMap` allocation per tick on the hot path (cf. viz_plan §3.9).
+    /// `HashMap` allocation per tick on the hot path
     #[cfg(feature = "visualize")]
     #[cfg_attr(feature = "serde", serde(skip))]
     pub(crate) trace_buffer: crate::telemetry::TickTrace,
@@ -165,9 +165,8 @@ impl<A: Clone, B> BT<A, B> {
 #[cfg(feature = "visualize")]
 impl<A: Clone, B> BT<A, B> {
     /// Number of `TickTrace`s dropped because the broadcaster channel was full.
-    /// Reset on `reset_bt`. Useful for diagnosing slow visualizer clients
-    /// (cf. viz_plan §3.9 — "Keep an eye on `dropped_traces`"). Always returns 0
-    /// if the visualizer was never attached via `BT::with_telemetry` (Step 5).
+    /// Reset on `reset_bt`. Useful for diagnosing slow visualizer clients.
+    /// Always returns 0 if the visualizer was never attached via `BT::with_telemetry`.
     pub fn dropped_traces(&self) -> u64 {
         self.dropped_traces
     }

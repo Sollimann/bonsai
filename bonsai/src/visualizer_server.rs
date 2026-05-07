@@ -1,5 +1,3 @@
-// All items in this module become live in Step 5 (BT::with_telemetry).
-// Until then, suppress dead-code warnings so clippy -D warnings stays clean.
 #![allow(dead_code)]
 
 use std::io::{self, Write};

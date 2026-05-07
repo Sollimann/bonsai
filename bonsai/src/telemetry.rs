@@ -88,7 +88,7 @@ pub struct TreeNode {
     pub children: Vec<TreeNode>,
 }
 
-/// Preorder metadata for one node — computed once at `BT::new`, used by step-2
+/// Preorder metadata for one node — computed once at `BT::new`,
 /// tracers to cheaply advance the id counter past unvisited subtrees.
 #[derive(Clone, Debug)]
 pub struct NodeMeta {
@@ -119,14 +119,14 @@ fn fill<A>(b: &Behavior<A>, out: &mut Vec<NodeMeta>) -> usize {
 /// Returns the ordered children of a behavior node.
 ///
 /// This is the **single source of truth** for preorder ID assignment order.
-/// `build_node_metas` (step 1) and `RecordingTracer::skip_subtree` (step 2)
+/// `build_node_metas`and `RecordingTracer::skip_subtree`
 /// must call this rather than re-implementing the ordering independently.
 pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
     use Behavior::*;
     match b {
         Action(_) | Wait(_) | WaitForever => vec![],
         Invert(c) | AlwaysSucceed(c) => vec![c.as_ref()],
-        // [condition, on_success, on_failure] — must match skip_subtree logic in step 2.
+        // [condition, on_success, on_failure] — must match skip_subtree logic.
         If(cond, ok, ko) => vec![cond.as_ref(), ok.as_ref(), ko.as_ref()],
         While(cond, body) | WhileAll(cond, body) => {
             let mut v = Vec::with_capacity(1 + body.len());
@@ -190,12 +190,10 @@ impl TreeDefinition {
     }
 }
 
-/// Embedded HTML payload served by the visualizer's HTTP fallback.
-/// Replaced with `include_str!("index.html")` in Step 4.
+/// Embedded HTML payload served at `GET /` by the visualizer server.
 #[cfg(feature = "visualize")]
-#[allow(dead_code)] // used by visualizer_server::serve_http, which is live in Step 5
-pub const VISUALIZER_HTML: &str =
-    "<!doctype html><meta charset=utf-8><title>bonsai-bt visualizer</title><p>placeholder — Step 4 will replace this.</p>";
+#[allow(dead_code)]
+pub const VISUALIZER_HTML: &str = include_str!("index.html");
 
 #[cfg(test)]
 mod tests {

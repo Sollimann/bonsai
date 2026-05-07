@@ -51,3 +51,7 @@ path = "src/simple_npc_ai/main.rs"
 [[bin]]
 name = "race_timeout"
 path = "src/race_timeout/main.rs"
+
+[[bin]]
+name = "visualizer_smoke"
+path = "src/visualizer_smoke/main.rs"
