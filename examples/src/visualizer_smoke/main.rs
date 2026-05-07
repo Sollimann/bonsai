@@ -1,10 +1,16 @@
-//! Manual smoke test for the WebSocket visualizer
+//! End-to-end demo for the WebSocket visualizer.
 //!
-//! Spins up `spawn_server` on 127.0.0.1:8910 with a deliberately rich tree, then
-//! pushes synthetic `TickTrace`s every 400 ms. We do **not** drive a real `BT` —
-//! the goal is to exercise the *frontend* (every `node_type` CSS hook, label
-//! formatter, status color), so the trace generator just hand-crafts plausible
-//! state maps.
+//! Drives a real `BT` over a deliberately rich 27-node tree, attaches the
+//! visualizer via `BT::with_telemetry(8910)`, and re-runs the tree every wall
+//! tick (~400 ms). Exercises every `node_type` CSS hook, label formatter, and
+//! status color, plus `tick` auto-routing to `tick_recording` (no explicit
+//! telemetry call needed).
+//!
+//! Each wall tick: call `bt.tick(...)` once → the closure resolves leaves
+//! based on a rotating tick counter so different `If`/`Invert` branches fire →
+//! the tree returns `Success` (or `Failure`) → `reset_bt` rewinds it for the
+//! next tick. This produces visible animation in the browser as leaves
+//! light up green/red and the active branches shift over time.
 //!
 //! # How to run
 //!
@@ -14,12 +20,12 @@
 //!
 //! Then open <http://127.0.0.1:8910/> in a browser. Acceptance:
 //! 1. Tree renders within ~1 s; status bar reads `connected` and `27 nodes`.
-//! 2. All 12 distinct node-type labels visible (note: `Select` shows as
+//! 2. All distinct node-type labels visible (note: `Select` shows as
 //!    `Selector`, `Invert` as `Inverter` — see `classify` in `telemetry.rs`).
 //! 3. `Wait` leaves display dynamic labels: `Wait(2.00s)` and `Wait(0.30s)`.
-//! 4. Every ~400 ms the running "context" rotates through composites/decorators
-//!    while leaves cycle through Success (green) / Failure (red) / Running
-//!    (amber). Root stays amber the whole time.
+//! 4. Every ~400 ms the leaf colors shift: the `If` branch alternates between
+//!    `flee` and `regroup`; `Invert(enemy_visible)` flips between Success and
+//!    Failure as the closure rotates the underlying status.
 //! 5. Refresh the page → tree re-renders; tick_id continues monotonically.
 //! 6. `Ctrl-C` the binary → status bar shows "disconnected — retrying in
 //!    500ms"; restart the binary → page reconnects within ≤ 1 s.
@@ -62,24 +68,19 @@
 //! ID assignment follows `bonsai_bt::telemetry::children_of` — `If` is
 //! `[cond, ok, ko]`, `While` is `[cond, body0, body1, …]`, decorators wrap one
 //! child, composites preserve order. Skipped variants: `WaitForever` (always
-//! running, no visual signal) and `WhileAll` (renders identically to `While`).
+//! Running, no visual signal) and `WhileAll` (renders identically to `While`).
+//!
+//! Note: with the current closure, `has_ammo` always returns `Success`, so
+//! `While` exits without entering its body — `fire` and `Wait(0.3)` are
+//! visited but not on every tick. `Race` and `Wait(2.0)` are reached only
+//! when `acquire_target` fails (rotated in by the closure). Over a full
+//! 4-tick rotation, every leaf flashes at least once.
 
-use bonsai_bt::telemetry::{TickTrace, TreeDefinition};
 use bonsai_bt::{
-    Action, After, AlwaysSucceed, Behavior, If, Invert, Race, Select, Sequence, Status, Wait, WhenAll, WhenAny, While,
+    Action, After, AlwaysSucceed, Behavior, Event, If, Invert, Race, Select, Sequence, Status, UpdateArgs, Wait,
+    WhenAll, WhenAny, While, BT,
 };
-use std::collections::HashMap;
-use std::net::TcpListener;
-use std::sync::mpsc::sync_channel;
 use std::time::Duration;
-
-/// Leaf node IDs (DFS preorder) — every leaf in the tree above.
-const LEAF_IDS: &[usize] = &[2, 4, 5, 8, 10, 11, 13, 14, 16, 18, 19, 20, 22, 23, 25, 26];
-/// Inner composite/decorator IDs — rotated through as the per-tick "running context".
-const INNER_IDS: &[usize] = &[1, 6, 7, 9, 12, 15, 17, 21, 24];
-/// Leaf-status palette. Repeating Success twice biases the demo toward green;
-/// over ~16 ticks every leaf still hits all three colors.
-const STATUS_CYCLE: &[Status] = &[Status::Success, Status::Success, Status::Failure];
 
 fn build_tree() -> Behavior<&'static str> {
     Sequence(vec![
@@ -96,40 +97,47 @@ fn build_tree() -> Behavior<&'static str> {
             Race(vec![Action("dodge"), Wait(2.0)]),
             Invert(Box::new(Action("enemy_visible"))),
         ]),
-        While(
-            Box::new(Action("has_ammo")),
-            vec![Action("fire"), Wait(0.3)],
-        ),
+        While(Box::new(Action("has_ammo")), vec![Action("fire"), Wait(0.3)]),
         After(vec![Action("cooldown"), Action("ready_signal")]),
         WhenAny(vec![Action("victory_check"), Action("retreat_signal")]),
     ])
 }
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:8910").unwrap();
-    let behavior = build_tree();
-    let json = serde_json::to_string(&TreeDefinition::build(&behavior)).unwrap();
+    let mut bt = BT::<&'static str, ()>::new(build_tree(), ())
+        .with_telemetry(8910)
+        .expect("bind 127.0.0.1:8910");
 
-    let (tx, rx) = sync_channel::<TickTrace>(1024);
-    bonsai_bt::spawn_server(listener, json, rx).unwrap();
-
-    println!("open http://127.0.0.1:8910/");
-
-    let mut tick: u64 = 0;
+    // dt = 1.0 s/tick — `Wait(0.3)` fires immediately when reached;
+    // `Wait(2.0)` fires after two ticks.
+    let event: Event = UpdateArgs { dt: 1.0 }.into();
+    let mut tick_n: u64 = 0;
     loop {
-        tick += 1;
-        let t = tick as usize;
-
-        let mut states = HashMap::new();
-        states.insert(0, Status::Running);
-        states.insert(INNER_IDS[t % INNER_IDS.len()], Status::Running);
-        for offset in 0..3 {
-            let leaf = LEAF_IDS[(t + offset) % LEAF_IDS.len()];
-            let status = STATUS_CYCLE[(t + offset) % STATUS_CYCLE.len()];
-            states.insert(leaf, status);
+        tick_n += 1;
+        // Vary leaf statuses tick-by-tick so the visualizer shows visible
+        // animation. The 4-tick rotation cycles through If branches and
+        // Select's first-vs-second-child path.
+        let outcome = bt.tick(&event, &mut |args, _bb| {
+            let status = match (*args.action, tick_n % 4) {
+                // If alternates on_success ↔ on_failure as low_hp toggles.
+                ("low_hp", 1 | 2) => Status::Failure,
+                // Force Select past its first child every other tick so
+                // Race / Invert / Wait(2.0) get visited.
+                ("acquire_target", 0 | 2) => Status::Failure,
+                // Invert flips this — Failure → Inverter Success, vice versa.
+                ("enemy_visible", 1) => Status::Success,
+                ("enemy_visible", _) => Status::Failure,
+                _ => Status::Success,
+            };
+            (status, 0.0)
+        });
+        // The tree completes in one tick (no WaitForever in the unconditional
+        // path). reset_bt rewinds the cursor so the next tick runs it again;
+        // tick_count and telemetry_sender survive the reset, so the browser
+        // sees a continuous stream of TickTraces with monotonic tick_id.
+        if matches!(outcome, Some((Status::Success | Status::Failure, _))) {
+            bt.reset_bt();
         }
-
-        tx.send(TickTrace { tick_id: tick, states }).unwrap();
         std::thread::sleep(Duration::from_millis(400));
     }
 }

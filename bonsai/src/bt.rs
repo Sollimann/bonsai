@@ -98,6 +98,13 @@ impl<A: Clone, B> BT<A, B> {
         if self.finished {
             return None;
         }
+        // When telemetry is attached, delegate to the recording path so the
+        // broadcaster receives a TickTrace. One runtime branch; both sides
+        // keep their Tracer monomorphizations.
+        #[cfg(feature = "visualize")]
+        if self.telemetry_sender.is_some() {
+            return self.tick_recording(e, f).map(|(result, _)| result);
+        }
         self.tick_count += 1;
         let mut tracer = crate::telemetry::NoopTracer;
         #[cfg(feature = "visualize")]
@@ -221,6 +228,73 @@ impl<A: Clone, B> BT<A, B> {
             }
         }
         Some((result, self.trace_buffer.clone()))
+    }
+
+    /// Attach a live visualizer at `http://127.0.0.1:{port}/`.
+    ///
+    /// Builder method: consumes and returns `Self` for chaining off [`BT::new`].
+    /// Spawns a listener thread and a broadcaster thread. Telemetry is
+    /// **best-effort** — [`TickTrace`](crate::telemetry::TickTrace)s are dropped
+    /// silently when the channel is full; the count is surfaced via
+    /// [`dropped_traces`](Self::dropped_traces).
+    ///
+    /// After calling this method, [`tick`](Self::tick) automatically records and
+    /// ships a trace on every call — no API change required.
+    ///
+    /// Calling `with_telemetry` a second time replaces the existing sender; the
+    /// previous broadcaster exits on its next `recv` (sees `Disconnected`). If the
+    /// same port is still bound, the second bind returns `AddrInUse`.
+    ///
+    /// # Errors
+    /// Returns `io::Error` if `127.0.0.1:{port}` cannot be bound.
+    ///
+    /// # Edge cases
+    /// - **Cloning a telemetry-attached `BT` is not supported.** `BT` derives
+    ///   `Clone`, and `Option<SyncSender<_>>` clones share the underlying
+    ///   channel — both BTs would interleave their `TickTrace`s into the same
+    ///   broadcaster, producing nonsense in the visualizer. Either clone *before*
+    ///   calling `with_telemetry`, or call `with_telemetry` again on the clone
+    ///   (with a different port).
+    /// - **`reset_bt` preserves telemetry.** The sender survives, `tick_count`
+    ///   keeps climbing, `dropped_traces` resets to 0. Connected browsers see
+    ///   no disruption.
+    /// - **Already-finished BT.** `with_telemetry` still works — the tree
+    ///   definition is sent to clients on connect — but no `TickTrace`s flow
+    ///   until [`reset_bt`](Self::reset_bt) is called (`tick` returns `None`).
+    /// - **Deserializing a BT.** `telemetry_sender` is `#[serde(skip)]`, so the
+    ///   deserialized BT runs without telemetry until `with_telemetry` is called
+    ///   again — the typical "fresh run" workflow.
+    /// - **Pre-connect tick backlog.** Traces queue in the channel (capacity
+    ///   1024) until the first WS client connects. If no one connects within
+    ///   1024 ticks, older traces are dropped (`dropped_traces` increments);
+    ///   the first connecting client sees the tree definition plus the *next*
+    ///   tick onward, not the backlog.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use bonsai_bt::{Action, BT, Behavior::Sequence};
+    /// # use std::collections::HashMap;
+    /// let behavior = Sequence(vec![Action("step")]);
+    /// let bb: HashMap<String, i32> = HashMap::new();
+    /// let mut bt = BT::new(behavior, bb).with_telemetry(8910)?;
+    /// # Ok::<(), std::io::Error>(())
+    /// ```
+    pub fn with_telemetry(mut self, port: u16) -> std::io::Result<Self>
+    where
+        A: std::fmt::Debug,
+    {
+        use crate::telemetry::{TickTrace, TreeDefinition};
+        use std::net::TcpListener;
+        use std::sync::mpsc::sync_channel;
+
+        let listener = TcpListener::bind(("127.0.0.1", port))?;
+        let definition = serde_json::to_string(&TreeDefinition::build(&self.initial_behavior))
+            .expect("TreeDefinition is always serializable");
+        let (tx, rx) = sync_channel::<TickTrace>(1024);
+        crate::visualizer_server::spawn_server(listener, definition, rx)?;
+        self.telemetry_sender = Some(tx);
+        println!("bonsai-bt visualizer: open http://127.0.0.1:{port}/");
+        Ok(self)
     }
 }
 
