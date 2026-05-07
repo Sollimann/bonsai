@@ -144,6 +144,10 @@ mod visualizer;
 #[cfg(feature = "visualize")]
 mod visualizer_server;
 
+#[cfg(feature = "visualize")]
+#[doc(hidden)]
+pub use visualizer_server::spawn_server;
+
 #[cfg(feature = "f32")]
 pub type Float = f32;
 

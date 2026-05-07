@@ -8,3 +8,6 @@ mod telemetry_tests;
 
 #[cfg(feature = "visualize")]
 mod telemetry_tracer_tests;
+
+#[cfg(feature = "visualize")]
+mod visualizer_server_tests;

@@ -30,6 +30,7 @@ f32 = []
 
 [dev-dependencies]
 serde_json = { version = "1.0.81" }
+tungstenite = { version = "0.21" }
 
 [[test]]
 name = "tests"

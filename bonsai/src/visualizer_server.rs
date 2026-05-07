@@ -37,9 +37,9 @@ struct Client {
 ///
 /// `rx` is moved into the broadcaster thread; dropping the matching `Sender`
 /// causes the broadcaster to exit cleanly.
-pub(crate) fn spawn_server(port: u16, tree_definition_json: String, rx: Receiver<TickTrace>) -> io::Result<()> {
-    let listener = TcpListener::bind(("127.0.0.1", port))?;
-    listener.set_nonblocking(false)?; // blocking accept is fine — dedicated thread
+pub fn spawn_server(listener: TcpListener, tree_definition_json: String, rx: Receiver<TickTrace>) -> io::Result<()> {
+    // Listener arrives pre-bound from the caller. Stdlib `TcpListener` is
+    // already blocking by default; no `set_nonblocking(false)` needed.
 
     let clients: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     // Shared shutdown flag: broadcaster sets it on exit; acceptor checks it between
