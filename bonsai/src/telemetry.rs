@@ -64,7 +64,7 @@ impl Tracer for RecordingTracer<'_> {
 
 /// The per-tick payload: maps each visited node's preorder ID to its returned Status.
 #[cfg(feature = "visualize")]
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct TickTrace {
     pub tick_id: u64,
     /// Maps Node ID to its return Status for the current tick.

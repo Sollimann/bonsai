@@ -39,6 +39,12 @@ pub struct BT<A, B> {
     #[cfg(feature = "visualize")]
     #[cfg_attr(feature = "serde", serde(skip))]
     pub(crate) dropped_traces: u64,
+    /// Reusable buffer for the recording trace. Held for the BT's lifetime;
+    /// `tick_recording` clears it on entry, preserving capacity. Avoids one
+    /// `HashMap` allocation per tick on the hot path (cf. viz_plan §3.9).
+    #[cfg(feature = "visualize")]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub(crate) trace_buffer: crate::telemetry::TickTrace,
 }
 
 impl<A: Clone, B> BT<A, B> {
@@ -61,6 +67,11 @@ impl<A: Clone, B> BT<A, B> {
             telemetry_sender: None,
             #[cfg(feature = "visualize")]
             dropped_traces: 0,
+            #[cfg(feature = "visualize")]
+            trace_buffer: crate::telemetry::TickTrace {
+                tick_id: 0,
+                states: std::collections::HashMap::new(),
+            },
         }
     }
 
@@ -153,6 +164,14 @@ impl<A: Clone, B> BT<A, B> {
 
 #[cfg(feature = "visualize")]
 impl<A: Clone, B> BT<A, B> {
+    /// Number of `TickTrace`s dropped because the broadcaster channel was full.
+    /// Reset on `reset_bt`. Useful for diagnosing slow visualizer clients
+    /// (cf. viz_plan §3.9 — "Keep an eye on `dropped_traces`"). Always returns 0
+    /// if the visualizer was never attached via `BT::with_telemetry` (Step 5).
+    pub fn dropped_traces(&self) -> u64 {
+        self.dropped_traces
+    }
+
     /// Tick the tree once and return both the standard tick result and a
     /// [`TickTrace`](crate::telemetry::TickTrace) recording every node visited
     /// this frame. Used by the in-process telemetry channel and by integration
@@ -172,13 +191,14 @@ impl<A: Clone, B> BT<A, B> {
             return None;
         }
         self.tick_count += 1;
-        let mut trace = crate::telemetry::TickTrace {
-            tick_id: self.tick_count,
-            states: std::collections::HashMap::new(),
-        };
+        // Reuse the long-lived buffer instead of fresh-allocating per tick.
+        // `clear()` preserves the HashMap's capacity, so once warmed up the
+        // fill phase doesn't reallocate.
+        self.trace_buffer.tick_id = self.tick_count;
+        self.trace_buffer.states.clear();
         let result = {
             let mut tracer = crate::telemetry::RecordingTracer {
-                trace: &mut trace,
+                trace: &mut self.trace_buffer,
                 metas: &self.node_metas,
             };
             self.state
@@ -189,7 +209,11 @@ impl<A: Clone, B> BT<A, B> {
         }
         // Try to ship the trace to the broadcaster thread. Uses as_ref().map() to
         // release the immutable borrow before the match arms take mutable borrows.
-        if let Some(outcome) = self.telemetry_sender.as_ref().map(|tx| tx.try_send(trace.clone())) {
+        if let Some(outcome) = self
+            .telemetry_sender
+            .as_ref()
+            .map(|tx| tx.try_send(self.trace_buffer.clone()))
+        {
             use std::sync::mpsc::TrySendError;
             match outcome {
                 Ok(()) => {}
@@ -197,7 +221,7 @@ impl<A: Clone, B> BT<A, B> {
                 Err(TrySendError::Disconnected(_)) => self.telemetry_sender = None,
             }
         }
-        Some((result, trace))
+        Some((result, self.trace_buffer.clone()))
     }
 }
 
