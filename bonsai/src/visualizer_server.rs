@@ -11,6 +11,18 @@ use std::time::Duration;
 
 use crate::telemetry::{TickTrace, VISUALIZER_HTML};
 
+/// Slowloris budget: drop a connection that hasn't delivered headers in this long.
+const READ_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Wedged-client budget: a single broadcast `send()` must complete in this long.
+/// Combined with channel size 1024, the tick path can drop frames after at most
+/// `WRITE_TIMEOUT * num_clients` of broadcaster blockage.
+const WRITE_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// Peek buffer for HTTP-vs-WS dispatch. Single-packet localhost requests fit
+/// comfortably; oversize headers are misclassified as HTTP (the client retries).
+const PEEK_BUF_BYTES: usize = 1024;
+
 struct Client {
     ws: tungstenite::WebSocket<TcpStream>,
     addr: std::net::SocketAddr,
@@ -25,11 +37,7 @@ struct Client {
 ///
 /// `rx` is moved into the broadcaster thread; dropping the matching `Sender`
 /// causes the broadcaster to exit cleanly.
-pub(crate) fn spawn_server(
-    port: u16,
-    tree_definition_json: String,
-    rx: Receiver<TickTrace>,
-) -> io::Result<()> {
+pub(crate) fn spawn_server(port: u16, tree_definition_json: String, rx: Receiver<TickTrace>) -> io::Result<()> {
     let listener = TcpListener::bind(("127.0.0.1", port))?;
     listener.set_nonblocking(false)?; // blocking accept is fine — dedicated thread
 
@@ -39,10 +47,11 @@ pub(crate) fn spawn_server(
     // after shutdown — this is a known, documented limitation (see §3.10).
     let shutdown = Arc::new(AtomicBool::new(false));
 
-    // Acceptor thread
+    // Acceptor thread. The `move` closure takes ownership of
+    // `tree_definition_json` directly — it's not used elsewhere in
+    // `spawn_server`, so cloning it would be redundant.
     let clients_acceptor = Arc::clone(&clients);
     let shutdown_acceptor = Arc::clone(&shutdown);
-    let tree_json = tree_definition_json.clone();
     std::thread::Builder::new()
         .name("bonsai-viz-acceptor".into())
         .spawn(move || {
@@ -55,9 +64,9 @@ pub(crate) fn spawn_server(
                     break; // drop stream — connection closes immediately on our side
                 }
                 stream.set_nodelay(true).ok();
-                stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
-                stream.set_write_timeout(Some(Duration::from_secs(2))).ok();
-                handle_connection(stream, &clients_acceptor, &tree_json);
+                stream.set_read_timeout(Some(READ_TIMEOUT)).ok();
+                stream.set_write_timeout(Some(WRITE_TIMEOUT)).ok();
+                handle_connection(stream, &clients_acceptor, &tree_definition_json);
             }
         })?;
 
@@ -72,7 +81,9 @@ pub(crate) fn spawn_server(
                 // silently starve all connected clients.
                 let clients = &clients_broadcaster;
                 if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    let Ok(json) = serde_json::to_string(&trace) else { return };
+                    let Ok(json) = serde_json::to_string(&trace) else {
+                        return;
+                    };
                     let mut guard = clients.lock().expect("clients mutex poisoned");
                     let mut i = 0;
                     while i < guard.len() {
@@ -100,7 +111,7 @@ pub(crate) fn spawn_server(
 
 fn handle_connection(stream: TcpStream, clients: &Mutex<Vec<Client>>, tree_json: &str) {
     // Peek without consuming — tungstenite::accept needs to re-read the headers.
-    let mut peek = [0u8; 1024];
+    let mut peek = [0u8; PEEK_BUF_BYTES];
     let n = match stream.peek(&mut peek) {
         Ok(n) => n,
         Err(_) => return,
@@ -132,8 +143,11 @@ fn handle_connection(stream: TcpStream, clients: &Mutex<Vec<Client>>, tree_json:
 fn serve_http(mut stream: TcpStream, head: &str) {
     let path = head.split_whitespace().nth(1).unwrap_or("/");
     let is_root = path == "/" || path.starts_with("/?");
-    let body: &[u8] = if is_root { VISUALIZER_HTML.as_bytes() } else { b"not found" };
-    let status = if is_root { "200 OK" } else { "404 Not Found" };
+    let (status, body): (&str, &[u8]) = if is_root {
+        ("200 OK", VISUALIZER_HTML.as_bytes())
+    } else {
+        ("404 Not Found", b"not found")
+    };
     let header = format!(
         "HTTP/1.1 {status}\r\n\
          Content-Type: text/html; charset=utf-8\r\n\
