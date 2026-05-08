@@ -58,6 +58,37 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 .node-type-Action circle { stroke-dasharray: none; }
 .node-type-Wait   circle { stroke-dasharray: 2 2; }
+
+#legend {
+  position: fixed; top: 44px; right: 14px; z-index: 10;
+  background: var(--bg-panel);
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 11px;
+  display: flex; flex-direction: column; gap: 6px;
+  pointer-events: none;
+}
+#legend .legend-title {
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+#legend .legend-row {
+  display: flex; align-items: center; gap: 8px;
+}
+#legend .legend-swatch {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  flex-shrink: 0;
+}
+#legend .legend-swatch.status-running { background: var(--status-running); border-color: var(--status-running-stroke); }
+#legend .legend-swatch.status-success { background: var(--status-success); border-color: var(--status-success-stroke); }
+#legend .legend-swatch.status-failure { background: var(--status-failure); border-color: var(--status-failure-stroke); }
+#legend .legend-swatch.status-idle    { background: var(--node-fill);      border-color: var(--node-stroke); }
 </style>
 </head>
 <body>
@@ -65,6 +96,13 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   <span id="conn-status">connecting…</span>
   <span id="tick-counter">tick: —</span>
   <span id="tree-meta"></span>
+</div>
+<div id="legend">
+  <div class="legend-title">legend</div>
+  <div class="legend-row"><span class="legend-swatch status-running"></span>Running</div>
+  <div class="legend-row"><span class="legend-swatch status-success"></span>Success</div>
+  <div class="legend-row"><span class="legend-swatch status-failure"></span>Failure</div>
+  <div class="legend-row"><span class="legend-swatch status-idle"></span>Idle / not visited</div>
 </div>
 <svg id="tree-svg" preserveAspectRatio="xMinYMin meet"></svg>
 <script>

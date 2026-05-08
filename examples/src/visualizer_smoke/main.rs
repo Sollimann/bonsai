@@ -6,26 +6,22 @@
 //! status color, plus `tick` auto-routing to `tick_recording` (no explicit
 //! telemetry call needed).
 //!
-//! Each wall tick: call `bt.tick(...)` once → the closure resolves leaves
-//! based on a rotating tick counter so different `If`/`Invert` branches fire →
-//! the tree returns `Success` (or `Failure`) → `reset_bt` rewinds it for the
-//! next tick. This produces visible animation in the browser as leaves
-//! light up green/red and the active branches shift over time.
-//!
 //! # How to run
 //!
 //! ```bash
 //! cargo run --bin visualizer_smoke
 //! ```
 //!
-//! Then open <http://127.0.0.1:8910/> in a browser. Acceptance:
+//! Then open <http://127.0.0.1:8910/> in a browser.
 //! 1. Tree renders within ~1 s; status bar reads `connected` and `27 nodes`.
 //! 2. All distinct node-type labels visible (note: `Select` shows as
 //!    `Selector`, `Invert` as `Inverter` — see `classify` in `telemetry.rs`).
 //! 3. `Wait` leaves display dynamic labels: `Wait(2.00s)` and `Wait(0.30s)`.
-//! 4. Every ~400 ms the leaf colors shift: the `If` branch alternates between
-//!    `flee` and `regroup`; `Invert(enemy_visible)` flips between Success and
-//!    Failure as the closure rotates the underlying status.
+//! 4. Every ~400 ms the leaf colors shift across **all** subtrees. Every leaf
+//!    cycles through Success (green), Running (yellow), and Failure (red) on
+//!    a 5-step rotation with a per-action phase offset, so at any tick a mix
+//!    of statuses is visible. When a leaf returns Running, the path from root
+//!    to that leaf turns yellow.
 //! 5. Refresh the page → tree re-renders; tick_id continues monotonically.
 //! 6. `Ctrl-C` the binary → status bar shows "disconnected — retrying in
 //!    500ms"; restart the binary → page reconnects within ≤ 1 s.
@@ -69,12 +65,6 @@
 //! `[cond, ok, ko]`, `While` is `[cond, body0, body1, …]`, decorators wrap one
 //! child, composites preserve order. Skipped variants: `WaitForever` (always
 //! Running, no visual signal) and `WhileAll` (renders identically to `While`).
-//!
-//! Note: with the current closure, `has_ammo` always returns `Success`, so
-//! `While` exits without entering its body — `fire` and `Wait(0.3)` are
-//! visited but not on every tick. `Race` and `Wait(2.0)` are reached only
-//! when `acquire_target` fails (rotated in by the closure). Over a full
-//! 4-tick rotation, every leaf flashes at least once.
 
 use bonsai_bt::{
     Action, After, AlwaysSucceed, Behavior, Event, If, Invert, Race, Select, Sequence, Status, UpdateArgs, Wait,
@@ -112,23 +102,59 @@ fn main() {
     // `Wait(2.0)` fires after two ticks.
     let event: Event = UpdateArgs { dt: 1.0 }.into();
     let mut tick_n: u64 = 0;
+
+    // Five-step status cycle visible across all three colors. Each action
+    // gets a unique phase offset so the same wall tick produces a varied
+    // mix of statuses across the tree (and yellow-Running shows up).
+    const CYCLE: &[Status] = &[
+        Status::Success,
+        Status::Running,
+        Status::Failure,
+        Status::Success,
+        Status::Running,
+    ];
+
     loop {
         tick_n += 1;
-        // Vary leaf statuses tick-by-tick so the visualizer shows visible
-        // animation. The 4-tick rotation cycles through If branches and
-        // Select's first-vs-second-child path.
         let outcome = bt.tick(&event, &mut |args, _bb| {
-            let status = match (*args.action, tick_n % 4) {
-                // If alternates on_success ↔ on_failure as low_hp toggles.
-                ("low_hp", 1 | 2) => Status::Failure,
-                // Force Select past its first child every other tick so
-                // Race / Invert / Wait(2.0) get visited.
-                ("acquire_target", 0 | 2) => Status::Failure,
-                // Invert flips this — Failure → Inverter Success, vice versa.
-                ("enemy_visible", 1) => Status::Success,
-                ("enemy_visible", _) => Status::Failure,
-                _ => Status::Success,
+            let phase: u64 = match *args.action {
+                "low_hp" => 0,
+                "flee" => 1,
+                "regroup" => 2,
+                "acquire_target" => 3,
+                "aim" => 4,
+                "track" => 0,
+                "dodge" => 1,
+                "enemy_visible" => 2,
+                "has_ammo" => 3,
+                "fire" => 4,
+                "cooldown" => 0,
+                "ready_signal" => 1,
+                "victory_check" => 2,
+                "retreat_signal" => 3,
+                _ => 0,
             };
+            let idx = ((tick_n + phase) % CYCLE.len() as u64) as usize;
+            let mut status = CYCLE[idx];
+            // The root is a Sequence: any child returning Failure short-
+            // circuits *before* downstream siblings (After at id 21, WhenAny
+            // at id 24) ever get visited. Four leaves are chain-critical —
+            // their Failure propagates straight up to the root:
+            //   - regroup       → If's on_failure branch → If Failure
+            //   - has_ammo      → While Failure
+            //   - cooldown,
+            //     ready_signal  → After Failure
+            // Substitute Running for Failure on these so the chain reaches
+            // the bottom branches. These four nodes still show Success
+            // (green) and Running (yellow); the other thirteen leaves keep
+            // cycling through all three statuses including red.
+            if matches!(
+                *args.action,
+                "regroup" | "has_ammo" | "cooldown" | "ready_signal"
+            ) && status == Status::Failure
+            {
+                status = Status::Running;
+            }
             (status, 0.0)
         });
         // The tree completes in one tick (no WaitForever in the unconditional
