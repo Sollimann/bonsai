@@ -141,6 +141,12 @@ mod when_all;
 pub mod telemetry;
 
 #[cfg(feature = "visualize")]
+mod telemetry_state;
+
+#[cfg(feature = "visualize")]
+mod bt_telemetry;
+
+#[cfg(feature = "visualize")]
 mod visualizer;
 
 #[cfg(feature = "visualize")]
