@@ -25,6 +25,7 @@
 * [Concepts](docs/concepts/README.md)
 * [Examples](examples/README.md)
 * [Development Guide](DEVELOPMENT.md)
+* [Kanban Board](https://github.com/users/Sollimann/projects/9/views/1)
 * [Honorable Mentions](#similar-crates)
 
 ## Using Bonsai
