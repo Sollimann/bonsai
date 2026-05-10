@@ -42,6 +42,7 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 .edge {
   fill: none; stroke: var(--edge); stroke-width: 1.5;
+  transition: stroke 80ms ease-out, stroke-width 80ms ease-out;
 }
 .node circle {
   fill: var(--node-fill); stroke: var(--node-stroke); stroke-width: 1.5;
@@ -52,9 +53,15 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   user-select: none;
 }
 
+/* Node highlight states */
 .node.status-running circle { fill: var(--status-running); stroke: var(--status-running-stroke); }
 .node.status-success circle { fill: var(--status-success); stroke: var(--status-success-stroke); }
 .node.status-failure circle { fill: var(--status-failure); stroke: var(--status-failure-stroke); }
+
+/* Edge highlight states */
+.edge.status-running { stroke: var(--status-running); stroke-width: 2.5; }
+.edge.status-success { stroke: var(--status-success); stroke-width: 2.5; }
+.edge.status-failure { stroke: var(--status-failure); stroke-width: 2.5; }
 
 .node-type-Action circle { stroke-dasharray: none; }
 .node-type-Wait   circle { stroke-dasharray: 2 2; }
@@ -118,6 +125,7 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
   let receivedTreeDef  = false;
   let idToElement      = new Map();
+  let idToEdgeElement  = new Map(); // Tracks edge paths by child node ID
   let prevTickStateIds = new Set();
   let reconnectDelayMs = RECONNECT_INITIAL_MS;
 
@@ -159,6 +167,7 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
       connStatusEl.textContent = `disconnected — retrying in ${reconnectDelayMs}ms`;
       receivedTreeDef = false;
       idToElement.clear();
+      idToEdgeElement.clear(); // Reset edge map
       prevTickStateIds.clear();
       d3.select('#tree-svg').selectAll('*').remove();
       tickCounterEl.textContent = 'tick: —';
@@ -190,11 +199,19 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
     const g = svg.append('g');
 
-    g.selectAll('path.edge')
+    // Clear edge map before rendering
+    idToEdgeElement.clear();
+
+    const edges = g.selectAll('path.edge')
       .data(hierarchy.links())
       .join('path')
       .attr('class', 'edge')
       .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
+
+    // Map each edge to its target child ID
+    edges.each(function (d) { 
+      idToEdgeElement.set(d.target.data.id, this); 
+    });
 
     const nodes = g.selectAll('g.node')
       .data(hierarchy.descendants())
@@ -227,21 +244,32 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     }
     tickCounterEl.textContent = `tick: ${trace.tick_id}`;
 
+    // Clear previous classes from both nodes and edges
     for (const id of prevTickStateIds) {
-      const el = idToElement.get(id);
-      if (el) el.classList.remove(...STATUS_CLASSES);
+      const nodeEl = idToElement.get(id);
+      if (nodeEl) nodeEl.classList.remove(...STATUS_CLASSES);
+      
+      const edgeEl = idToEdgeElement.get(id);
+      if (edgeEl) edgeEl.classList.remove(...STATUS_CLASSES);
     }
     prevTickStateIds.clear();
 
+    // Apply new classes to both nodes and edges
     const states = trace.states || {};
     for (const key in states) {
       if (!Object.prototype.hasOwnProperty.call(states, key)) continue;
       const id = Number(key);
-      const el = idToElement.get(id);
-      if (!el) continue;
+      
+      const nodeEl = idToElement.get(id);
+      if (!nodeEl) continue;
+      
       const status = states[key];
       if (status === 'running' || status === 'success' || status === 'failure') {
-        el.classList.add(`status-${status}`);
+        nodeEl.classList.add(`status-${status}`);
+        
+        const edgeEl = idToEdgeElement.get(id);
+        if (edgeEl) edgeEl.classList.add(`status-${status}`);
+        
         prevTickStateIds.add(id);
       }
     }
