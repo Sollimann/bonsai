@@ -1,10 +1,9 @@
-#![allow(dead_code)]
-
 use std::io::{self, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 use std::time::Duration;
 
 use crate::telemetry::{TickTrace, VISUALIZER_HTML};
@@ -23,7 +22,6 @@ const PEEK_BUF_BYTES: usize = 1024;
 
 struct Client {
     ws: tungstenite::WebSocket<TcpStream>,
-    addr: std::net::SocketAddr,
 }
 
 /// Spawn the broadcaster thread + accept loop. Returns once the listener is
@@ -35,14 +33,28 @@ struct Client {
 ///
 /// `rx` is moved into the broadcaster thread; dropping the matching `Sender`
 /// causes the broadcaster to exit cleanly.
-pub fn spawn_server(listener: TcpListener, tree_definition_json: String, rx: Receiver<TickTrace>) -> io::Result<()> {
+///
+/// Returns `(acceptor_handle, shutdown_flag, bound_addr)`. The caller
+/// (typically [`BT::with_telemetry_at`](crate::BT::with_telemetry_at)) uses
+/// these to build a [`crate::telemetry_state::AcceptorGuard`]: on drop the
+/// guard sets the flag, self-connects to `bound_addr` to unblock the parked
+/// `accept()`, and joins the acceptor handle so the listener (and thus the
+/// port) is guaranteed released before `Drop` returns.
+pub fn spawn_server(
+    listener: TcpListener,
+    tree_definition_json: String,
+    rx: Receiver<TickTrace>,
+) -> io::Result<(JoinHandle<()>, Arc<AtomicBool>, SocketAddr)> {
     // Listener arrives pre-bound from the caller. Stdlib `TcpListener` is
     // already blocking by default; no `set_nonblocking(false)` needed.
+    // Capture local_addr *before* moving the listener into the acceptor
+    // closure so the caller can wake us on shutdown.
+    let bound_addr = listener.local_addr()?;
 
     let clients: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
-    // Shared shutdown flag: broadcaster sets it on exit; acceptor checks it between
-    // connections. The acceptor will not terminate until the NEXT connection arrives
-    // after shutdown — this is a known, documented limitation.
+    // Shared shutdown flag: the broadcaster sets it on exit, and the
+    // `AcceptorGuard` returned to the caller sets it on `Drop` then
+    // self-connects to `bound_addr` to wake the parked `accept()` call.
     let shutdown = Arc::new(AtomicBool::new(false));
 
     // Acceptor thread. The `move` closure takes ownership of
@@ -50,7 +62,7 @@ pub fn spawn_server(listener: TcpListener, tree_definition_json: String, rx: Rec
     // `spawn_server`, so cloning it would be redundant.
     let clients_acceptor = Arc::clone(&clients);
     let shutdown_acceptor = Arc::clone(&shutdown);
-    std::thread::Builder::new()
+    let acceptor_handle = std::thread::Builder::new()
         .name("bonsai-viz-acceptor".into())
         .spawn(move || {
             for stream in listener.incoming() {
@@ -66,10 +78,14 @@ pub fn spawn_server(listener: TcpListener, tree_definition_json: String, rx: Rec
                 stream.set_write_timeout(Some(WRITE_TIMEOUT)).ok();
                 handle_connection(stream, &clients_acceptor, &tree_definition_json);
             }
+            // Falling out of the loop drops `listener`, releasing the OS
+            // socket. `AcceptorGuard` joins this handle so callers can rely
+            // on the port being free once Drop returns.
         })?;
 
     // Broadcaster thread
     let clients_broadcaster = Arc::clone(&clients);
+    let shutdown_broadcaster = Arc::clone(&shutdown);
     std::thread::Builder::new()
         .name("bonsai-viz-broadcaster".into())
         .spawn(move || {
@@ -101,10 +117,10 @@ pub fn spawn_server(listener: TcpListener, tree_definition_json: String, rx: Rec
                 }
             }
             // All senders dropped — signal acceptor to stop on its next wakeup.
-            shutdown.store(true, Ordering::Relaxed);
+            shutdown_broadcaster.store(true, Ordering::Relaxed);
         })?;
 
-    Ok(())
+    Ok((acceptor_handle, shutdown, bound_addr))
 }
 
 fn handle_connection(stream: TcpStream, clients: &Mutex<Vec<Client>>, tree_json: &str) {
@@ -126,12 +142,8 @@ fn handle_connection(stream: TcpStream, clients: &Mutex<Vec<Client>>, tree_json:
             if ws.send(tungstenite::Message::Text(tree_json.to_owned())).is_err() {
                 return;
             }
-            let addr = ws
-                .get_ref()
-                .peer_addr()
-                .unwrap_or_else(|_| ([0u8, 0, 0, 0], 0u16).into());
             let mut guard = clients.lock().expect("clients mutex poisoned");
-            guard.push(Client { ws, addr });
+            guard.push(Client { ws });
         }
     } else {
         serve_http(stream, head);

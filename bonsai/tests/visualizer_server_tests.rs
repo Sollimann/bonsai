@@ -9,7 +9,7 @@ use std::sync::mpsc::{sync_channel, SyncSender, TrySendError};
 use std::time::Duration;
 
 use bonsai_bt::telemetry::{TickTrace, TreeDefinition};
-use bonsai_bt::{Action, Behavior, Status};
+use bonsai_bt::{Action, Behavior, Status, BT};
 
 /// A real, well-formed tree-definition JSON. Using a built `TreeDefinition`
 /// (not `"{}"`) means `parsed["root"]["id"]` actually exists for test 4.
@@ -27,11 +27,13 @@ fn bind_localhost_random() -> (TcpListener, u16) {
 }
 
 /// Spin up a server with the fixture tree. Caller owns `tx` — drop it at end
-/// of the test to let the broadcaster thread exit.
+/// of the test to let the broadcaster thread exit. The acceptor's
+/// shutdown flag and bound address are discarded; each test uses a fresh
+/// OS-assigned port (port 0) so leaked acceptors don't collide.
 fn start_server() -> (u16, SyncSender<TickTrace>) {
     let (listener, port) = bind_localhost_random();
     let (tx, rx) = sync_channel::<TickTrace>(1024);
-    bonsai_bt::spawn_server(listener, fixture_tree_json(), rx).expect("spawn_server");
+    let _ = bonsai_bt::spawn_server(listener, fixture_tree_json(), rx).expect("spawn_server");
     (port, tx)
 }
 
@@ -239,4 +241,60 @@ fn broadcaster_exits_when_sender_dropped() {
     let mut buf = [0u8; 16];
     let n = probe.read(&mut buf).expect("read after shutdown");
     assert_eq!(n, 0, "acceptor should drop the probe connection at EOF");
+}
+
+/// Pick a port the kernel is happy to hand us, then drop the listener so the
+/// caller can rebind it. There's a small race window where another process
+/// could grab the port; in practice it's a non-issue on a dev/CI machine
+/// running a single test at a time.
+fn reserve_free_port() -> u16 {
+    let (_listener, port) = bind_localhost_random();
+    port
+}
+
+/// Retry a bind for up to `~1s` to absorb OS-level TIME_WAIT delays after the
+/// previous owner of the port released it.
+fn bind_with_retry(port: u16) -> std::io::Result<TcpListener> {
+    let deadline = std::time::Instant::now() + Duration::from_secs(1);
+    loop {
+        match TcpListener::bind(("127.0.0.1", port)) {
+            Ok(l) => return Ok(l),
+            Err(e) if std::time::Instant::now() >= deadline => return Err(e),
+            Err(_) => std::thread::sleep(Duration::from_millis(25)),
+        }
+    }
+}
+
+#[test]
+fn bt_drop_releases_port() {
+    let port = reserve_free_port();
+
+    {
+        let behavior: Behavior<&str> = Action("a");
+        let bb: HashMap<String, i32> = HashMap::new();
+        let _bt = BT::new(behavior, bb)
+            .with_telemetry_at("127.0.0.1", port)
+            .expect("with_telemetry_at");
+        // `_bt` dropped at end of block — AcceptorGuard fires, port freed.
+    }
+
+    bind_with_retry(port).expect("port should be reusable after BT drop");
+}
+
+#[test]
+fn with_telemetry_at_re_attaches_on_same_port() {
+    let port = reserve_free_port();
+
+    let behavior: Behavior<&str> = Action("a");
+    let bb: HashMap<String, i32> = HashMap::new();
+    let bt1 = BT::new(behavior.clone(), bb.clone())
+        .with_telemetry_at("127.0.0.1", port)
+        .expect("first attach");
+    drop(bt1);
+
+    // Re-attach on the same port — must succeed now that AcceptorGuard's
+    // Drop tore down the previous acceptor.
+    let _bt2 = BT::new(behavior, bb)
+        .with_telemetry_at("127.0.0.1", port)
+        .expect("second attach on same port");
 }

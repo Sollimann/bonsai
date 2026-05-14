@@ -114,10 +114,11 @@ impl<A: Clone, B> BT<A, B> {
     /// After calling this method, [`tick`](Self::tick) automatically records and
     /// ships a trace on every call — no API change required.
     ///
-    /// Calling either telemetry method a second time replaces the existing
-    /// sender; the previous broadcaster exits on its next `recv` (sees
-    /// `Disconnected`). If the same `(addr, port)` is still bound, the second
-    /// bind returns `AddrInUse`.
+    /// Calling either telemetry method a second time replaces both the
+    /// sender and the acceptor guard: the previous broadcaster exits on its
+    /// next `recv` (sees `Disconnected`), and the previous acceptor is woken
+    /// and torn down before the new `TcpListener::bind` runs, so re-attaching
+    /// on the same `(addr, port)` works.
     ///
     /// # Errors
     /// Returns `io::Error` if `{addr}:{port}` cannot be bound (invalid address,
@@ -164,15 +165,25 @@ impl<A: Clone, B> BT<A, B> {
     {
         use std::net::TcpListener;
         use std::sync::mpsc::sync_channel;
+        use std::sync::Arc;
+
+        // Drop any prior acceptor guard before binding so re-attaching on the
+        // same `(addr, port)` releases the old port first. Replacing the
+        // field afterward would only run the old guard's `Drop` *after* the
+        // new bind, which would race with `AddrInUse`.
+        self.telemetry.acceptor_guard = None;
 
         let listener = TcpListener::bind((addr, port))?;
-        // local_addr reflects the resolved socket — useful when port=0 (kernel-
-        // assigned) or when the user passes a hostname rather than a literal IP.
         let definition = serde_json::to_string(&TreeDefinition::build(&self.initial_behavior))
             .expect("TreeDefinition is always serializable");
         let (tx, rx) = sync_channel::<TickTrace>(1024);
-        crate::visualizer_server::spawn_server(listener, definition, rx)?;
+        let (acceptor_handle, shutdown, bound_addr) = crate::visualizer_server::spawn_server(listener, definition, rx)?;
         self.telemetry.sender = Some(tx);
+        self.telemetry.acceptor_guard = Some(Arc::new(crate::telemetry_state::AcceptorGuard::new(
+            shutdown,
+            bound_addr,
+            acceptor_handle,
+        )));
         Ok(self)
     }
 }
