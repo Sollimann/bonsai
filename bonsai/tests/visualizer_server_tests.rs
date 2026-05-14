@@ -108,7 +108,10 @@ fn http_get_root_returns_200() {
         "status: {}",
         &response[..32.min(response.len())]
     );
-    assert!(response.contains("Content-Type: text/html"), "Content-Type header missing");
+    assert!(
+        response.contains("Content-Type: text/html"),
+        "Content-Type header missing"
+    );
     assert!(response.contains("Cache-Control: no-store"));
 
     let body = response.split_once("\r\n\r\n").expect("headers/body separator").1;
@@ -163,7 +166,11 @@ fn broadcaster_evicts_dead_client() {
     // Push 5 traces. The broadcaster's send to the dead client will fail on
     // some iteration ≤ 5 (TCP buffers may absorb the first few writes).
     for i in 1..=5u64 {
-        tx.send(TickTrace { tick_id: i, states: HashMap::new() }).unwrap();
+        tx.send(TickTrace {
+            tick_id: i,
+            states: HashMap::new(),
+        })
+        .unwrap();
     }
 
     // Surviving client must see all 5 in order.
@@ -185,7 +192,10 @@ fn channel_full_drop_semantics() {
 
     let mut full_seen = false;
     for i in 0..2_000u64 {
-        match tx.try_send(TickTrace { tick_id: i, states: HashMap::new() }) {
+        match tx.try_send(TickTrace {
+            tick_id: i,
+            states: HashMap::new(),
+        }) {
             Ok(()) => {}
             Err(TrySendError::Full(_)) => {
                 full_seen = true;
@@ -205,7 +215,11 @@ fn broadcaster_exits_when_sender_dropped() {
     // Drain tree-definition frame, push 5 traces, drain them.
     let _ = read_text(&mut ws);
     for i in 1..=5u64 {
-        tx.send(TickTrace { tick_id: i, states: HashMap::new() }).unwrap();
+        tx.send(TickTrace {
+            tick_id: i,
+            states: HashMap::new(),
+        })
+        .unwrap();
     }
     for expected in 1..=5u64 {
         let frame = read_text(&mut ws);

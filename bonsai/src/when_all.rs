@@ -26,7 +26,17 @@ where
     F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
     T: Tracer,
 {
-    let WhenAllArgs { any, upd, cursors, e, blackboard, f, parent_id, metas, tracer } = args;
+    let WhenAllArgs {
+        any,
+        upd,
+        cursors,
+        e,
+        blackboard,
+        f,
+        parent_id,
+        metas,
+        tracer,
+    } = args;
     let (status, inv_status) = if any {
         // `WhenAny`
         (Status::Failure, Status::Success)

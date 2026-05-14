@@ -24,11 +24,7 @@ fn node_metas_subtree_sizes() {
     use bonsai_bt::Action;
     use Act::*;
 
-    let behavior = Sequence(vec![
-        Action(A),
-        Sequence(vec![Action(B), Action(C)]),
-        Action(D),
-    ]);
+    let behavior = Sequence(vec![Action(A), Sequence(vec![Action(B), Action(C)]), Action(D)]);
 
     let metas = bonsai_bt::telemetry::build_node_metas(&behavior);
 
@@ -50,11 +46,7 @@ fn node_metas_ids_match_tree_definition() {
     use bonsai_bt::Action;
     use Act::*;
 
-    let behavior = Sequence(vec![
-        Action(A),
-        Sequence(vec![Action(B), Action(C)]),
-        Action(D),
-    ]);
+    let behavior = Sequence(vec![Action(A), Sequence(vec![Action(B), Action(C)]), Action(D)]);
 
     let metas = build_node_metas(&behavior);
     let def = TreeDefinition::build(&behavior);
@@ -100,7 +92,10 @@ fn node_metas_subtree_sizes_all_variants() {
         (AlwaysSucceed(Box::new(Action(A))), vec![2, 1]),
         // --- If: [condition, on_success, on_failure] ---
         // If(A, B, C): root(4) + cond(1) + ok(1) + ko(1)
-        (If(Box::new(Action(A)), Box::new(Action(B)), Box::new(Action(C))), vec![4, 1, 1, 1]),
+        (
+            If(Box::new(Action(A)), Box::new(Action(B)), Box::new(Action(C))),
+            vec![4, 1, 1, 1],
+        ),
         // If with a Sequence on the success branch:
         //   root(6) + cond(1) + ok_seq(3) + ok_B(1) + ok_C(1) + ko(1)
         (

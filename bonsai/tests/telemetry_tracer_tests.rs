@@ -3,8 +3,8 @@
 //! correct (id, Status) entries for every variant, including sparse semantics.
 
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Running, Select,
-    Sequence, Status, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
+    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Running, Select, Sequence,
+    Status, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
 };
 use std::collections::HashMap;
 
@@ -92,11 +92,7 @@ fn sequence_sparse_on_subsequent_tick() {
 #[test]
 fn if_success_branch_sparse_on_failure() {
     use Act::*;
-    let tree = If(
-        Box::new(Action(Cond)),
-        Box::new(Action(OnS)),
-        Box::new(Action(OnF)),
-    );
+    let tree = If(Box::new(Action(Cond)), Box::new(Action(OnS)), Box::new(Action(OnF)));
     let mut bt = BT::new(tree, ());
     let e = dt_event(1.0);
 
@@ -119,11 +115,7 @@ fn if_success_branch_sparse_on_failure() {
 #[test]
 fn if_failure_branch_sparse_on_success() {
     use Act::*;
-    let tree = If(
-        Box::new(Action(Cond)),
-        Box::new(Action(OnS)),
-        Box::new(Action(OnF)),
-    );
+    let tree = If(Box::new(Action(Cond)), Box::new(Action(OnS)), Box::new(Action(OnF)));
     let mut bt = BT::new(tree, ());
     let e = dt_event(1.0);
 
@@ -169,11 +161,7 @@ fn while_body_cycles_within_tick() {
     // ids: 0=While, 1=WaitForever, 2=Action(A), 3=Action(B)
     assert!(trace.states.contains_key(&0), "While root must be recorded");
     assert!(trace.states.contains_key(&1), "WaitForever cond must be recorded");
-    assert_eq!(
-        trace.states.get(&1),
-        Some(&Running),
-        "WaitForever always Running"
-    );
+    assert_eq!(trace.states.get(&1), Some(&Running), "WaitForever always Running");
     assert!(trace.states.contains_key(&2), "Action(A) must be recorded");
     assert!(trace.states.contains_key(&3), "Action(B) must be recorded");
 }
@@ -210,10 +198,7 @@ fn when_all_partial_completion_sparse_on_next_tick() {
 
     assert_eq!(trace2.states.get(&0), Some(&Running), "WhenAll root");
     assert_eq!(trace2.states.get(&2), Some(&Running), "B");
-    assert!(
-        !trace2.states.contains_key(&1),
-        "A is None — must be sparse"
-    );
+    assert!(!trace2.states.contains_key(&1), "A is None — must be sparse");
     assert_eq!(trace2.states.len(), 2);
 }
 

@@ -100,20 +100,20 @@ pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
 fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String>) {
     use Behavior::*;
     match b {
-        Action(a)        => ("Action",        Some(format!("{a:?}"))),
-        Wait(t)          => ("Wait",          Some(format!("Wait({t:.2}s)"))),
-        WaitForever      => ("WaitForever",   None),
-        Invert(_)        => ("Inverter",      None),
+        Action(a) => ("Action", Some(format!("{a:?}"))),
+        Wait(t) => ("Wait", Some(format!("Wait({t:.2}s)"))),
+        WaitForever => ("WaitForever", None),
+        Invert(_) => ("Inverter", None),
         AlwaysSucceed(_) => ("AlwaysSucceed", None),
-        Select(_)        => ("Selector",      None),
-        Sequence(_)      => ("Sequence",      None),
-        If(..)           => ("If",            None),
-        While(..)        => ("While",         None),
-        WhileAll(..)     => ("WhileAll",      None),
-        WhenAll(_)       => ("WhenAll",       None),
-        WhenAny(_)       => ("WhenAny",       None),
-        After(_)         => ("After",         None),
-        Race(_)          => ("Race",          None),
+        Select(_) => ("Selector", None),
+        Sequence(_) => ("Sequence", None),
+        If(..) => ("If", None),
+        While(..) => ("While", None),
+        WhileAll(..) => ("WhileAll", None),
+        WhenAll(_) => ("WhenAll", None),
+        WhenAny(_) => ("WhenAny", None),
+        After(_) => ("After", None),
+        Race(_) => ("Race", None),
     }
 }
 
@@ -214,8 +214,16 @@ mod tests {
         assert_eq!(seq_kids.len(), 3);
         assert_eq!(sel_kids.len(), 3);
         for i in 0..3 {
-            assert_eq!(format!("{:?}", seq_kids[i]), format!("{:?}", &items[i]), "Sequence child {i}");
-            assert_eq!(format!("{:?}", sel_kids[i]), format!("{:?}", &items[i]), "Select child {i}");
+            assert_eq!(
+                format!("{:?}", seq_kids[i]),
+                format!("{:?}", &items[i]),
+                "Sequence child {i}"
+            );
+            assert_eq!(
+                format!("{:?}", sel_kids[i]),
+                format!("{:?}", &items[i]),
+                "Select child {i}"
+            );
         }
     }
 }

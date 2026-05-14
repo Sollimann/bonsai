@@ -209,8 +209,8 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
       .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
 
     // Map each edge to its target child ID
-    edges.each(function (d) { 
-      idToEdgeElement.set(d.target.data.id, this); 
+    edges.each(function (d) {
+      idToEdgeElement.set(d.target.data.id, this);
     });
 
     const nodes = g.selectAll('g.node')
@@ -248,7 +248,7 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     for (const id of prevTickStateIds) {
       const nodeEl = idToElement.get(id);
       if (nodeEl) nodeEl.classList.remove(...STATUS_CLASSES);
-      
+
       const edgeEl = idToEdgeElement.get(id);
       if (edgeEl) edgeEl.classList.remove(...STATUS_CLASSES);
     }
@@ -259,17 +259,17 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     for (const key in states) {
       if (!Object.prototype.hasOwnProperty.call(states, key)) continue;
       const id = Number(key);
-      
+
       const nodeEl = idToElement.get(id);
       if (!nodeEl) continue;
-      
+
       const status = states[key];
       if (status === 'running' || status === 'success' || status === 'failure') {
         nodeEl.classList.add(`status-${status}`);
-        
+
         const edgeEl = idToEdgeElement.get(id);
         if (edgeEl) edgeEl.classList.add(`status-${status}`);
-        
+
         prevTickStateIds.add(id);
       }
     }

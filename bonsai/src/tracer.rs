@@ -42,7 +42,11 @@ pub struct NodeMeta {
 /// all arithmetic in the noop path.
 #[inline(always)]
 pub(crate) fn first_child_id<T: Tracer>(self_id: usize) -> usize {
-    if T::IS_RECORDING { self_id + 1 } else { usize::MAX }
+    if T::IS_RECORDING {
+        self_id + 1
+    } else {
+        usize::MAX
+    }
 }
 
 /// Compute the preorder id of `child_id`'s next sibling. `metas[child_id]` is

@@ -150,10 +150,7 @@ fn main() {
             // the bottom branches. These four nodes still show Success
             // (green) and Running (yellow); the other thirteen leaves keep
             // cycling through all three statuses including red.
-            if matches!(
-                *args.action,
-                "regroup" | "has_ammo" | "cooldown" | "ready_signal"
-            ) && status == Status::Failure
+            if matches!(*args.action, "regroup" | "has_ammo" | "cooldown" | "ready_signal") && status == Status::Failure
             {
                 status = Status::Running;
             }
