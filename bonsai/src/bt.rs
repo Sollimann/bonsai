@@ -3,6 +3,17 @@ use crate::{state::State, ActionArgs, Behavior, Float, Status, UpdateEvent};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// Result of [`BT::try_route_recording`]: whether the recording helper consumed
+/// the tick. `Handled` carries the value `tick` should return; `NotHandled`
+/// tells the caller to continue with the no-op path. Under
+/// `not(feature = "visualize")` the helper unconditionally returns
+/// `NotHandled`, so the `Handled` variant is unconstructed.
+#[allow(dead_code)]
+enum TickRoute {
+    NotHandled,
+    Handled(Option<(Status, Float)>),
+}
+
 /// The execution state of a behavior tree, along with a "blackboard" (state
 /// shared between all nodes in the tree).
 #[derive(Clone, Debug)]
@@ -73,7 +84,7 @@ impl<A: Clone, B> BT<A, B> {
         if self.finished {
             return None;
         }
-        if let Some(out) = self.try_route_recording(e, f) {
+        if let TickRoute::Handled(out) = self.try_route_recording(e, f) {
             return out;
         }
         self.tick_count += 1;
@@ -110,32 +121,27 @@ impl<A: Clone, B> BT<A, B> {
     }
 
     /// If telemetry is attached, dispatch to `tick_recording` and return its
-    /// result wrapped in `Some`. Returns `None` otherwise — the caller
-    /// (`tick`) should proceed with the no-op path.
-    ///
-    /// Returns `Option<Option<(Status, Float)>>`:
-    /// - `None` — helper did not handle the tick; caller continues.
-    /// - `Some(None)` — helper handled it but the BT was already finished.
-    /// - `Some(Some(result))` — helper handled it; this is the tick's return.
+    /// result as [`TickRoute::Handled`]. Returns [`TickRoute::NotHandled`]
+    /// otherwise — the caller (`tick`) should proceed with the no-op path.
     ///
     /// `#[inline(always)]` lets the optimizer constant-fold the no-op path:
-    /// under `not(feature = "visualize")` the body is unconditionally `None`,
-    /// so the `if let Some(_) = self.try_route_recording(...)` branch in
-    /// `tick` becomes unreachable and disappears.
+    /// under `not(feature = "visualize")` the body unconditionally returns
+    /// `TickRoute::NotHandled`, so the `if let TickRoute::Handled(_) = ...`
+    /// branch in `tick` becomes unreachable and disappears.
     #[inline(always)]
-    fn try_route_recording<E, F>(&mut self, e: &E, f: &mut F) -> Option<Option<(Status, Float)>>
+    fn try_route_recording<E, F>(&mut self, e: &E, f: &mut F) -> TickRoute
     where
         E: UpdateEvent,
         F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
     {
         #[cfg(feature = "visualize")]
         if self.telemetry.sender.is_some() {
-            return Some(self.tick_recording(e, f).map(|(result, _)| result));
+            return TickRoute::Handled(self.tick_recording(e, f).map(|(result, _)| result));
         }
         // Suppress unused-variable warnings on the no-op path (visualize off,
         // or visualize on but no sender attached).
         let _ = (e, f);
-        None
+        TickRoute::NotHandled
     }
 
     /// Retrieve an immutable reference to the blackboard for

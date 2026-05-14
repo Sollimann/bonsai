@@ -114,6 +114,8 @@ fn main() {
         Status::Running,
     ];
 
+    println!("bonsai-bt visualizer: open http://127.0.0.1:8910/");
+
     loop {
         tick_n += 1;
         let outcome = bt.tick(&event, &mut |args, _bb| {

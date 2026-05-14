@@ -42,7 +42,7 @@ pub fn spawn_server(listener: TcpListener, tree_definition_json: String, rx: Rec
     let clients: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     // Shared shutdown flag: broadcaster sets it on exit; acceptor checks it between
     // connections. The acceptor will not terminate until the NEXT connection arrives
-    // after shutdown — this is a known, documented limitation (see §3.10).
+    // after shutdown — this is a known, documented limitation.
     let shutdown = Arc::new(AtomicBool::new(false));
 
     // Acceptor thread. The `move` closure takes ownership of

@@ -168,13 +168,11 @@ impl<A: Clone, B> BT<A, B> {
         let listener = TcpListener::bind((addr, port))?;
         // local_addr reflects the resolved socket — useful when port=0 (kernel-
         // assigned) or when the user passes a hostname rather than a literal IP.
-        let bound = listener.local_addr()?;
         let definition = serde_json::to_string(&TreeDefinition::build(&self.initial_behavior))
             .expect("TreeDefinition is always serializable");
         let (tx, rx) = sync_channel::<TickTrace>(1024);
         crate::visualizer_server::spawn_server(listener, definition, rx)?;
         self.telemetry.sender = Some(tx);
-        println!("bonsai-bt visualizer: open http://{bound}/");
         Ok(self)
     }
 }
