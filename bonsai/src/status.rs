@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 /// * Failure or
 /// * Running, if the action is asynchronous and it needs more time to complete
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "lowercase"))]
 pub enum Status {
     /// The behavior or action succeeded.
     Success,

@@ -12,7 +12,7 @@ name = "bonsai-bt"
 readme = "../README.md"
 repository = "https://github.com/sollimann/bonsai.git"
 rust-version = "1.80.0"
-version = "0.11.0"
+version = "0.12.0"
 
 [lib]
 name = "bonsai_bt"
@@ -21,13 +21,16 @@ path = "src/lib.rs"
 [dependencies]
 petgraph = { version = "0.6.2", optional = true }
 serde = { version = "1.0.137", features = ["derive"], optional = true }
+serde_json = { version = "1.0.81", optional = true }
+tungstenite = { version = "0.21", optional = true }
 
 [features]
-visualize = ["dep:petgraph"]
+visualize = ["dep:petgraph", "serde", "serde_json", "tungstenite"]
 f32 = []
 
 [dev-dependencies]
 serde_json = { version = "1.0.81" }
+tungstenite = { version = "0.21" }
 
 [[test]]
 name = "tests"

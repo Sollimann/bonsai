@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>bonsai-bt visualizer</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+  --bg:        #1a1a1a;
+  --bg-panel:  #14141a;
+  --fg:        #ddd;
+  --fg-dim:    #888;
+  --edge:      #555;
+  --node-fill: #2a2a2a;
+  --node-stroke:#888;
+
+  --status-running: #d4a017;
+  --status-running-stroke: #f1c40f;
+  --status-success: #28a745;
+  --status-success-stroke: #5cd271;
+  --status-failure: #c0392b;
+  --status-failure-stroke: #e74c3c;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+#status-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  padding: 8px 14px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid #2a2a2a;
+  display: flex; gap: 24px; font-size: 12px;
+}
+#status-bar #conn-status { font-weight: 600; }
+
+#tree-svg {
+  width: 100vw; height: 100vh; display: block;
+  padding-top: 36px;
+}
+
+.edge {
+  fill: none; stroke: var(--edge); stroke-width: 1.5;
+  transition: stroke 80ms ease-out, stroke-width 80ms ease-out;
+}
+.node circle {
+  fill: var(--node-fill); stroke: var(--node-stroke); stroke-width: 1.5;
+  transition: fill 80ms ease-out, stroke 80ms ease-out;
+}
+.node text {
+  fill: var(--fg); font-size: 11px; pointer-events: none;
+  user-select: none;
+}
+
+/* Node highlight states */
+.node.status-running circle { fill: var(--status-running); stroke: var(--status-running-stroke); }
+.node.status-success circle { fill: var(--status-success); stroke: var(--status-success-stroke); }
+.node.status-failure circle { fill: var(--status-failure); stroke: var(--status-failure-stroke); }
+
+/* Edge highlight states */
+.edge.status-running { stroke: var(--status-running); stroke-width: 2.5; }
+.edge.status-success { stroke: var(--status-success); stroke-width: 2.5; }
+.edge.status-failure { stroke: var(--status-failure); stroke-width: 2.5; }
+
+.node-type-Action circle { stroke-dasharray: none; }
+.node-type-Wait   circle { stroke-dasharray: 2 2; }
+
+#legend {
+  position: fixed; top: 44px; right: 14px; z-index: 10;
+  background: var(--bg-panel);
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 11px;
+  display: flex; flex-direction: column; gap: 6px;
+  pointer-events: none;
+}
+#legend .legend-title {
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+#legend .legend-row {
+  display: flex; align-items: center; gap: 8px;
+}
+#legend .legend-swatch {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  flex-shrink: 0;
+}
+#legend .legend-swatch.status-running { background: var(--status-running); border-color: var(--status-running-stroke); }
+#legend .legend-swatch.status-success { background: var(--status-success); border-color: var(--status-success-stroke); }
+#legend .legend-swatch.status-failure { background: var(--status-failure); border-color: var(--status-failure-stroke); }
+#legend .legend-swatch.status-idle    { background: var(--node-fill);      border-color: var(--node-stroke); }
+</style>
+</head>
+<body>
+<div id="status-bar">
+  <span id="conn-status">connecting…</span>
+  <span id="tick-counter">tick: —</span>
+  <span id="tree-meta"></span>
+</div>
+<div id="legend">
+  <div class="legend-title">legend</div>
+  <div class="legend-row"><span class="legend-swatch status-running"></span>Running</div>
+  <div class="legend-row"><span class="legend-swatch status-success"></span>Success</div>
+  <div class="legend-row"><span class="legend-swatch status-failure"></span>Failure</div>
+  <div class="legend-row"><span class="legend-swatch status-idle"></span>Idle / not visited</div>
+</div>
+<svg id="tree-svg" preserveAspectRatio="xMinYMin meet"></svg>
+<script>
+(function () {
+  'use strict';
+
+  const RECONNECT_INITIAL_MS = 500;
+  const RECONNECT_MAX_MS     = 8000;
+
+  const connStatusEl   = document.getElementById('conn-status');
+  const tickCounterEl  = document.getElementById('tick-counter');
+  const treeMetaEl     = document.getElementById('tree-meta');
+
+  let receivedTreeDef  = false;
+  let idToElement      = new Map();
+  let idToEdgeElement  = new Map(); // Tracks edge paths by child node ID
+  let prevTickStateIds = new Set();
+  let reconnectDelayMs = RECONNECT_INITIAL_MS;
+
+  const NODE_RADIUS = 8;
+  const NODE_DX     = 30;
+  const NODE_DY     = 220;
+  const LABEL_MAX   = 30;
+
+  const STATUS_CLASSES = ['status-running', 'status-success', 'status-failure'];
+
+  function connect() {
+    connStatusEl.textContent = 'connecting…';
+    const ws = new WebSocket(`ws://${location.host}/`);
+
+    ws.onopen = () => {
+      connStatusEl.textContent = 'connected';
+      reconnectDelayMs = RECONNECT_INITIAL_MS;
+    };
+
+    ws.onmessage = (ev) => {
+      let msg;
+      try {
+        msg = JSON.parse(ev.data);
+      } catch (e) {
+        console.warn('bonsai-viz: malformed JSON frame, dropping', e);
+        return;
+      }
+      if (!receivedTreeDef) {
+        renderTree(msg);
+        receivedTreeDef = true;
+      } else {
+        applyTick(msg);
+      }
+    };
+
+    ws.onerror = () => { /* let onclose handle the retry */ };
+
+    ws.onclose = () => {
+      connStatusEl.textContent = `disconnected — retrying in ${reconnectDelayMs}ms`;
+      receivedTreeDef = false;
+      idToElement.clear();
+      idToEdgeElement.clear(); // Reset edge map
+      prevTickStateIds.clear();
+      d3.select('#tree-svg').selectAll('*').remove();
+      tickCounterEl.textContent = 'tick: —';
+      treeMetaEl.textContent = '';
+
+      setTimeout(connect, reconnectDelayMs);
+      reconnectDelayMs = Math.min(reconnectDelayMs * 2, RECONNECT_MAX_MS);
+    };
+  }
+
+  function renderTree(treeDef) {
+    if (!treeDef || !treeDef.root) {
+      console.warn('bonsai-viz: tree definition missing root', treeDef);
+      return;
+    }
+
+    const hierarchy = d3.hierarchy(treeDef.root, d => d.children);
+    d3.tree().nodeSize([NODE_DX, NODE_DY])(hierarchy);
+
+    let xMin = Infinity, xMax = -Infinity, yMax = 0;
+    for (const d of hierarchy.descendants()) {
+      if (d.x < xMin) xMin = d.x;
+      if (d.x > xMax) xMax = d.x;
+      if (d.y > yMax) yMax = d.y;
+    }
+    const pad = NODE_DY;
+    const svg = d3.select('#tree-svg')
+      .attr('viewBox', [-pad, xMin - pad, yMax + 2 * pad, xMax - xMin + 2 * pad].join(' '));
+
+    const g = svg.append('g');
+
+    // Clear edge map before rendering
+    idToEdgeElement.clear();
+
+    const edges = g.selectAll('path.edge')
+      .data(hierarchy.links())
+      .join('path')
+      .attr('class', 'edge')
+      .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
+
+    // Map each edge to its target child ID
+    edges.each(function (d) {
+      idToEdgeElement.set(d.target.data.id, this);
+    });
+
+    const nodes = g.selectAll('g.node')
+      .data(hierarchy.descendants())
+      .join('g')
+      .attr('class', d => `node node-type-${d.data.node_type}`)
+      .attr('data-node-id', d => d.data.id)
+      .attr('transform', d => `translate(${d.y},${d.x})`);
+
+    nodes.append('circle').attr('r', NODE_RADIUS);
+    nodes.append('text')
+      .attr('x', NODE_RADIUS + 6)
+      .attr('dy', '0.32em')
+      .text(d => truncate(d.data.label, LABEL_MAX));
+    nodes.append('title').text(d => `${d.data.node_type}: ${d.data.label}`);
+
+    idToElement.clear();
+    nodes.each(function (d) { idToElement.set(d.data.id, this); });
+
+    treeMetaEl.textContent = `${idToElement.size} nodes`;
+  }
+
+  function truncate(s, n) {
+    return (s && s.length > n) ? s.slice(0, n - 1) + '…' : (s || '');
+  }
+
+  function applyTick(trace) {
+    if (!trace || typeof trace.tick_id !== 'number') {
+      console.warn('bonsai-viz: malformed TickTrace', trace);
+      return;
+    }
+    tickCounterEl.textContent = `tick: ${trace.tick_id}`;
+
+    // Clear previous classes from both nodes and edges
+    for (const id of prevTickStateIds) {
+      const nodeEl = idToElement.get(id);
+      if (nodeEl) nodeEl.classList.remove(...STATUS_CLASSES);
+
+      const edgeEl = idToEdgeElement.get(id);
+      if (edgeEl) edgeEl.classList.remove(...STATUS_CLASSES);
+    }
+    prevTickStateIds.clear();
+
+    // Apply new classes to both nodes and edges
+    const states = trace.states || {};
+    for (const key in states) {
+      if (!Object.prototype.hasOwnProperty.call(states, key)) continue;
+      const id = Number(key);
+
+      const nodeEl = idToElement.get(id);
+      if (!nodeEl) continue;
+
+      const status = states[key];
+      if (status === 'running' || status === 'success' || status === 'failure') {
+        nodeEl.classList.add(`status-${status}`);
+
+        const edgeEl = idToEdgeElement.get(id);
+        if (edgeEl) edgeEl.classList.add(`status-${status}`);
+
+        prevTickStateIds.add(id);
+      }
+    }
+  }
+
+  connect();
+})();
+</script>
+</body>
+</html>

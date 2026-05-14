@@ -1,9 +1,18 @@
-use std::fmt::Debug;
-
 use crate::{state::State, ActionArgs, Behavior, Float, Status, UpdateEvent};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+/// Result of [`BT::try_route_recording`]: whether the recording helper consumed
+/// the tick. `Handled` carries the value `tick` should return; `NotHandled`
+/// tells the caller to continue with the no-op path. Under
+/// `not(feature = "visualize")` the helper unconditionally returns
+/// `NotHandled`, so the `Handled` variant is unconstructed.
+#[allow(dead_code)]
+enum TickRoute {
+    NotHandled,
+    Handled(Option<(Status, Float)>),
+}
 
 /// The execution state of a behavior tree, along with a "blackboard" (state
 /// shared between all nodes in the tree).
@@ -11,15 +20,25 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BT<A, B> {
     /// constructed behavior tree
-    state: State<A>,
+    pub(crate) state: State<A>,
     /// keep the initial state
-    initial_behavior: Behavior<A>,
+    pub(crate) initial_behavior: Behavior<A>,
     /// The data storage shared by all nodes in the tree. This is generally
     /// referred to as a "blackboard". State is written to and read from a
     /// blackboard, allowing nodes to share state and communicate each other.
-    bb: B,
+    pub(crate) bb: B,
     /// Whether the tree has been finished before.
-    finished: bool,
+    pub(crate) finished: bool,
+    /// Monotonically increasing per-tick counter. Starts at 0; first completed
+    /// `tick`/`tick_recording` call increments to 1. Survives `reset_bt`
+    /// (the counter is global to the BT instance, not the current run).
+    pub(crate) tick_count: u64,
+    /// Bundle of visualize-only state: preorder node metadata, telemetry
+    /// channel sender, dropped-trace counter, and the per-tick recording
+    /// buffer. See [`crate::telemetry_state::TelemetryState`].
+    #[cfg(feature = "visualize")]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub(crate) telemetry: crate::telemetry_state::TelemetryState,
 }
 
 impl<A: Clone, B> BT<A, B> {
@@ -27,11 +46,18 @@ impl<A: Clone, B> BT<A, B> {
         let backup_behavior = behavior.clone();
         let bt = State::new(behavior);
 
+        #[cfg(feature = "visualize")]
+        let telemetry =
+            crate::telemetry_state::TelemetryState::new(crate::telemetry::build_node_metas(&backup_behavior));
+
         Self {
             state: bt,
             initial_behavior: backup_behavior,
             bb: blackboard,
             finished: false,
+            tick_count: 0,
+            #[cfg(feature = "visualize")]
+            telemetry,
         }
     }
 
@@ -58,13 +84,64 @@ impl<A: Clone, B> BT<A, B> {
         if self.finished {
             return None;
         }
-        match self.state.tick(e, &mut self.bb, f) {
-            result @ (Status::Success | Status::Failure, _) => {
-                self.finished = true;
-                Some(result)
-            }
-            result => Some(result),
+        if let TickRoute::Handled(out) = self.try_route_recording(e, f) {
+            return out;
         }
+        self.tick_count += 1;
+        let result = self.dispatch_noop_tick(e, f);
+        if matches!(result, (Status::Success | Status::Failure, _)) {
+            self.finished = true;
+        }
+        Some(result)
+    }
+
+    /// Run `State::tick` with a [`NoopTracer`](crate::tracer::NoopTracer) (the
+    /// non-recording path). The cfg-gated `metas` binding lives inside this
+    /// helper so `tick`'s body can stay free of `#[cfg]` directives.
+    ///
+    /// Disjoint-field borrows: `&self.telemetry.node_metas` (immutable) and
+    /// `&mut self.state` / `&mut self.bb` (mutable) target distinct fields,
+    /// so the borrow checker accepts the simultaneous borrows.
+    ///
+    /// `#[inline(always)]` ensures the cfg branches constant-fold at the
+    /// monomorphization site, leaving identical generated code to the prior
+    /// inlined-in-`tick` version.
+    #[inline(always)]
+    fn dispatch_noop_tick<E, F>(&mut self, e: &E, f: &mut F) -> (Status, Float)
+    where
+        E: UpdateEvent,
+        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
+    {
+        let mut tracer = crate::tracer::NoopTracer;
+        #[cfg(feature = "visualize")]
+        let metas: &[crate::tracer::NodeMeta] = &self.telemetry.node_metas;
+        #[cfg(not(feature = "visualize"))]
+        let metas: &[crate::tracer::NodeMeta] = &[];
+        self.state.tick(0, metas, e, &mut self.bb, f, &mut tracer)
+    }
+
+    /// If telemetry is attached, dispatch to `tick_recording` and return its
+    /// result as [`TickRoute::Handled`]. Returns [`TickRoute::NotHandled`]
+    /// otherwise — the caller (`tick`) should proceed with the no-op path.
+    ///
+    /// `#[inline(always)]` lets the optimizer constant-fold the no-op path:
+    /// under `not(feature = "visualize")` the body unconditionally returns
+    /// `TickRoute::NotHandled`, so the `if let TickRoute::Handled(_) = ...`
+    /// branch in `tick` becomes unreachable and disappears.
+    #[inline(always)]
+    fn try_route_recording<E, F>(&mut self, e: &E, f: &mut F) -> TickRoute
+    where
+        E: UpdateEvent,
+        F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
+    {
+        #[cfg(feature = "visualize")]
+        if self.telemetry.sender.is_some() {
+            return TickRoute::Handled(self.tick_recording(e, f).map(|(result, _)| result));
+        }
+        // Suppress unused-variable warnings on the no-op path (visualize off,
+        // or visualize on but no sender attached).
+        let _ = (e, f);
+        TickRoute::NotHandled
     }
 
     /// Retrieve an immutable reference to the blackboard for
@@ -94,65 +171,23 @@ impl<A: Clone, B> BT<A, B> {
         let initial_behavior = self.initial_behavior.to_owned();
         self.state = State::new(initial_behavior);
         self.finished = false;
+        // tick_count is intentionally NOT reset — it identifies tick events
+        // across the BT's lifetime, including across reset_bt boundaries.
+        // dropped_traces resets per-run: it's a diagnostic for the current session.
+        #[cfg(feature = "visualize")]
+        {
+            self.telemetry.dropped_traces = 0;
+        }
+    }
+
+    /// Returns the total number of ticks this BT has completed (across resets).
+    pub fn tick_count(&self) -> u64 {
+        self.tick_count
     }
 
     /// Whether this behavior tree is in a completed state (the last tick returned
     /// [`Status::Success`] or [`Status::Failure`]).
     pub fn is_finished(&self) -> bool {
         self.finished
-    }
-}
-
-#[cfg(feature = "visualize")]
-impl<A: Clone + Debug, B: Debug> BT<A, B> {
-    /// Compile the behavior tree into a [graphviz](https://graphviz.org/) compatible [DiGraph](https://docs.rs/petgraph/latest/petgraph/graph/type.DiGraph.html).
-    ///
-    /// ```rust
-    /// use std::collections::HashMap;
-    /// use bonsai_bt::{
-    ///     Behavior::{Action, Sequence, Wait, WaitForever, While},
-    ///     BT
-    /// };
-    ///
-    /// #[derive(Clone, Debug, Copy)]
-    /// pub enum Counter {
-    ///     // Increment accumulator.
-    ///     Inc,
-    ///     // Decrement accumulator.
-    ///     Dec,
-    /// }
-    ///
-    ///
-    /// // create the behavior
-    /// let behavior = While(Box::new(WaitForever), vec![Wait(0.5), Action(Counter::Inc), WaitForever]);
-    ///
-    /// let h: HashMap<String, i32> = HashMap::new();
-    /// let mut bt = BT::new(behavior, h);
-    ///
-    /// // produce a string DiGraph compatible with graphviz
-    /// // paste the contents in graphviz, e.g: https://dreampuf.github.io/GraphvizOnline/#
-    /// let g = bt.get_graphviz();
-    /// println!("{}", g);
-    /// ```
-    pub fn get_graphviz(&mut self) -> String {
-        self.get_graphviz_with_graph_instance().0
-    }
-
-    pub(crate) fn get_graphviz_with_graph_instance(
-        &mut self,
-    ) -> (String, petgraph::Graph<crate::visualizer::NodeType<A>, u32>) {
-        use crate::visualizer::NodeType;
-        use petgraph::dot::{Config, Dot};
-        use petgraph::Graph;
-
-        let behavior = self.initial_behavior.to_owned();
-
-        let mut graph = Graph::<NodeType<A>, u32, petgraph::Directed>::new();
-        let root_id = graph.add_node(NodeType::Root);
-
-        Self::dfs_recursive(&mut graph, behavior, root_id);
-
-        let digraph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
-        (format!("{:?}", digraph), graph)
     }
 }

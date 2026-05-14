@@ -1,25 +1,42 @@
 use crate::status::Status::*;
+use crate::tracer::{first_child_id, next_sibling_id, NodeMeta, Tracer};
 use crate::Float;
 use crate::{event::UpdateEvent, state::State, ActionArgs, Status, RUNNING};
+
+pub struct WhenAllArgs<'a, A, E, F, B, T> {
+    pub any: bool,
+    pub upd: Option<Float>,
+    pub cursors: &'a mut [Option<State<A>>],
+    pub e: &'a E,
+    pub blackboard: &'a mut B,
+    pub f: &'a mut F,
+    pub parent_id: usize,
+    pub metas: &'a [NodeMeta],
+    pub tracer: &'a mut T,
+}
 
 // `WhenAll` and `WhenAny` share same algorithm.
 //
 // `WhenAll` fails if any fails and succeeds when all succeeds.
 // `WhenAny` succeeds if any succeeds and fails when all fails.
-#[rustfmt::skip]
-pub fn when_all<A, E, F, B>(
-    any: bool,
-    upd: Option<Float>,
-    cursors: &mut [Option<State<A>>],
-    e: &E,
-    f: &mut F,
-    blackboard: &mut B,
-) -> (Status, Float)
+pub fn when_all<A, E, F, B, T>(args: WhenAllArgs<A, E, F, B, T>) -> (Status, Float)
 where
     A: Clone,
     E: UpdateEvent,
     F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
+    T: Tracer,
 {
+    let WhenAllArgs {
+        any,
+        upd,
+        cursors,
+        e,
+        blackboard,
+        f,
+        parent_id,
+        metas,
+        tracer,
+    } = args;
     let (status, inv_status) = if any {
         // `WhenAny`
         (Status::Failure, Status::Success)
@@ -31,11 +48,14 @@ where
     let mut min_dt = Float::MAX;
     // Count number of terminated events.
     let mut terminated = 0;
+    let mut child_id = first_child_id::<T>(parent_id);
     for cur in cursors.iter_mut() {
+        let this_id = child_id;
+        child_id = next_sibling_id::<T>(metas, this_id);
         match *cur {
             None => {}
             Some(ref mut cur) => {
-                match cur.tick(e, blackboard, f) {
+                match cur.tick(this_id, metas, e, blackboard, f, tracer) {
                     (Running, _) => {
                         continue;
                     }

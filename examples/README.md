@@ -75,3 +75,17 @@ This simple example shows an example of using the Race behavior to time out a lo
 <p align="center">
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/race_timeout.png" width="700">
 </p>
+
+## WebSocket visualizer (live tree inspector)
+
+A live web-based visualizer for a running behavior tree. The example builds a 27-node tree, enabling the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.
+
+To see it in example, run the following command:
+
+`cargo run --bin visualizer_smoke`
+
+Then open <http://127.0.0.1:8910/> in a browser. The tree renders within ~1 s and the status bar reads `connected` / `27 nodes`. `Ctrl-C` and restart — the page reconnects within ≤ 1 s. See the module-level doc comment at [src/visualizer_smoke/main.rs](src/visualizer_smoke/main.rs) for the full DFS tree layout and the per-leaf status-cycle rationale.
+
+<p align="center">
+  <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/live_visualizer_example.gif" width="1000" ">
+</p>

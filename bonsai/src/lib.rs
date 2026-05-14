@@ -134,10 +134,27 @@ mod event;
 mod sequence;
 mod state;
 mod status;
+mod tracer;
 mod when_all;
 
 #[cfg(feature = "visualize")]
+pub mod telemetry;
+
+#[cfg(feature = "visualize")]
+mod telemetry_state;
+
+#[cfg(feature = "visualize")]
+mod bt_telemetry;
+
+#[cfg(feature = "visualize")]
 mod visualizer;
+
+#[cfg(feature = "visualize")]
+mod visualizer_server;
+
+#[cfg(feature = "visualize")]
+#[doc(hidden)]
+pub use visualizer_server::spawn_server;
 
 #[cfg(feature = "f32")]
 pub type Float = f32;
