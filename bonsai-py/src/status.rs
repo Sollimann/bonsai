@@ -1,11 +1,13 @@
 use bonsai_bt::Status;
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass_enum, gen_stub_pymethods};
 
 /// Behavior-tree node result.
 ///
 /// Mirrors `bonsai_bt::Status`. Comparable to `int`
 /// (`Status.Success == 0`, `Failure == 1`, `Running == 2`) and usable
 /// as a `dict` key or `set` member.
+#[gen_stub_pyclass_enum]
 #[pyclass(eq, eq_int, hash, frozen, from_py_object, module = "bonsai_py", name = "Status")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum PyStatus {
@@ -14,6 +16,7 @@ pub enum PyStatus {
     Running,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyStatus {
     /// Pickle support: name the singleton by class + variant name, since

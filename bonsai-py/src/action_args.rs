@@ -1,5 +1,6 @@
 use bonsai_bt::{ActionArgs, Event};
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::behavior::PyAction;
 
@@ -8,6 +9,7 @@ use crate::behavior::PyAction;
 /// Constructed by the tick bridge and passed to the user's callback.
 /// The Rust `ActionArgs::event` field is intentionally not exposed —
 /// Python users only see `dt` and `action`.
+#[gen_stub_pyclass]
 #[pyclass(frozen, module = "bonsai_py", name = "ActionArgs")]
 pub struct PyActionArgs {
     /// Remaining delta time in seconds.
@@ -18,6 +20,7 @@ pub struct PyActionArgs {
     pub action: Py<PyAny>,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyActionArgs {
     #[new]

@@ -8,3 +8,15 @@ except PackageNotFoundError:  # editable install before metadata is in place
     __version__ = "0.0.0+unknown"
 
 from .bonsai_py import *  # noqa: F401,F403  (re-export the compiled module)
+
+__all__ = [
+    # types
+    "Status", "ActionArgs", "Behavior", "BT",
+    # factories (leaves, decorators, composites, control flow)
+    "Action", "Wait", "WaitForever",
+    "Invert", "AlwaysSucceed",
+    "Sequence", "Select", "WhenAll", "WhenAny", "After", "Race",
+    "If", "While", "WhileAll",
+    # constants
+    "RUNNING",
+]

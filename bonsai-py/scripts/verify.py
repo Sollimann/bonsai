@@ -358,6 +358,50 @@ def test_bt_tick_and_telemetry() -> None:
         raise AssertionError("expected RuntimeError on poisoned BT")
 
 
+def test_type_stubs() -> None:
+    """Type stub is present, valid syntax, declares every public symbol."""
+    import ast
+    from pathlib import Path
+
+    import bonsai_py
+
+    stub_path = Path(bonsai_py.__file__).parent / "__init__.pyi"
+    assert stub_path.exists(), f"missing stub: {stub_path}"
+    print(f"  OK: stub present at {stub_path.name}")
+
+    tree = ast.parse(stub_path.read_text())
+    print("  OK: stub parses as valid Python syntax")
+
+    declared: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+            declared.add(node.name)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            declared.add(node.target.id)
+
+    expected = set(bonsai_py.__all__)
+    missing = expected - declared
+    assert not missing, f"stub missing names: {sorted(missing)}"
+    print(f"  OK: all {len(expected)} __all__ names present in stub")
+
+    # The stub-side __all__ must agree with the package __all__ on the
+    # full public surface. Drift between the two is the most common cause
+    # of "mypy sees Status but `from bonsai_py import *` doesn't".
+    stub_all: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets
+        ):
+            if isinstance(node.value, ast.List):
+                stub_all = {
+                    elt.value for elt in node.value.elts if isinstance(elt, ast.Constant)
+                }
+    if stub_all:
+        diff = expected.symmetric_difference(stub_all)
+        assert not diff, f"package and stub __all__ disagree: {sorted(diff)}"
+        print("  OK: package and stub __all__ agree")
+
+
 # ---------------------------------------------------------------------------
 # Registry — append new test functions above and add them to this list.
 # Do not reorder or remove existing entries.
@@ -367,6 +411,7 @@ TESTS = [
     test_status_and_action_args,
     test_behavior_factories,
     test_bt_tick_and_telemetry,
+    test_type_stubs,
 ]
 
 

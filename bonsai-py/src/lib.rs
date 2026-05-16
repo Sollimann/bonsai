@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3_stub_gen::define_stub_info_gatherer;
 
 mod action_args;
 mod behavior;
@@ -43,3 +44,7 @@ fn bonsai_py(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     Ok(())
 }
+
+// Add pyo3-stub-gen: emits `pub fn stub_info() -> ...` that the
+// `stub_gen` binary calls to collect every #[gen_stub_*] annotated item.
+define_stub_info_gatherer!(stub_info);

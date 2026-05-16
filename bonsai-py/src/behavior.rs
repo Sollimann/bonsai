@@ -1,6 +1,7 @@
 use bonsai_bt::Behavior;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
 /// Wrapper around `Py<PyAny>` that satisfies `bonsai_bt::BT<A, B>`'s
 /// `A: Clone + Debug` bounds.
@@ -34,6 +35,7 @@ impl std::fmt::Debug for PyAction {
 /// Construct via the factory functions (`Sequence`, `Action`, `Wait`, ...)
 /// at the module level. Subtrees are reusable - the same `Behavior`
 /// can appear as a child of multiple parents.
+#[gen_stub_pyclass]
 #[pyclass(unsendable, frozen, module = "bonsai_py", name = "Behavior")]
 pub struct PyBehavior {
     pub(crate) inner: Behavior<PyAction>,
@@ -45,6 +47,7 @@ impl PyBehavior {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyBehavior {
     fn __repr__(&self) -> String {
@@ -73,12 +76,14 @@ fn collect_children(children: Vec<PyRef<'_, PyBehavior>>) -> Vec<Behavior<PyActi
 
 // ----- Leaves --------------------------------------------------------------
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "Action")]
 pub fn action_fn(action: Py<PyAny>) -> PyBehavior {
     PyBehavior::wrap(Behavior::Action(PyAction(action)))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "Wait")]
 pub fn wait_fn(seconds: f64) -> PyResult<PyBehavior> {
@@ -88,6 +93,7 @@ pub fn wait_fn(seconds: f64) -> PyResult<PyBehavior> {
     Ok(PyBehavior::wrap(Behavior::Wait(seconds)))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "WaitForever")]
 pub fn wait_forever_fn() -> PyBehavior {
@@ -96,12 +102,14 @@ pub fn wait_forever_fn() -> PyBehavior {
 
 // ----- Decorators ----------------------------------------------------------
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "Invert")]
 pub fn invert_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
     PyBehavior::wrap(Behavior::Invert(Box::new(child.inner.clone())))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "AlwaysSucceed")]
 pub fn always_succeed_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
@@ -110,36 +118,42 @@ pub fn always_succeed_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
 
 // ----- Composites (Vec<children>) -----------------------------------------
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "Sequence")]
 pub fn sequence_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
     PyBehavior::wrap(Behavior::Sequence(collect_children(children)))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "Select")]
 pub fn select_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
     PyBehavior::wrap(Behavior::Select(collect_children(children)))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "WhenAll")]
 pub fn when_all_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
     PyBehavior::wrap(Behavior::WhenAll(collect_children(children)))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "WhenAny")]
 pub fn when_any_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
     PyBehavior::wrap(Behavior::WhenAny(collect_children(children)))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "After")]
 pub fn after_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
     PyBehavior::wrap(Behavior::After(collect_children(children)))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "Race")]
 pub fn race_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
@@ -148,6 +162,7 @@ pub fn race_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
 
 // ----- Control flow --------------------------------------------------------
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "If")]
 pub fn if_fn(
@@ -162,6 +177,7 @@ pub fn if_fn(
     ))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "While")]
 pub fn while_fn(
@@ -177,6 +193,7 @@ pub fn while_fn(
     )))
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "WhileAll")]
 pub fn while_all_fn(

@@ -1,6 +1,7 @@
 use bonsai_bt::{Event, Status, UpdateArgs, BT};
 use pyo3::exceptions::{PyOSError, PyRuntimeError};
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::action_args::PyActionArgs;
 use crate::behavior::{PyAction, PyBehavior};
@@ -13,6 +14,7 @@ const POISONED_MSG: &str =
 ///
 /// Construct from a tree and a blackboard, then drive with `.tick(dt, callback)`.
 /// The callback receives `(args, blackboard)` and must return `(Status, float)`.
+#[gen_stub_pyclass]
 #[pyclass(unsendable, module = "bonsai_py", name = "BT")]
 pub struct PyBT {
     inner: Option<BT<PyAction, Py<PyAny>>>,
@@ -32,6 +34,7 @@ impl PyBT {
     }
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyBT {
     #[new]
