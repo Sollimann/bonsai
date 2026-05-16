@@ -299,6 +299,64 @@ def test_bt_tick_and_telemetry() -> None:
     else:
         raise AssertionError("expected OSError on already-bound port")
 
+    assert bt.BT.__module__ == "bonsai_py", bt.BT.__module__
+    print("  OK: BT.__module__ == 'bonsai_py'")
+
+    bb_in = {"x": 1}
+    identity_bt = bt.BT(bt.Action("noop"), bb_in)
+    assert identity_bt.blackboard() is bb_in
+    print("  OK: blackboard() preserves Python object identity")
+
+    sentinel_action = {"k": 42}
+    sentinel_bb = {"y": 1}
+    seen = []
+
+    def identity_cb(args, bbref):
+        seen.append((args.action is sentinel_action, bbref is sentinel_bb))
+        return (bt.Status.Success, 0.0)
+
+    bt.BT(bt.Action(sentinel_action), sentinel_bb).tick(0.0, identity_cb)
+    assert seen == [(True, True)], seen
+    print("  OK: action + bb identity preserved through tick callback")
+
+    # WhenAll short-circuit: callback raise on child[1] must NOT invoke child[2].
+    order = []
+
+    def short_circuit_cb(args, _bb):
+        order.append(args.action)
+        if args.action == "b":
+            raise ValueError("stop")
+        return (bt.Status.Success, 0.0)
+
+    parallel = bt.BT(
+        bt.WhenAll([bt.Action("a"), bt.Action("b"), bt.Action("c")]),
+        None,
+    )
+    try:
+        parallel.tick(0.0, short_circuit_cb)
+    except ValueError:
+        pass
+    assert order == ["a", "b"], f"expected ['a','b'] (short-circuit), got {order}"
+    print("  OK: WhenAll short-circuits sibling callbacks after a raise")
+
+    # Poisoned BT (after with_telemetry bind failure) refuses subsequent calls.
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port2 = s.getsockname()[1]
+    _holder = bt.BT(bt.Action("x"), None).with_telemetry(port2)  # keep alive
+    victim = bt.BT(bt.Action("y"), None)
+    try:
+        victim.with_telemetry(port2)
+    except OSError:
+        pass
+    try:
+        victim.tick(0.0, lambda _a, _b: (bt.Status.Success, 0.0))
+    except RuntimeError as e:
+        assert "invalidated" in str(e), str(e)
+        print("  OK: poisoned BT raises RuntimeError on subsequent tick")
+    else:
+        raise AssertionError("expected RuntimeError on poisoned BT")
+
 
 # ---------------------------------------------------------------------------
 # Registry — append new test functions above and add them to this list.
