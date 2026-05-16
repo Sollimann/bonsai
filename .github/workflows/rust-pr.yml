@@ -28,3 +28,25 @@ jobs:
       run: cargo build --examples
     - name: Run tests
       run: cargo test --verbose
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - name: Install libudev
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev pkg-config librust-alsa-sys-dev
+      - uses: actions/checkout@v6.0.2
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install maturin and test deps
+        run: pip install "maturin>=1.7,<2.0" pytest pytest-timeout mypy
+      - name: Build and install bonsai-py
+        working-directory: bonsai-py
+        run: maturin develop --release
+      - name: Run pytest
+        run: pytest -v bonsai-py/tests/
+      - name: Run verify.py (sanity)
+        run: python bonsai-py/scripts/verify.py

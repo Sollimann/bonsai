@@ -5,10 +5,7 @@ edition = "2021"
 rust-version = "1.80.0"
 description = "Python bindings for the bonsai-bt behavior tree library"
 license = "MIT"
-authors = [
-    "Kristoffer Solberg Rakstad <kristoffer.solberg@cognite.com>",
-    "Anmol Kathail <anmolkathail@gmail.com>",
-]
+authors = ["Kristoffer Solberg Rakstad <kristoffer.solberg@cognite.com>"]
 repository = "https://github.com/sollimann/bonsai.git"
 homepage = "https://github.com/sollimann/bonsai"
 publish = false
