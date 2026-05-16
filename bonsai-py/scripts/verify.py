@@ -172,6 +172,37 @@ def test_behavior_factories() -> None:
     assert repr(bt.WaitForever()) == "WaitForever"
     print("  OK: __repr__ is one-line bounded summary")
 
+    assert bt.Behavior.__module__ == "bonsai_py", bt.Behavior.__module__
+    print("  OK: Behavior.__module__ == 'bonsai_py'")
+
+    assert repr(bt.Action(None)) == "Action(...)"
+    print("  OK: Action(None) is a legal leaf")
+
+    # Identity-based equality holds for every variant. Two distinct
+    # constructions of the same shape must compare as distinct objects.
+    builders = [
+        ("Action",        lambda: bt.Action("x")),
+        ("Wait",          lambda: bt.Wait(1.0)),
+        ("WaitForever",   lambda: bt.WaitForever()),
+        ("Invert",        lambda: bt.Invert(bt.Action("x"))),
+        ("AlwaysSucceed", lambda: bt.AlwaysSucceed(bt.Action("x"))),
+        ("Sequence",      lambda: bt.Sequence([bt.Action("x")])),
+        ("Select",        lambda: bt.Select([bt.Action("x")])),
+        ("WhenAll",       lambda: bt.WhenAll([bt.Action("x")])),
+        ("WhenAny",       lambda: bt.WhenAny([bt.Action("x")])),
+        ("After",         lambda: bt.After([bt.Action("x")])),
+        ("Race",          lambda: bt.Race([bt.Action("x")])),
+        ("If",            lambda: bt.If(bt.Action("c"), bt.Action("s"), bt.Action("f"))),
+        ("While",         lambda: bt.While(bt.Action("c"), [bt.Action("b")])),
+        ("WhileAll",      lambda: bt.WhileAll(bt.Action("c"), [bt.Action("b")])),
+    ]
+    for label, make in builders:
+        a, b = make(), make()
+        assert a is not b, f"{label}: distinct constructions returned same object"
+        assert (a == b) is False, f"{label}: structural == returned True"
+        assert a != b, f"{label}: != returned False"
+    print(f"  OK: identity-based equality across all {len(builders)} variants")
+
 
 # ---------------------------------------------------------------------------
 # Registry — append new test functions above and add them to this list.

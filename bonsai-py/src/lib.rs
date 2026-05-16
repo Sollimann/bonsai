@@ -1,9 +1,14 @@
 use pyo3::prelude::*;
 
 mod action_args;
+mod behavior;
 mod status;
 
 use action_args::PyActionArgs;
+use behavior::{
+    action_fn, after_fn, always_succeed_fn, if_fn, invert_fn, race_fn, select_fn, sequence_fn,
+    wait_fn, wait_forever_fn, when_all_fn, when_any_fn, while_all_fn, while_fn, PyBehavior,
+};
 use status::PyStatus;
 
 /// Python bindings for the bonsai-bt behavior-tree library.
@@ -14,5 +19,20 @@ use status::PyStatus;
 fn bonsai_py(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyStatus>()?;
     m.add_class::<PyActionArgs>()?;
+    m.add_class::<PyBehavior>()?;
+    m.add_function(wrap_pyfunction!(action_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(wait_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(wait_forever_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(invert_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(always_succeed_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(sequence_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(select_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(when_all_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(when_any_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(after_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(race_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(if_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(while_fn, m)?)?;
+    m.add_function(wrap_pyfunction!(while_all_fn, m)?)?;
     Ok(())
 }
