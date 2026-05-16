@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 /// Constructed by the tick bridge and passed to the user's callback.
 /// The Rust `ActionArgs::event` field is intentionally not exposed —
 /// Python users only see `dt` and `action`.
-#[pyclass(frozen, name = "ActionArgs")]
+#[pyclass(frozen, module = "bonsai_py", name = "ActionArgs")]
 pub struct PyActionArgs {
     /// Remaining delta time in seconds.
     #[pyo3(get)]
