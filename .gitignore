@@ -10,3 +10,7 @@ Cargo.lock
 **/*.rs.bk
 
 .idea/
+
+# Python virtual environments
+.venv/
+venv/

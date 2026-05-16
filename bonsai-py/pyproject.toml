@@ -1,0 +1,41 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "bonsai-py"
+description = "Behavior trees in Python, powered by the bonsai-bt Rust crate."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+  { name = "Kristoffer Solberg Rakstad", email = "kristoffer.solberg@cognite.com" },
+  { name = "Anmol Kathail", email = "anmolkathail@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Rust",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Games/Entertainment",
+  "Typing :: Typed",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/sollimann/bonsai"
+Repository = "https://github.com/sollimann/bonsai"
+Issues = "https://github.com/sollimann/bonsai/issues"
+
+[tool.maturin]
+module-name = "bonsai_py"
+python-source = "python"
+features = ["pyo3/extension-module"]
+strip = true

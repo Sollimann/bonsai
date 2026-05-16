@@ -1,0 +1,22 @@
+[package]
+name = "bonsai-py"
+version = "0.12.0"
+edition = "2021"
+rust-version = "1.80.0"
+description = "Python bindings for the bonsai-bt behavior tree library"
+license = "MIT"
+authors = [
+    "Kristoffer Solberg Rakstad <kristoffer.solberg@cognite.com>",
+    "Anmol Kathail <anmolkathail@gmail.com>",
+]
+repository = "https://github.com/sollimann/bonsai.git"
+homepage = "https://github.com/sollimann/bonsai"
+publish = false
+
+[lib]
+name = "bonsai_py"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.28", features = ["extension-module", "abi3-py310"] }
+bonsai-bt = { path = "../bonsai", version = "0.12", features = ["visualize"] }
