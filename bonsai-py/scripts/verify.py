@@ -402,6 +402,60 @@ def test_type_stubs() -> None:
         print("  OK: package and stub __all__ agree")
 
 
+def test_mypy_strict() -> None:
+    """mypy --strict accepts a sample script using the typed surface."""
+    import importlib.util
+    import os
+    import subprocess
+    import sys
+    import tempfile
+
+    if importlib.util.find_spec("mypy") is None:
+        print("  SKIP: mypy not installed (pip install mypy to enable)")
+        return
+
+    sample = (
+        "import bonsai_py as bt\n"
+        "\n"
+        "def cb(args: bt.ActionArgs, bb: object) -> tuple[bt.Status, float]:\n"
+        '    if args.action == "inc":\n'
+        "        return (bt.Status.Success, args.dt)\n"
+        "    return bt.RUNNING\n"
+        "\n"
+        'tree = bt.Sequence([bt.Action("inc"), bt.Wait(1)])  # int coerces to float\n'
+        'tree_bt = bt.BT(tree, {"count": 0})\n'
+        "for _ in range(3):\n"
+        "    res: tuple[bt.Status, float] | None = tree_bt.tick(0.5, cb)\n"
+        "    if res is None:\n"
+        "        tree_bt.reset_bt()\n"
+        "\n"
+        'chained: bt.BT = bt.BT(bt.Action("x"), None).with_telemetry(0, host="0.0.0.0")\n'
+    )
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False, encoding="utf-8"
+    ) as f:
+        f.write(sample)
+        sample_path = f.name
+
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "mypy", "--strict", sample_path],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise AssertionError(
+                f"mypy --strict failed (exit {result.returncode}):\n"
+                f"--- stdout ---\n{result.stdout}\n"
+                f"--- stderr ---\n{result.stderr}"
+            )
+        print("  OK: mypy --strict accepts the sample script")
+    finally:
+        os.unlink(sample_path)
+
+
 # ---------------------------------------------------------------------------
 # Registry — append new test functions above and add them to this list.
 # Do not reorder or remove existing entries.
@@ -412,6 +466,7 @@ TESTS = [
     test_behavior_factories,
     test_bt_tick_and_telemetry,
     test_type_stubs,
+    test_mypy_strict,
 ]
 
 
