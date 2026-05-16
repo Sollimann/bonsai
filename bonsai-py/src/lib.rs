@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 
 mod action_args;
 mod behavior;
+mod bt;
 mod status;
 
 use action_args::PyActionArgs;
@@ -9,6 +10,7 @@ use behavior::{
     action_fn, after_fn, always_succeed_fn, if_fn, invert_fn, race_fn, select_fn, sequence_fn,
     wait_fn, wait_forever_fn, when_all_fn, when_any_fn, while_all_fn, while_fn, PyBehavior,
 };
+use bt::PyBT;
 use status::PyStatus;
 
 /// Python bindings for the bonsai-bt behavior-tree library.
@@ -16,10 +18,11 @@ use status::PyStatus;
 /// Construct trees with the factory functions (Sequence, Action, Wait, ...),
 /// wrap one in `BT(tree, blackboard)`, and drive it with `bt.tick(dt, callback)`.
 #[pymodule]
-fn bonsai_py(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn bonsai_py(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyStatus>()?;
     m.add_class::<PyActionArgs>()?;
     m.add_class::<PyBehavior>()?;
+    m.add_class::<PyBT>()?;
     m.add_function(wrap_pyfunction!(action_fn, m)?)?;
     m.add_function(wrap_pyfunction!(wait_fn, m)?)?;
     m.add_function(wrap_pyfunction!(wait_forever_fn, m)?)?;
@@ -34,5 +37,9 @@ fn bonsai_py(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(if_fn, m)?)?;
     m.add_function(wrap_pyfunction!(while_fn, m)?)?;
     m.add_function(wrap_pyfunction!(while_all_fn, m)?)?;
+
+    // Convenience constant matching Rust's `bonsai_bt::RUNNING`.
+    m.add("RUNNING", (PyStatus::Running, 0.0_f64).into_pyobject(py)?)?;
+
     Ok(())
 }

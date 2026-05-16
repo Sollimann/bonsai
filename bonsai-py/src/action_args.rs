@@ -1,6 +1,8 @@
 use bonsai_bt::{ActionArgs, Event};
 use pyo3::prelude::*;
 
+use crate::behavior::PyAction;
+
 /// Action callback arguments.
 ///
 /// Constructed by the tick bridge and passed to the user's callback.
@@ -32,10 +34,10 @@ impl PyActionArgs {
 impl PyActionArgs {
     /// Build a `PyActionArgs` from the Rust `ActionArgs` that the tick
     /// callback receives. Hot path — one `clone_ref` plus an `f64` copy.
-    pub fn from_rust(args: &ActionArgs<Event, Py<PyAny>>, py: Python<'_>) -> Self {
+    pub(crate) fn from_rust(args: &ActionArgs<Event, PyAction>, py: Python<'_>) -> Self {
         Self {
             dt: args.dt,
-            action: args.action.clone_ref(py),
+            action: args.action.0.clone_ref(py),
         }
     }
 }

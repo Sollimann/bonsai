@@ -204,6 +204,102 @@ def test_behavior_factories() -> None:
     print(f"  OK: identity-based equality across all {len(builders)} variants")
 
 
+def test_bt_tick_and_telemetry() -> None:
+    """BT class: tick callback semantics, blackboard, reset, telemetry."""
+    import socket
+
+    import bonsai_py as bt
+
+    # Doctest equivalent: 5 ticks of 0.5s, expect count == 1.
+    tree = bt.Sequence([
+        bt.Wait(1.0), bt.Action("inc"),
+        bt.Wait(1.0), bt.Action("inc"),
+        bt.Wait(0.5), bt.Action("dec"),
+    ])
+    bb = {"count": 0}
+    tree_bt = bt.BT(tree, bb)
+    acc = 0
+
+    def cb(args, _blackboard):
+        nonlocal acc
+        if args.action == "inc":
+            acc += 1
+            return (bt.Status.Success, args.dt)
+        if args.action == "dec":
+            acc -= 1
+            return (bt.Status.Success, args.dt)
+        return bt.RUNNING
+
+    for _ in range(5):
+        tree_bt.tick(0.5, cb)
+    blackboard = tree_bt.blackboard()
+    blackboard["count"] = acc
+    assert bb["count"] == 1, bb["count"]
+    assert tree_bt.tick_count() == 5
+    print("  OK: doctest equivalent — count == 1 after 5 ticks")
+
+    assert bt.RUNNING == (bt.Status.Running, 0.0)
+    print("  OK: bt.RUNNING == (Status.Running, 0.0)")
+
+    # Callback exception propagates with traceback / message intact.
+    bad_bt = bt.BT(bt.Sequence([bt.Action("boom")]), None)
+
+    def raising_cb(_args, _bb):
+        raise ValueError("boom")
+
+    try:
+        bad_bt.tick(0.5, raising_cb)
+    except ValueError as e:
+        assert str(e) == "boom", str(e)
+        print("  OK: callback ValueError propagates with message intact")
+    else:
+        raise AssertionError("expected ValueError from tick")
+
+    # Callback returning a non-tuple is rejected by extract.
+    bad_shape = bt.BT(bt.Sequence([bt.Action("x")]), None)
+
+    def bad_return_cb(_args, _bb):
+        return "not a tuple"
+
+    try:
+        bad_shape.tick(0.5, bad_return_cb)
+    except Exception as e:
+        msg = str(e).lower()
+        assert "extract" in msg or "tuple" in msg or isinstance(e, TypeError), e
+        print(f"  OK: bad return shape rejected ({type(e).__name__})")
+    else:
+        raise AssertionError("expected error from malformed return")
+
+    # is_finished + reset_bt cycle.
+    quick = bt.BT(bt.Action("done"), None)
+
+    def done_cb(_args, _bb):
+        return (bt.Status.Success, 0.0)
+
+    assert not quick.is_finished()
+    quick.tick(0.0, done_cb)
+    assert quick.is_finished()
+    assert quick.tick(0.0, done_cb) is None
+    quick.reset_bt()
+    assert not quick.is_finished()
+    print("  OK: is_finished + reset_bt cycle")
+
+    # with_telemetry: chainable + bind-failure raises OSError.
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    chained = bt.BT(bt.Action("x"), None).with_telemetry(port)
+    assert chained is not None, "with_telemetry should return self for chaining"
+    print(f"  OK: with_telemetry({port}) chainable")
+
+    try:
+        bt.BT(bt.Action("x"), None).with_telemetry(port)
+    except OSError as e:
+        print(f"  OK: with_telemetry on bound port raises OSError ({type(e).__name__})")
+    else:
+        raise AssertionError("expected OSError on already-bound port")
+
+
 # ---------------------------------------------------------------------------
 # Registry — append new test functions above and add them to this list.
 # Do not reorder or remove existing entries.
@@ -212,6 +308,7 @@ TESTS = [
     test_module_scaffolding,
     test_status_and_action_args,
     test_behavior_factories,
+    test_bt_tick_and_telemetry,
 ]
 
 
