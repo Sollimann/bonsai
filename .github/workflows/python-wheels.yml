@@ -25,15 +25,22 @@ jobs:
       fail-fast: false
       matrix:
         target:
+          # `manylinux: "2_28"` makes maturin-action run the build inside the
+          # official PyPA manylinux_2_28 container (Rocky Linux 8 / glibc 2.28).
+          # Without this, the build runs on the host (Ubuntu glibc 2.39) and
+          # produces a wheel that fails the auditwheel manylinux_2_28 check.
           - label: linux-x86_64
             runner: ubuntu-latest
-            args: --release --manylinux 2_28
+            target: x86_64-unknown-linux-gnu
+            manylinux: "2_28"
           - label: macos-universal2
             runner: macos-latest
-            args: --release --target universal2-apple-darwin
+            target: universal2-apple-darwin
+            manylinux: "auto"
           - label: windows-x86_64
             runner: windows-latest
-            args: --release
+            target: x86_64-pc-windows-msvc
+            manylinux: "auto"
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +74,9 @@ jobs:
         with:
           working-directory: bonsai-py
           command: build
-          args: ${{ matrix.target.args }} --out dist --strip
+          target: ${{ matrix.target.target }}
+          manylinux: ${{ matrix.target.manylinux }}
+          args: --release --out dist --strip
 
       - name: Verify wheel (Linux/macOS only — Windows venv quirks)
         if: matrix.target.runner != 'windows-latest'
