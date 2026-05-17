@@ -17,9 +17,13 @@ Pytest suite for the `bonsai_py` extension module. Primarily used to prevent any
 | [test_performance.py](test_performance.py) | `@pytest.mark.perf`: 100 ticks under 500 ms, 1000 constructions under 5 s. `@pytest.mark.bench` (opt-in): tick throughput microbenchmark. |
 | [test_drift.py](test_drift.py) | Checks that every Rust `#[pyo3(name=...)]` symbol appears in `__all__`; every `#[pyclass(name=..., module='bonsai_py')]` appears in `__all__`; every name in `__all__` is mentioned in at least one other test file. |
 
+## Prerequisites
+
+A Python venv with the `bonsai_py` extension built in. See [../README.md](../README.md#installation-dev) for the one-time setup (`python -m venv .venv`, activate, `pip install maturin`, `maturin develop --release`).
+
 ## Running
 
-From the repository root, with the wheel installed in your venv (`maturin develop --release` from `bonsai-py/`):
+From the repository root, with the venv activated:
 
 ```bash
 # Full suite (default — runs perf budget tests, skips benchmarks)

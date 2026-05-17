@@ -227,3 +227,30 @@ class TestRunningConstant:
         status, _ = result
         assert status == bt.Status.Running
         assert not b.is_finished()
+
+
+class TestGraphviz:
+    def test_returns_dot_string(self) -> None:
+        """BT.graphviz() returns a non-empty graphviz DOT string."""
+        b = bt.BT(bt.Sequence([bt.Action("a"), bt.Action("b")]), None)
+        dot = b.graphviz()
+        assert isinstance(dot, str)
+        assert "digraph" in dot.lower() or "graph" in dot.lower()
+
+    def test_graphviz_idempotent_around_tick(self) -> None:
+        """graphviz() can be called before or after ticks — tree shape is invariant."""
+        b = bt.BT(bt.Action("x"), None)
+        before = b.graphviz()
+        b.tick(0.0, lambda _a, _bb: (bt.Status.Success, 0.0))
+        after = b.graphviz()
+        assert before == after
+
+    def test_graphviz_on_poisoned_bt_raises(self, free_port: int) -> None:
+        """graphviz() on a poisoned BT raises RuntimeError (consistent with other methods)."""
+        holder = bt.BT(bt.Action("x"), None).with_telemetry(free_port)
+        assert holder is not None
+        victim = bt.BT(bt.Action("y"), None)
+        with pytest.raises(OSError):
+            victim.with_telemetry(free_port)
+        with pytest.raises(RuntimeError, match="invalidated"):
+            victim.graphviz()

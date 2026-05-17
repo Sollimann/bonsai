@@ -97,6 +97,10 @@ impl PyBT {
         Ok(self.require_inner()?.is_finished())
     }
 
+    fn graphviz(&mut self) -> PyResult<String> {
+        Ok(self.require_inner_mut()?.get_graphviz())
+    }
+
     #[pyo3(signature = (port, host = "127.0.0.1"))]
     fn with_telemetry<'py>(
         mut slf: PyRefMut<'py, Self>,
