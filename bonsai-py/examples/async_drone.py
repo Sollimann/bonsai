@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Async drone mission with multi-job orchestration.
 
@@ -19,8 +20,8 @@ repeating while a background collision-avoidance task runs:
 
 Each long-running action runs on its own `threading.Thread` and reports
 status through a per-job `queue.Queue`. The BT polls non-blockingly with
-`get_nowait()`. The BT itself stays on the main asyncio loop. The script 
-prints the tree's `graphviz()` at the start, then runs the mission until 
+`get_nowait()`. The BT itself stays on the main asyncio loop. The script
+prints the tree's `graphviz()` at the start, then runs the mission until
 a wall-clock cap.
 
 Demonstrates `Select` for prioritized fallback, multi-job orchestration

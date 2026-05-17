@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Shared fixtures for bonsai-py tests."""
 from __future__ import annotations
 

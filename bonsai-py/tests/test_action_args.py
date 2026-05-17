@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ActionArgs: construction, identity, frozen, repr."""
 from __future__ import annotations
 

@@ -33,6 +33,7 @@ repos:
       - id: forbid-new-submodules
       - id: mixed-line-ending
       - id: name-tests-test
+        args: [--pytest-test-first]
       - id: requirements-txt-fixer
       - id: sort-simple-yaml
       - id: trailing-whitespace

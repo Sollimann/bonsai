@@ -8,8 +8,8 @@ mod status;
 
 use action_args::PyActionArgs;
 use behavior::{
-    action_fn, after_fn, always_succeed_fn, if_fn, invert_fn, race_fn, select_fn, sequence_fn,
-    wait_fn, wait_forever_fn, when_all_fn, when_any_fn, while_all_fn, while_fn, PyBehavior,
+    action_fn, after_fn, always_succeed_fn, if_fn, invert_fn, race_fn, select_fn, sequence_fn, wait_fn,
+    wait_forever_fn, when_all_fn, when_any_fn, while_all_fn, while_fn, PyBehavior,
 };
 use bt::PyBT;
 use status::PyStatus;

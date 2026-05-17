@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """BT class: tick mechanics, callback errors, blackboard, reset, finished state."""
 from __future__ import annotations
 

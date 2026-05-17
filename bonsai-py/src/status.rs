@@ -21,10 +21,11 @@ pub enum PyStatus {
 impl PyStatus {
     /// Pickle support: name the singleton by class + variant name, since
     /// PyO3 simple enums refuse construction by call (`Status(0)` raises).
-    fn __reduce__<'py>(
-        &self,
-        py: Python<'py>,
-    ) -> PyResult<(Bound<'py, PyAny>, (Bound<'py, PyAny>, &'static str))> {
+    // The nested-tuple return shape is dictated by Python's pickle protocol
+    // (callable, args-tuple); factoring it into a type alias would obscure
+    // the contract more than it would clarify.
+    #[allow(clippy::type_complexity)]
+    fn __reduce__<'py>(&self, py: Python<'py>) -> PyResult<(Bound<'py, PyAny>, (Bound<'py, PyAny>, &'static str))> {
         let getattr = py.import("builtins")?.getattr("getattr")?;
         let cls = py.get_type::<Self>().into_any();
         let name = match self {

@@ -90,7 +90,7 @@ pub fn wait_fn(seconds: f64) -> PyResult<PyBehavior> {
     if seconds.is_nan() {
         return Err(PyValueError::new_err("Wait: seconds must not be NaN"));
     }
-    Ok(PyBehavior::wrap(Behavior::Wait(seconds)))
+    Ok(PyBehavior::wrap(Behavior::Wait(seconds as bonsai_bt::Float)))
 }
 
 #[gen_stub_pyfunction]
@@ -180,10 +180,7 @@ pub fn if_fn(
 #[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "While")]
-pub fn while_fn(
-    cond: PyRef<'_, PyBehavior>,
-    body: Vec<PyRef<'_, PyBehavior>>,
-) -> PyResult<PyBehavior> {
+pub fn while_fn(cond: PyRef<'_, PyBehavior>, body: Vec<PyRef<'_, PyBehavior>>) -> PyResult<PyBehavior> {
     if body.is_empty() {
         return Err(PyValueError::new_err("While: body must not be empty"));
     }
@@ -196,10 +193,7 @@ pub fn while_fn(
 #[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(name = "WhileAll")]
-pub fn while_all_fn(
-    cond: PyRef<'_, PyBehavior>,
-    body: Vec<PyRef<'_, PyBehavior>>,
-) -> PyResult<PyBehavior> {
+pub fn while_all_fn(cond: PyRef<'_, PyBehavior>, body: Vec<PyRef<'_, PyBehavior>>) -> PyResult<PyBehavior> {
     if body.is_empty() {
         return Err(PyValueError::new_err("WhileAll: body must not be empty"));
     }

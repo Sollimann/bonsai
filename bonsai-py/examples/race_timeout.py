@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Race a simulated long-running job against a hard timeout.
 

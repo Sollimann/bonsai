@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Behavior class + 14 factory functions + ports of Rust behavior_tests."""
 from __future__ import annotations
 

@@ -7,8 +7,7 @@ use crate::action_args::PyActionArgs;
 use crate::behavior::{PyAction, PyBehavior};
 use crate::status::PyStatus;
 
-const POISONED_MSG: &str =
-    "BT was invalidated by a failed with_telemetry call; construct a new BT";
+const POISONED_MSG: &str = "BT was invalidated by a failed with_telemetry call; construct a new BT";
 
 /// A behavior-tree executor wrapping `bonsai_bt::BT<PyObject, PyObject>`.
 ///
@@ -22,15 +21,11 @@ pub struct PyBT {
 
 impl PyBT {
     fn require_inner(&self) -> PyResult<&BT<PyAction, Py<PyAny>>> {
-        self.inner
-            .as_ref()
-            .ok_or_else(|| PyRuntimeError::new_err(POISONED_MSG))
+        self.inner.as_ref().ok_or_else(|| PyRuntimeError::new_err(POISONED_MSG))
     }
 
     fn require_inner_mut(&mut self) -> PyResult<&mut BT<PyAction, Py<PyAny>>> {
-        self.inner
-            .as_mut()
-            .ok_or_else(|| PyRuntimeError::new_err(POISONED_MSG))
+        self.inner.as_mut().ok_or_else(|| PyRuntimeError::new_err(POISONED_MSG))
     }
 }
 
@@ -45,14 +40,13 @@ impl PyBT {
         }
     }
 
-    fn tick(
-        &mut self,
-        py: Python<'_>,
-        dt: f64,
-        callback: Py<PyAny>,
-    ) -> PyResult<Option<(PyStatus, f64)>> {
+    fn tick(&mut self, py: Python<'_>, dt: f64, callback: Py<PyAny>) -> PyResult<Option<(PyStatus, f64)>> {
         let inner = self.require_inner_mut()?;
-        let event: Event = UpdateArgs { dt }.into();
+        // `UpdateArgs.dt` is `bonsai_bt::Float`; cast from the f64 Python input.
+        let event: Event = UpdateArgs {
+            dt: dt as bonsai_bt::Float,
+        }
+        .into();
         let mut cb_err: Option<PyErr> = None;
         let result = inner.tick(&event, &mut |args, bb: &mut Py<PyAny>| {
             if cb_err.is_some() {
@@ -61,8 +55,9 @@ impl PyBT {
             let py_args = PyActionArgs::from_rust(&args, py);
             let bb_ref = bb.clone_ref(py);
             match callback.call1(py, (py_args, bb_ref)) {
+                // Callback returns Python f64; cast back to `bonsai_bt::Float`.
                 Ok(ret) => match ret.extract::<(PyStatus, f64)>(py) {
-                    Ok((s, remaining)) => (s.into(), remaining),
+                    Ok((s, remaining)) => (s.into(), remaining as bonsai_bt::Float),
                     Err(e) => {
                         cb_err = Some(e);
                         (Status::Failure, 0.0)
@@ -77,7 +72,8 @@ impl PyBT {
         if let Some(e) = cb_err {
             return Err(e);
         }
-        Ok(result.map(|(s, dt)| (s.into(), dt)))
+        // Tick result's `Float` -> f64 for the Python return tuple.
+        Ok(result.map(|(s, dt)| (s.into(), dt as f64)))
     }
 
     fn blackboard(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
@@ -102,23 +98,14 @@ impl PyBT {
     }
 
     #[pyo3(signature = (port, host = "127.0.0.1"))]
-    fn with_telemetry<'py>(
-        mut slf: PyRefMut<'py, Self>,
-        port: u16,
-        host: &str,
-    ) -> PyResult<PyRefMut<'py, Self>> {
-        let inner = slf
-            .inner
-            .take()
-            .ok_or_else(|| PyRuntimeError::new_err(POISONED_MSG))?;
+    fn with_telemetry<'py>(mut slf: PyRefMut<'py, Self>, port: u16, host: &str) -> PyResult<PyRefMut<'py, Self>> {
+        let inner = slf.inner.take().ok_or_else(|| PyRuntimeError::new_err(POISONED_MSG))?;
         match inner.with_telemetry_at(host, port) {
             Ok(new_inner) => {
                 slf.inner = Some(new_inner);
                 Ok(slf)
             }
-            Err(e) => Err(PyOSError::new_err(format!(
-                "with_telemetry({host}:{port}) failed: {e}"
-            ))),
+            Err(e) => Err(PyOSError::new_err(format!("with_telemetry({host}:{port}) failed: {e}"))),
         }
     }
 }

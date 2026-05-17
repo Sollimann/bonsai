@@ -39,7 +39,9 @@ impl PyActionArgs {
     /// callback receives. Hot path — one `clone_ref` plus an `f64` copy.
     pub(crate) fn from_rust(args: &ActionArgs<Event, PyAction>, py: Python<'_>) -> Self {
         Self {
-            dt: args.dt,
+            // `args.dt` is `bonsai_bt::Float` (f32 or f64 per feature). Cast to
+            // f64 at the Python boundary — Python's `float` is always f64.
+            dt: args.dt as f64,
             action: args.action.0.clone_ref(py),
         }
     }

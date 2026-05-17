@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 End-to-end demo for the WebSocket visualizer.
 

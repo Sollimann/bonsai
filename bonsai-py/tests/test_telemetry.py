@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """with_telemetry: chainable, bind failures, poisoned state, host parameter."""
 from __future__ import annotations
 

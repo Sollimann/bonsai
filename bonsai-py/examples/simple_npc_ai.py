@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Console NPC behavior demo.
 

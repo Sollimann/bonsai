@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Boids flocking with one Behavior shared across many agents.
 
