@@ -28,27 +28,27 @@ from __future__ import annotations
 import time
 from typing import Any
 
-import bonsai_py as bt
+from bonsai_py import *  # noqa: F401,F403
 
 
-def build_tree() -> bt.Behavior:
-    return bt.Sequence([
-        bt.If(
-            bt.Action("low_hp"),
-            bt.AlwaysSucceed(bt.Action("flee")),
-            bt.Action("regroup"),
+def build_tree() -> Behavior:
+    return Sequence([
+        If(
+            Action("low_hp"),
+            AlwaysSucceed(Action("flee")),
+            Action("regroup"),
         ),
-        bt.Select([
-            bt.Sequence([
-                bt.Action("acquire_target"),
-                bt.WhenAll([bt.Action("aim"), bt.Action("track")]),
+        Select([
+            Sequence([
+                Action("acquire_target"),
+                WhenAll([Action("aim"), Action("track")]),
             ]),
-            bt.Race([bt.Action("dodge"), bt.Wait(2.0)]),
-            bt.Invert(bt.Action("enemy_visible")),
+            Race([Action("dodge"), Wait(2.0)]),
+            Invert(Action("enemy_visible")),
         ]),
-        bt.While(bt.Action("has_ammo"), [bt.Action("fire"), bt.Wait(0.3)]),
-        bt.After([bt.Action("cooldown"), bt.Action("ready_signal")]),
-        bt.WhenAny([bt.Action("victory_check"), bt.Action("retreat_signal")]),
+        While(Action("has_ammo"), [Action("fire"), Wait(0.3)]),
+        After([Action("cooldown"), Action("ready_signal")]),
+        WhenAny([Action("victory_check"), Action("retreat_signal")]),
     ])
 
 
@@ -56,11 +56,11 @@ def build_tree() -> bt.Behavior:
 # unique phase offset so the same wall tick produces a varied mix of statuses
 # across the tree (and yellow-Running shows up).
 CYCLE = (
-    bt.Status.Success,
-    bt.Status.Running,
-    bt.Status.Failure,
-    bt.Status.Success,
-    bt.Status.Running,
+    Status.Success,
+    Status.Running,
+    Status.Failure,
+    Status.Success,
+    Status.Running,
 )
 
 PHASE_OFFSET = {
@@ -87,19 +87,19 @@ KEEP_ALIVE = {"regroup", "has_ammo", "cooldown", "ready_signal"}
 
 
 def make_callback(tick_n_ref: list[int]):
-    def cb(args: Any, _bb: Any) -> tuple[bt.Status, float]:
+    def cb(args: Any, _bb: Any) -> tuple[Status, float]:
         phase = PHASE_OFFSET.get(args.action, 0)
         idx = (tick_n_ref[0] + phase) % len(CYCLE)
         status = CYCLE[idx]
-        if args.action in KEEP_ALIVE and status == bt.Status.Failure:
-            status = bt.Status.Running
+        if args.action in KEEP_ALIVE and status == Status.Failure:
+            status = Status.Running
         return (status, 0.0)
 
     return cb
 
 
 def main() -> None:
-    tree_bt = bt.BT(build_tree(), None).with_telemetry(8910)
+    tree_bt = BT(build_tree(), None).with_telemetry(8910)
     tick_n_ref = [0]
     callback = make_callback(tick_n_ref)
     print("bonsai-bt visualizer: open http://127.0.0.1:8910/")
@@ -109,7 +109,7 @@ def main() -> None:
         result = tree_bt.tick(1.0, callback)
         if result is not None:
             status, _ = result
-            if status in (bt.Status.Success, bt.Status.Failure):
+            if status in (Status.Success, Status.Failure):
                 tree_bt.reset_bt()
         time.sleep(0.4)
 
