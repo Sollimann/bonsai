@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module-level surface: __version__, __all__, __doc__, RUNNING."""
 from __future__ import annotations
 

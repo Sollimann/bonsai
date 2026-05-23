@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """bonsai-py - behavior trees in Python, powered by the Rust bonsai-bt crate."""
 
 from importlib.metadata import PackageNotFoundError, version as _version

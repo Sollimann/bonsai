@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Print the graphviz DOT representation of an attack-drone behavior tree.
 

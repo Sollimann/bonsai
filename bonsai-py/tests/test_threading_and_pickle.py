@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Cross-process and cross-thread semantics: BT is unsendable + unpicklable."""
 from __future__ import annotations
 

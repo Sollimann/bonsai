@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Verification script for bonsai-py.
 

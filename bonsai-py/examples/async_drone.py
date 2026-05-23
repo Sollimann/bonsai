@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Async drone mission with multi-job orchestration.
 

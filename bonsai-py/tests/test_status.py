@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Status enum: semantics, pickle, copy, hash, identity."""
 from __future__ import annotations
 

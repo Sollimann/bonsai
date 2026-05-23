@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Performance budget -- generous bounds to avoid CI flakiness. Heavy
 benchmarks gated behind `@pytest.mark.bench` (run with `pytest -m bench`)."""
 from __future__ import annotations

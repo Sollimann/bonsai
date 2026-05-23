@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Boids flocking with one Behavior shared across many agents.
 
@@ -166,13 +165,11 @@ def main() -> None:
             boid = boids[i]
             boid.x += boid.dx * DT_SECONDS
             boid.y += boid.dy * DT_SECONDS
-            if i == 0 or i == NUM_BOIDS - 1:
-                # Log first + last boid only; full log would be 300 lines.
-                print(
-                    f"[boid {i:2d}] step {step:2d}"
-                    f" pos=({boid.x:7.1f}, {boid.y:7.1f})"
-                    f" vel=({boid.dx:7.1f}, {boid.dy:7.1f})"
-                )
+            print(
+                f"[boid {i:2d}] step {step:2d}"
+                f" pos=({boid.x:7.1f}, {boid.y:7.1f})"
+                f" vel=({boid.dx:7.1f}, {boid.dy:7.1f})"
+            )
         time.sleep(DT_SECONDS / 10.0)  # tiny pause so output is readable
 
     print(f"Done after {TICKS} ticks. Each BT instance ticked {bts[0].tick_count()} times.")

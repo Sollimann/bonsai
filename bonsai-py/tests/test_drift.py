@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Drift gate: every Rust binding has at least one exercising Python test.
 
 Two parity checks:
