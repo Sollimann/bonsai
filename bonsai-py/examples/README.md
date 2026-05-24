@@ -21,7 +21,7 @@ cd bonsai-py && maturin develop --release && cd ..
 
 After that, just `source .venv/bin/activate` + `python bonsai-py/examples/<name>.py` in any new shell.
 
-## Examples (6)
+## Examples (7)
 
 ### [simple_npc_ai.py](simple_npc_ai.py) — console NPC
 NPC runs and shoots until action points are exhausted, then rests and dies. Demonstrates `WhileAll`, blackboard mutation via `@dataclass`, structural-`match` callback.
@@ -61,11 +61,16 @@ Builds **one** `Behavior` tree and binds it to 10 independent `BT` instances (ea
 python bonsai-py/examples/boids_console.py
 ```
 
-### [async_drone.py](async_drone.py) — multi-job mission
-Drone mission: takeoff → check battery → fly (or fall back to land) → land → repeat. Each long-running step runs on a background thread; the BT polls per-job queues. Prints the tree's `graphviz()` at the start, then runs the mission for ~8 seconds.
+### [threaded_drone.py](threaded_drone.py) — multi-job mission (threading)
+Drone mission: takeoff → check battery → fly (or fall back to land) → land → repeat. Each long-running step runs on a background `threading.Thread`; the BT polls per-job `queue.Queue`s. Prints the tree's `graphviz()` at the start, then runs the mission for ~8 seconds. **Pick this variant when actions block on hardware or sync IO** — blocking syscalls, vendor SDKs without an async API, `subprocess.run`, etc.
+
+```bash
+python bonsai-py/examples/threaded_drone.py
+```
+
+### [async_drone.py](async_drone.py) — multi-job mission (asyncio)
+Same mission and tree as `threaded_drone.py`, but background jobs are `async def` coroutines on a single asyncio event loop, communicating via `asyncio.Queue`. **Pick this variant when actions are awaitable** (`aiohttp`, async DB drivers, websockets) — N-way concurrency without OS thread overhead. 
 
 ```bash
 python bonsai-py/examples/async_drone.py
 ```
-
-Demonstrates `Select` for prioritized fallback, multi-job orchestration via per-job channels, asyncio + threading.

@@ -1,7 +1,9 @@
 """
-Async drone mission with multi-job orchestration (asyncio-native).
+Threaded drone mission with multi-job orchestration.
 
-Same mission as `threaded_drone.py`:
+A drone takes off, checks battery, flies to a mission point (or falls
+back to landing at the dock if the battery is low), then lands —
+repeating while a background collision-avoidance task runs:
 
     While(
         cond = AvoidOthers,
@@ -15,39 +17,37 @@ Same mission as `threaded_drone.py`:
         ],
     )
 
-…but each long-running action is an `async def` coroutine scheduled on
-the same asyncio event loop as the BT tick loop, communicating with the
-BT via `asyncio.Queue`. No OS threads — every job is cooperatively
-scheduled on a single thread.
+Each long-running action runs on its own `threading.Thread` and reports
+status through a per-job `queue.Queue`. The BT polls non-blockingly with
+`get_nowait()`. The script prints the tree's `graphviz()` at the start,
+then runs the mission until a wall-clock cap.
 
-**Pick this variant when actions are awaitable** — `aiohttp`, async DB
-drivers (`asyncpg`, `motor`), websockets, async stream readers, async
-subprocess.
+**Pick this variant when actions block on hardware or sync IO** —
+blocking syscalls, blocking C extensions, vendor SDKs without an async
+API, `subprocess.run`, file IO without `aiofiles`, etc. The OS scheduler
+runs the threads in parallel, so a blocking call in one job doesn't
+freeze the others.
 
-How the integration works:
+See `async_drone.py` for the asyncio-native variant of the same mission
+(pick that when actions are awaitable — `aiohttp`, async DB drivers,
+websockets, async stream readers).
 
-* `BT.tick()` is synchronous. The callback we pass to it is also
-  synchronous — it polls each per-job `asyncio.Queue` with the
-  non-blocking `get_nowait()`. The callback never awaits.
-* On the first call for a given action, the callback spawns the job
-  coroutine via `asyncio.create_task(job(q))`. The task starts running
-  on the next loop iteration.
-* The main loop is `async def` and uses `await asyncio.sleep(0.5)` to
-  yield control back to the event loop between BT ticks. While main
-  is sleeping, the job coroutines run and push status updates into
-  their queues.
+Demonstrates `Select` for prioritized fallback, multi-job orchestration
+via per-job channels, threading + queue.Queue, and `BT.graphviz()` for
+static tree visualization at startup.
 
 Run:
-    python bonsai-py/examples/async_drone.py
+    python bonsai-py/examples/threaded_drone.py
 """
 from __future__ import annotations
 
-import asyncio
 import enum
+import queue
 import random
+import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Optional
 
 import bonsai_py as bt
 
@@ -70,78 +70,72 @@ class FlyToPoint:
 
 @dataclass
 class DroneState:
-    avoid_others: Optional[asyncio.Queue[bt.Status]] = None
-    takeoff: Optional[asyncio.Queue[bt.Status]] = None
-    land: Optional[asyncio.Queue[bt.Status]] = None
-    fly_to_point: Optional[asyncio.Queue[bt.Status]] = None
+    avoid_others: Optional[queue.Queue[bt.Status]] = None
+    takeoff: Optional[queue.Queue[bt.Status]] = None
+    land: Optional[queue.Queue[bt.Status]] = None
+    fly_to_point: Optional[queue.Queue[bt.Status]] = None
 
 
-# ---- Background "jobs": one coroutine per long-running action --------------
+# ---- Background "jobs": one thread per long-running action -----------------
 # Each pushes Status.Running every step, then Status.Success when done.
 
-async def collision_avoidance_task(q: asyncio.Queue[bt.Status]) -> None:
+def collision_avoidance_task(q: queue.Queue[bt.Status]) -> None:
     print("collision avoidance task started")
     while True:
-        q.put_nowait(bt.Status.Running)
-        await asyncio.sleep(0.1)
+        try:
+            q.put(bt.Status.Running, timeout=1.0)
+        except queue.Full:
+            return
+        time.sleep(0.1)
 
 
-async def takeoff_task(q: asyncio.Queue[bt.Status]) -> None:
+def takeoff_task(q: queue.Queue[bt.Status]) -> None:
     print("takeoff task started")
     for i in range(3):
-        q.put_nowait(bt.Status.Running)
-        await asyncio.sleep(0.3)
+        q.put(bt.Status.Running)
+        time.sleep(0.3)
         print(f"takeoff task running for {(i + 1) * 300} ms")
     print("takeoff task finished")
-    q.put_nowait(bt.Status.Success)
+    q.put(bt.Status.Success)
 
 
-async def landing_task(q: asyncio.Queue[bt.Status]) -> None:
+def landing_task(q: queue.Queue[bt.Status]) -> None:
     print("landing task started")
     for i in range(3):
-        q.put_nowait(bt.Status.Running)
-        await asyncio.sleep(0.3)
+        q.put(bt.Status.Running)
+        time.sleep(0.3)
         print(f"landing task running for {(i + 1) * 300} ms")
     print("landing task finished")
-    q.put_nowait(bt.Status.Success)
+    q.put(bt.Status.Success)
 
 
-async def fly_to_point_task(point: FlyToPoint, q: asyncio.Queue[bt.Status]) -> None:
+def fly_to_point_task(point: FlyToPoint, q: queue.Queue[bt.Status]) -> None:
     print(f"flying task started: target=({point.x}, {point.y}, {point.z})")
     for i in range(3):
-        q.put_nowait(bt.Status.Running)
-        await asyncio.sleep(0.5)
+        q.put(bt.Status.Running)
+        time.sleep(0.5)
         print(f"flying task running for {(i + 1) * 500} ms")
     print("flying task finished")
-    q.put_nowait(bt.Status.Success)
+    q.put(bt.Status.Success)
 
 
 # ---- Polling helpers -------------------------------------------------------
 
-SpawnCoro = Callable[[asyncio.Queue[bt.Status]], Awaitable[None]]
-
-
 def poll_job(
     q_attr: str,
     state: DroneState,
-    spawn: SpawnCoro,
+    spawn: callable,  # type: ignore[type-arg]
     dt: float,
 ) -> tuple[bt.Status, float]:
-    """Generic 'schedule on first call, poll thereafter' pattern for any async job.
-
-    Calls `asyncio.create_task(spawn(q))` on first invocation; subsequent
-    invocations drain the queue non-blockingly. Must be called from inside
-    a running event loop (the BT tick runs from inside `await asyncio.sleep`
-    in `main`, so this holds).
-    """
+    """Generic 'spawn on first call, poll thereafter' pattern for any threaded job."""
     q = getattr(state, q_attr)
     if q is None:
-        q = asyncio.Queue()
+        q = queue.Queue()
         setattr(state, q_attr, q)
-        asyncio.create_task(spawn(q))
+        threading.Thread(target=spawn, args=(q,), daemon=True).start()
     try:
         status = q.get_nowait()
-    except asyncio.QueueEmpty:
+    except queue.Empty:
         return bt.RUNNING
     if status == bt.Status.Running:
         return bt.RUNNING
@@ -164,8 +158,7 @@ def make_callback(state: DroneState, rng: random.Random):
             print(f"check battery: {'OK' if ok else 'LOW'}")
             return (bt.Status.Success if ok else bt.Status.Failure, args.dt)
         if isinstance(action, FlyToPoint):
-            async def spawn(q: asyncio.Queue[bt.Status], p: FlyToPoint = action) -> None:
-                await fly_to_point_task(p, q)
+            spawn = lambda q, p=action: fly_to_point_task(p, q)
             return poll_job("fly_to_point", state, spawn, args.dt)
         raise ValueError(f"unknown action: {action!r}")
 
@@ -189,7 +182,7 @@ def build_tree() -> bt.Behavior:
     )
 
 
-async def main() -> None:
+def main() -> None:
     tree_bt = bt.BT(build_tree(), None)
     state = DroneState()
     rng = random.Random(0)
@@ -201,7 +194,7 @@ async def main() -> None:
     start = time.perf_counter()
     last = start
     while True:
-        await asyncio.sleep(0.5)
+        time.sleep(0.5)
         now = time.perf_counter()
         dt = now - last
         last = now
@@ -214,4 +207,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
