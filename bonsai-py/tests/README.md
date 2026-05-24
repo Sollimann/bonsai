@@ -56,7 +56,7 @@ A `pytest-timeout` of 10 seconds per test is configured in [pyproject.toml](../p
 pip install pytest pytest-timeout
 ```
 
-`mypy` is used by [../scripts/verify.py](../scripts/verify.py), not by this suite directly.
+`mypy` is used by [test_mypy_strict.py](test_mypy_strict.py) — install with `pip install mypy`. The test is skipped if `mypy` isn't installed.
 
 ## CI
 

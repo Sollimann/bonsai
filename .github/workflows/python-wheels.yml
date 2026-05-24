@@ -88,7 +88,6 @@ jobs:
           pip install pytest pytest-timeout mypy
           pip install bonsai-py/dist/*.whl
           pytest bonsai-py/tests/
-          python bonsai-py/scripts/verify.py
 
       - name: Wheel size sanity (Linux/macOS only)
         if: matrix.target.runner != 'windows-latest'

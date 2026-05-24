@@ -54,5 +54,3 @@ jobs:
         run: maturin develop --release
       - name: Run pytest
         run: pytest -v bonsai-py/tests/
-      - name: Run verify.py (sanity)
-        run: python bonsai-py/scripts/verify.py
