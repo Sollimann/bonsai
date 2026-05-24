@@ -87,6 +87,7 @@ jobs:
           pip install --upgrade pip
           pip install pytest pytest-timeout mypy
           pip install bonsai-py/dist/*.whl
+          python -c "import bonsai_bt; print(bonsai_bt.__version__)"
           pytest bonsai-py/tests/
 
       - name: Wheel size sanity (Linux/macOS only)
@@ -145,7 +146,7 @@ jobs:
           source .venv-sdist/bin/activate
           pip install --upgrade pip
           pip install --no-binary :all: dist/*.tar.gz
-          python -c "import bonsai_py; print(bonsai_py.__version__)"
+          python -c "import bonsai_bt; print(bonsai_bt.__version__)"
 
   publish:
     name: Publish to PyPI / TestPyPI
