@@ -19,7 +19,7 @@ use status::PyStatus;
 /// Construct trees with the factory functions (Sequence, Action, Wait, ...),
 /// wrap one in `BT(tree, blackboard)`, and drive it with `bt.tick(dt, callback)`.
 #[pymodule]
-fn bonsai_py(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn bonsai_bt(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyStatus>()?;
     m.add_class::<PyActionArgs>()?;
     m.add_class::<PyBehavior>()?;

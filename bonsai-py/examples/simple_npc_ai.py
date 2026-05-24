@@ -22,7 +22,7 @@ import enum
 from dataclasses import dataclass
 from typing import Any
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 class EnemyNPC(enum.Enum):

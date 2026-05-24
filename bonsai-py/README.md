@@ -1,4 +1,4 @@
-# bonsai-py - Python bindings
+# bonsai-bt - Python bindings
 
 Python bindings for the [bonsai-bt](https://github.com/sollimann/bonsai)
 behavior-tree library.
@@ -11,7 +11,7 @@ source .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
 pip install maturin
 cd bonsai-py
 maturin develop
-python -c "import bonsai_py; print(bonsai_py.__version__)"
+python -c "import bonsai_bt; print(bonsai_bt.__version__)"
 ```
 
 ## Same BT in Rust and Python
@@ -51,7 +51,7 @@ fn main() {
 ### Python
 
 ```python
-import bonsai_py as bt
+import bonsai_bt as bt
 
 tree = bt.Sequence([
     bt.Action("hello"),

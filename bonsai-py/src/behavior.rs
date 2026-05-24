@@ -36,7 +36,7 @@ impl std::fmt::Debug for PyAction {
 /// at the module level. Subtrees are reusable - the same `Behavior`
 /// can appear as a child of multiple parents.
 #[gen_stub_pyclass]
-#[pyclass(unsendable, frozen, module = "bonsai_py", name = "Behavior")]
+#[pyclass(unsendable, frozen, module = "bonsai_bt", name = "Behavior")]
 pub struct PyBehavior {
     pub(crate) inner: Behavior<PyAction>,
 }

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 # Payload-less actions are plain strings; payload variants are frozen
 # dataclasses (hashable, immutable, work as bt.Action(...) values).

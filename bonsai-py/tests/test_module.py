@@ -1,7 +1,7 @@
 """Module-level surface: __version__, __all__, __doc__, RUNNING."""
 from __future__ import annotations
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 def test_version_present() -> None:

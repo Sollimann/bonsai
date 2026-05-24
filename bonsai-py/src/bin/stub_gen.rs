@@ -3,7 +3,7 @@
 //!
 //! Run with `cargo run --bin stub_gen -p bonsai-py`. pyo3-stub-gen reads
 //! `pyproject.toml` to determine the package layout and writes the stub
-//! to `python/bonsai_py/__init__.pyi`. The companion `scripts/regen-stubs.sh`
+//! to `python/bonsai_bt/__init__.pyi`. The companion `scripts/regen-stubs.sh`
 //! appends the manual `RUNNING` constant declaration afterwards.
 
 use pyo3_stub_gen::Result;

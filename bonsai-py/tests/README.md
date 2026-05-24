@@ -1,6 +1,6 @@
 # bonsai-py tests
 
-Pytest suite for the `bonsai_py` extension module. Primarily used to prevent any drift between the Rust bindings (`bonsai-py/src/*.rs`) and the Python surface: every `#[pyclass]`, `#[pymethods]`, and `#[pyfunction]` has at least one Python test exercising it.
+Pytest suite for the `bonsai_bt` extension module. Primarily used to prevent any drift between the Rust bindings (`bonsai-py/src/*.rs`) and the Python surface: every `#[pyclass]`, `#[pymethods]`, and `#[pyfunction]` has at least one Python test exercising it.
 
 ## Test files
 
@@ -15,11 +15,11 @@ Pytest suite for the `bonsai_py` extension module. Primarily used to prevent any
 | [test_module.py](test_module.py) | `__version__ == "0.12.0"`; module docstring present; `__all__` lists exactly the 19 expected names; all names accessible; `RUNNING` is `(Status.Running, 0.0)`; `.pyi` stub ships with the wheel. |
 | [test_threading_and_pickle.py](test_threading_and_pickle.py) | `BT` is unsendable across threads (PyO3 `PanicException`); `BT`, `Behavior`, `ActionArgs` are unpicklable; `Status` IS picklable (multiprocessing-friendly). |
 | [test_performance.py](test_performance.py) | `@pytest.mark.perf`: 100 ticks under 500 ms, 1000 constructions under 5 s. `@pytest.mark.bench` (opt-in): tick throughput microbenchmark. |
-| [test_drift.py](test_drift.py) | Checks that every Rust `#[pyo3(name=...)]` symbol appears in `__all__`; every `#[pyclass(name=..., module='bonsai_py')]` appears in `__all__`; every name in `__all__` is mentioned in at least one other test file. |
+| [test_drift.py](test_drift.py) | Checks that every Rust `#[pyo3(name=...)]` symbol appears in `__all__`; every `#[pyclass(name=..., module='bonsai_bt')]` appears in `__all__`; every name in `__all__` is mentioned in at least one other test file. |
 
 ## Prerequisites
 
-A Python venv with the `bonsai_py` extension built in. See [../README.md](../README.md#installation-dev) for the one-time setup (`python -m venv .venv`, activate, `pip install maturin`, `maturin develop --release`).
+A Python venv with the `bonsai_bt` extension built in. See [../README.md](../README.md#installation-dev) for the one-time setup (`python -m venv .venv`, activate, `pip install maturin`, `maturin develop --release`).
 
 ## Running
 

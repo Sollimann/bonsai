@@ -69,7 +69,7 @@ python bonsai-py/examples/threaded_drone.py
 ```
 
 ### [async_drone.py](async_drone.py) — multi-job mission (asyncio)
-Same mission and tree as `threaded_drone.py`, but background jobs are `async def` coroutines on a single asyncio event loop, communicating via `asyncio.Queue`. **Pick this variant when actions are awaitable** (`aiohttp`, async DB drivers, websockets) — N-way concurrency without OS thread overhead. 
+Same mission and tree as `threaded_drone.py`, but background jobs are `async def` coroutines on a single asyncio event loop, communicating via `asyncio.Queue`. **Pick this variant when actions are awaitable** (`aiohttp`, async DB drivers, websockets) — N-way concurrency without OS thread overhead.
 
 ```bash
 python bonsai-py/examples/async_drone.py

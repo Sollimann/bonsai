@@ -11,6 +11,10 @@ homepage = "https://github.com/sollimann/bonsai"
 publish = false
 
 [lib]
+# Internal Rust crate name — kept as `bonsai_py` to avoid colliding with the
+# workspace's `bonsai-bt` crate at `bonsai/`, which also produces `libbonsai_bt.rlib`.
+# The Python-facing module name is controlled separately by
+# `[tool.maturin] module-name = "bonsai_bt"` in pyproject.toml.
 name = "bonsai_py"
 crate-type = ["cdylib", "rlib"]
 

@@ -9,8 +9,8 @@ cd "$(dirname "$0")/.."   # cd into bonsai-py/
 cargo run --quiet --bin stub_gen -p bonsai-py
 
 # pyo3-stub-gen 0.22 reads pyproject.toml and writes the stub to
-# python/bonsai_py/__init__.pyi automatically.
-STUB=python/bonsai_py/__init__.pyi
+# python/bonsai_bt/__init__.pyi automatically.
+STUB=python/bonsai_bt/__init__.pyi
 if [ ! -f "$STUB" ]; then
     echo "ERROR: $STUB was not generated. Did the binary fail silently?" >&2
     exit 1

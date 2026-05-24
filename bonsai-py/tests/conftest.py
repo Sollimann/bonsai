@@ -6,7 +6,7 @@ from typing import Any, Callable
 
 import pytest
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 @pytest.fixture

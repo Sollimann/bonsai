@@ -2,9 +2,9 @@
 
 Two parity checks:
 1. Every `#[pyfunction]` in `bonsai-py/src/*.rs` (with a `#[pyo3(name = "X")]`
-   override) appears in `bonsai_py.__all__`.
-2. Every public `#[pyclass]` (with `module = "bonsai_py"` set) appears in
-   `bonsai_py.__all__`.
+   override) appears in `bonsai_bt.__all__`.
+2. Every public `#[pyclass]` (with `module = "bonsai_bt"` set) appears in
+   `bonsai_bt.__all__`.
 
 If a Rust contributor adds a binding and forgets to:
   - add it to __all__,
@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 
@@ -34,18 +34,18 @@ def _names_from_rust(pattern: re.Pattern[str]) -> set[str]:
 
 
 def test_every_rust_pyfunction_in_all() -> None:
-    """Every Rust #[pyo3(name=...)] symbol scanned from src/*.rs must appear in bonsai_py.__all__."""
+    """Every Rust #[pyo3(name=...)] symbol scanned from src/*.rs must appear in bonsai_bt.__all__."""
     rust_names = _names_from_rust(RUST_NAME_RE)
     rust_names = {n for n in rust_names if not n.startswith("_")}
     missing = rust_names - set(bt.__all__)
     assert not missing, (
         f"Rust declares these #[pyo3(name=...)] symbols but they're missing "
-        f"from bonsai_py.__all__: {sorted(missing)}."
+        f"from bonsai_bt.__all__: {sorted(missing)}."
     )
 
 
 def test_every_rust_pyclass_in_all() -> None:
-    """Every Rust #[pyclass(name=...)] must appear in bonsai_py.__all__."""
+    """Every Rust #[pyclass(name=...)] must appear in bonsai_bt.__all__."""
     rust_classes = _names_from_rust(PYCLASS_NAME_RE)
     missing = rust_classes - set(bt.__all__)
     assert not missing, (

@@ -31,7 +31,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 class MissionAction(enum.Enum):

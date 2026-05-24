@@ -8,7 +8,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass_enum, gen_stub_pymethods};
 /// (`Status.Success == 0`, `Failure == 1`, `Running == 2`) and usable
 /// as a `dict` key or `set` member.
 #[gen_stub_pyclass_enum]
-#[pyclass(eq, eq_int, hash, frozen, from_py_object, module = "bonsai_py", name = "Status")]
+#[pyclass(eq, eq_int, hash, frozen, from_py_object, module = "bonsai_bt", name = "Status")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum PyStatus {
     Success,

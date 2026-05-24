@@ -32,7 +32,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 NUM_BOIDS = 10
 WIDTH = 1280.0

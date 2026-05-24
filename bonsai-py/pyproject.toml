@@ -3,7 +3,7 @@ requires = ["maturin>=1.7,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "bonsai-py"
+name = "bonsai-bt"
 description = "Behavior trees in Python, powered by the bonsai-bt Rust crate."
 readme = "README.md"
 license = { text = "MIT" }
@@ -35,7 +35,7 @@ Repository = "https://github.com/sollimann/bonsai"
 Issues = "https://github.com/sollimann/bonsai/issues"
 
 [tool.maturin]
-module-name = "bonsai_py"
+module-name = "bonsai_bt"
 python-source = "python"
 features = ["pyo3/extension-module"]
 strip = true

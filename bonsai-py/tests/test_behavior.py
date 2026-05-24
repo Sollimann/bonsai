@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 import pytest
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 FACTORY_NAMES = (
     "Action", "Wait", "WaitForever",
@@ -184,8 +184,8 @@ class TestIdentityEquality:
 
 class TestBehaviorAttribution:
     def test_module(self) -> None:
-        """Behavior.__module__ is `bonsai_py` (required for pickle / introspection)."""
-        assert bt.Behavior.__module__ == "bonsai_py"
+        """Behavior.__module__ is `bonsai_bt` (required for pickle / introspection)."""
+        assert bt.Behavior.__module__ == "bonsai_bt"
 
 
 # ---------- Ports of Rust behavior_tests.rs (golden-truth equivalence) ----------

@@ -1,13 +1,13 @@
-"""bonsai-py - behavior trees in Python, powered by the Rust bonsai-bt crate."""
+"""bonsai-bt - behavior trees in Python, powered by the Rust bonsai-bt crate."""
 
 from importlib.metadata import PackageNotFoundError, version as _version
 
 try:
-    __version__ = _version("bonsai-py")
+    __version__ = _version("bonsai-bt")
 except PackageNotFoundError:  # editable install before metadata is in place
     __version__ = "0.0.0+unknown"
 
-from .bonsai_py import *  # noqa: F401,F403  (re-export the compiled module)
+from .bonsai_bt import *  # noqa: F401,F403  (re-export the compiled module)
 
 __all__ = [
     # types

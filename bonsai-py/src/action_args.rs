@@ -10,7 +10,7 @@ use crate::behavior::PyAction;
 /// The Rust `ActionArgs::event` field is intentionally not exposed —
 /// Python users only see `dt` and `action`.
 #[gen_stub_pyclass]
-#[pyclass(frozen, module = "bonsai_py", name = "ActionArgs")]
+#[pyclass(frozen, module = "bonsai_bt", name = "ActionArgs")]
 pub struct PyActionArgs {
     /// Remaining delta time in seconds.
     #[pyo3(get)]

@@ -6,7 +6,7 @@ import pickle
 
 import pytest
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 class TestStatusSemantics:
@@ -46,8 +46,8 @@ class TestStatusSemantics:
         assert repr(bt.Status.Running) == "Status.Running"
 
     def test_module_attribution(self) -> None:
-        """`module = "bonsai_py"` is set on the pyclass — required for pickle."""
-        assert bt.Status.__module__ == "bonsai_py"
+        """`module = "bonsai_bt"` is set on the pyclass — required for pickle."""
+        assert bt.Status.__module__ == "bonsai_bt"
 
 
 class TestStatusPickle:

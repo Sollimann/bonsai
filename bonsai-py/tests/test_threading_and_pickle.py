@@ -6,7 +6,7 @@ import threading
 
 import pytest
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 class TestBTUnsendable:

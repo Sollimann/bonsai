@@ -49,7 +49,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 MAX_WALL_SECONDS = 8.0  # Demo cap; the BT itself would loop forever.
 

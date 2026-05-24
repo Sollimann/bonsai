@@ -5,7 +5,7 @@ import math
 
 import pytest
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 class TestActionArgsConstruction:
@@ -78,5 +78,5 @@ class TestActionArgsRepr:
 
 class TestActionArgsModuleAttribution:
     def test_module(self) -> None:
-        """ActionArgs.__module__ is `bonsai_py` (required for pickle / introspection)."""
-        assert bt.ActionArgs.__module__ == "bonsai_py"
+        """ActionArgs.__module__ is `bonsai_bt` (required for pickle / introspection)."""
+        assert bt.ActionArgs.__module__ == "bonsai_bt"

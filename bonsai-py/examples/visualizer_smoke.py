@@ -28,7 +28,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from bonsai_py import *  # noqa: F401,F403
+from bonsai_bt import *  # noqa: F401,F403
 
 
 def build_tree() -> Behavior:

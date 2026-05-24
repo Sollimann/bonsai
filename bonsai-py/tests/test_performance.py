@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 @pytest.mark.perf

@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 import pytest
 
-import bonsai_py as bt
+import bonsai_bt as bt
 
 
 class TestBTConstruction:
@@ -30,8 +30,8 @@ class TestBTConstruction:
         assert b.blackboard() is s
 
     def test_module(self) -> None:
-        """BT.__module__ is `bonsai_py` (required for pickle / introspection)."""
-        assert bt.BT.__module__ == "bonsai_py"
+        """BT.__module__ is `bonsai_bt` (required for pickle / introspection)."""
+        assert bt.BT.__module__ == "bonsai_bt"
 
 
 class TestTick:

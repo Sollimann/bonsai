@@ -11,7 +11,7 @@ import pytest
 
 
 def test_mypy_strict_accepts_sample_script() -> None:
-    """mypy --strict accepts a sample script using bonsai_py's typed surface.
+    """mypy --strict accepts a sample script using bonsai_bt's typed surface.
 
     Catches stub regressions that pytest's runtime tests wouldn't notice —
     e.g. a removed annotation, a wrong type in __init__.pyi, or a missing
@@ -22,7 +22,7 @@ def test_mypy_strict_accepts_sample_script() -> None:
         pytest.skip("mypy not installed (pip install mypy to enable)")
 
     sample = (
-        "import bonsai_py as bt\n"
+        "import bonsai_bt as bt\n"
         "\n"
         "def cb(args: bt.ActionArgs, bb: object) -> tuple[bt.Status, float]:\n"
         '    if args.action == "inc":\n'

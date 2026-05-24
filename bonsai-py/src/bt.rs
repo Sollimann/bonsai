@@ -14,7 +14,7 @@ const POISONED_MSG: &str = "BT was invalidated by a failed with_telemetry call; 
 /// Construct from a tree and a blackboard, then drive with `.tick(dt, callback)`.
 /// The callback receives `(args, blackboard)` and must return `(Status, float)`.
 #[gen_stub_pyclass]
-#[pyclass(unsendable, module = "bonsai_py", name = "BT")]
+#[pyclass(unsendable, module = "bonsai_bt", name = "BT")]
 pub struct PyBT {
     inner: Option<BT<PyAction, Py<PyAny>>>,
 }
