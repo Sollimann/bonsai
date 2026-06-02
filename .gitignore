@@ -10,3 +10,16 @@ Cargo.lock
 **/*.rs.bk
 
 .idea/
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python build artifacts (maturin develop output, bytecode caches)
+__pycache__/
+*.pyc
+*.pyo
+*.so
+*.abi3.so
+*.pyd
+*.dylib

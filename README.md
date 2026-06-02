@@ -29,12 +29,19 @@
 * [Honorable Mentions](#similar-crates)
 
 ## Using Bonsai
+
+### Rust
+
 Bonsai is available on crates.io. The recommended way to use it is to add a line into your Cargo.toml such as:
 
 ```toml
 [dependencies]
 bonsai-bt = "*"
 ```
+
+### Python
+
+Python bindings are available — see [`bonsai-py/`](bonsai-py/) for installation, examples, and a side-by-side comparison of the same BT in Rust and Python. The package wraps the same Rust crate, so the BT semantics are identical; only the API surface differs.
 
 ## What is a Behavior Tree?
 

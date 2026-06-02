@@ -29,10 +29,10 @@ repos:
       - id: end-of-file-fixer
       - id: file-contents-sorter
       - id: fix-byte-order-marker
-      - id: fix-encoding-pragma
       - id: forbid-new-submodules
       - id: mixed-line-ending
       - id: name-tests-test
+        args: [--pytest-test-first]
       - id: requirements-txt-fixer
       - id: sort-simple-yaml
       - id: trailing-whitespace
@@ -50,3 +50,10 @@ repos:
           pass_filenames: false
           types: [file, rust]
           language: system
+      -   id: regen-stubs
+          name: regenerate bonsai_py type stub
+          description: Regenerate python/bonsai_py/__init__.pyi from #[gen_stub_*] annotations. If the regenerated stub differs from the committed version, the hook fails so the developer can stage the update.
+          entry: bash bonsai-py/scripts/regen-stubs.sh
+          language: system
+          files: ^(bonsai-py/src/.*\.rs|bonsai-py/python/bonsai_py/__init__\.pyi)$
+          pass_filenames: false

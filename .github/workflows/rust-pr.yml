@@ -28,3 +28,29 @@ jobs:
       run: cargo build --examples
     - name: Run tests
       run: cargo test --verbose
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Create + activate venv (maturin develop requires one)
+        # $GITHUB_PATH prepends to PATH for every subsequent step;
+        # $GITHUB_ENV exports VIRTUAL_ENV (which maturin/pip detect)
+        # so we don't need to `source venv/bin/activate` in each step.
+        run: |
+          python -m venv $HOME/.venv
+          echo "$HOME/.venv/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$HOME/.venv" >> $GITHUB_ENV
+      - name: Install maturin and test deps
+        run: pip install "maturin>=1.7,<2.0" pytest pytest-timeout mypy
+      - name: Build and install bonsai-py
+        working-directory: bonsai-py
+        run: maturin develop --release
+      - name: Run pytest
+        run: pytest -v bonsai-py/tests/

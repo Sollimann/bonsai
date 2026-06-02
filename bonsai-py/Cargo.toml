@@ -1,0 +1,32 @@
+[package]
+name = "bonsai-py"
+version = "0.12.0"
+edition = "2021"
+rust-version = "1.80.0"
+description = "Python bindings for the bonsai-bt behavior tree library"
+license = "MIT"
+authors = ["Kristoffer Solberg Rakstad <solkristoffer@gmail.com>"]
+repository = "https://github.com/sollimann/bonsai.git"
+homepage = "https://github.com/sollimann/bonsai"
+publish = false
+
+[lib]
+# Internal Rust crate name — kept as `bonsai_py` to avoid colliding with the
+# workspace's `bonsai-bt` crate at `bonsai/`, which also produces `libbonsai_bt.rlib`.
+# The Python-facing module name is controlled separately by
+# `[tool.maturin] module-name = "bonsai_bt"` in pyproject.toml.
+name = "bonsai_py"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "stub_gen"
+path = "src/bin/stub_gen.rs"
+
+[dependencies]
+# Note: `extension-module` is enabled by maturin via pyproject.toml's
+# `[tool.maturin].features` setting. Keeping it out of the default feature
+# list lets `cargo run --bin stub_gen` link libpython for the regular binary
+# path; maturin still activates it for the wheel build.
+pyo3 = { version = "0.28", features = ["abi3-py310"] }
+bonsai-bt = { path = "../bonsai", version = "0.12", features = ["visualize"] }
+pyo3-stub-gen = "0.22.3"

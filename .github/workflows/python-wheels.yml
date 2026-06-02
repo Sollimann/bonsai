@@ -1,0 +1,180 @@
+name: Python wheels
+
+on:
+  push:
+    branches: [main]
+    tags: ["py-v*", "py-test-*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:  # manual ad-hoc builds from any branch
+
+concurrency:
+  # Tag pushes get their own group so publishes never get cancelled.
+  group: >-
+    ${{ github.workflow }}-${{ github.ref }}-${{ startsWith(github.ref, 'refs/tags/') && 'publish' || 'branch' }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build wheel (${{ matrix.target.label }})
+    runs-on: ${{ matrix.target.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          # `manylinux: "2_28"` makes maturin-action run the build inside the
+          # official PyPA manylinux_2_28 container (Rocky Linux 8 / glibc 2.28).
+          # Without this, the build runs on the host (Ubuntu glibc 2.39) and
+          # produces a wheel that fails the auditwheel manylinux_2_28 check.
+          - label: linux-x86_64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: "2_28"
+          - label: macos-universal2
+            runner: macos-latest
+            target: universal2-apple-darwin
+            manylinux: "auto"
+          - label: windows-x86_64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            manylinux: "auto"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"   # abi3 — any 3.10+ works for building
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target.label == 'macos-universal2' && 'x86_64-apple-darwin,aarch64-apple-darwin' || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: bonsai-py
+          key: ${{ matrix.target.label }}
+
+      - name: Tag/version guard (tag pushes only)
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag#py-v}"
+          version="${version#py-test-}"
+          cargo_version=$(grep -m1 '^version' bonsai-py/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ "$version" != "$cargo_version" ]; then
+            echo "::error::Tag version '$version' does not match Cargo.toml version '$cargo_version'."
+            exit 1
+          fi
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          working-directory: bonsai-py
+          command: build
+          target: ${{ matrix.target.target }}
+          manylinux: ${{ matrix.target.manylinux }}
+          args: --release --out dist --strip
+
+      - name: Verify wheel (Linux/macOS only — Windows venv quirks)
+        if: matrix.target.runner != 'windows-latest'
+        shell: bash
+        run: |
+          python -m venv .venv-test
+          source .venv-test/bin/activate
+          pip install --upgrade pip
+          pip install pytest pytest-timeout mypy
+          pip install bonsai-py/dist/*.whl
+          python -c "import bonsai_bt; print(bonsai_bt.__version__)"
+          pytest bonsai-py/tests/
+
+      - name: Wheel size sanity (Linux/macOS only)
+        if: matrix.target.runner != 'windows-latest'
+        shell: bash
+        run: |
+          size=$(stat -c%s bonsai-py/dist/*.whl 2>/dev/null || stat -f%z bonsai-py/dist/*.whl)
+          ceiling=$((5 * 1024 * 1024))
+          if [ "$size" -gt "$ceiling" ]; then
+            echo "::error::Wheel size $size exceeds 5MB ceiling."
+            exit 1
+          fi
+          echo "Wheel size: $size bytes (under 5MB ceiling)."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.target.label }}
+          path: bonsai-py/dist/*.whl
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/') && 90 || 14 }}
+
+  sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - uses: PyO3/maturin-action@v1
+        with:
+          working-directory: bonsai-py
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: bonsai-py/dist/*.tar.gz
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/') && 90 || 14 }}
+
+  verify-sdist:
+    name: Verify sdist builds from source
+    needs: sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+      - name: Install + smoke-test from sdist
+        run: |
+          python -m venv .venv-sdist
+          source .venv-sdist/bin/activate
+          pip install --upgrade pip
+          pip install --no-binary :all: dist/*.tar.gz
+          python -c "import bonsai_bt; print(bonsai_bt.__version__)"
+
+  publish:
+    name: Publish to PyPI / TestPyPI
+    needs: [build, sdist, verify-sdist]
+    if: startsWith(github.ref, 'refs/tags/py-v') || startsWith(github.ref, 'refs/tags/py-test-')
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ startsWith(github.ref, 'refs/tags/py-test-') && 'testpypi' || 'pypi' }}
+    permissions:
+      id-token: write   # OIDC for Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheel-*
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - name: List artifacts to publish
+        run: ls -la dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: >-
+            ${{ startsWith(github.ref, 'refs/tags/py-test-') && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+          packages-dir: dist
+          skip-existing: true
