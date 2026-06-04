@@ -3,7 +3,7 @@ name: Python wheels
 on:
   push:
     branches: [main]
-    tags: ["py-v*", "py-test-*"]
+    tags: ["py-v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:  # manual ad-hoc builds from any branch
@@ -63,7 +63,6 @@ jobs:
         run: |
           tag="${GITHUB_REF#refs/tags/}"
           version="${tag#py-v}"
-          version="${version#py-test-}"
           cargo_version=$(grep -m1 '^version' bonsai-py/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
           if [ "$version" != "$cargo_version" ]; then
             echo "::error::Tag version '$version' does not match Cargo.toml version '$cargo_version'."
@@ -149,12 +148,12 @@ jobs:
           python -c "import bonsai_bt; print(bonsai_bt.__version__)"
 
   publish:
-    name: Publish to PyPI / TestPyPI
+    name: Publish to PyPI
     needs: [build, sdist, verify-sdist]
-    if: startsWith(github.ref, 'refs/tags/py-v') || startsWith(github.ref, 'refs/tags/py-test-')
+    if: startsWith(github.ref, 'refs/tags/py-v')
     runs-on: ubuntu-latest
     environment:
-      name: ${{ startsWith(github.ref, 'refs/tags/py-test-') && 'testpypi' || 'pypi' }}
+      name: pypi
     permissions:
       id-token: write   # OIDC for Trusted Publishing
     steps:
@@ -174,7 +173,5 @@ jobs:
 
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: >-
-            ${{ startsWith(github.ref, 'refs/tags/py-test-') && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
           packages-dir: dist
           skip-existing: true
