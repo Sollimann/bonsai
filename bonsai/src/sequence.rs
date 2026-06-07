@@ -184,11 +184,11 @@ where
     let mut remaining_dt = initial_dt;
     let mut remaining_e;
 
-    for idx in 0..seq.len() {
+    for child in seq {
         // In-place cursor reset. Drops the previous child State (may walk a
         // subtree) and constructs the new one through the existing Box —
         // the Box itself is NOT re-allocated.
-        **cursor = State::new(seq[idx].clone());
+        **cursor = State::new(child.clone());
 
         let ev = match upd {
             Some(_) => {
