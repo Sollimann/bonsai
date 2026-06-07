@@ -1,0 +1,55 @@
+name: Auto-tag Python release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bonsai-py/Cargo.toml'
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TAG_PAT }}
+          fetch-depth: 0  # need full history so `git rev-parse` can see existing tags
+
+      - name: Extract version from Cargo.toml
+        id: version
+        run: |
+          version=$(grep -m1 '^version' bonsai-py/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$version" ]; then
+            echo "::error::Could not parse version from bonsai-py/Cargo.toml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $version"
+
+      - name: Check if py-v tag already exists
+        id: check
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          if git rev-parse "py-v$v" >/dev/null 2>&1; then
+            echo "py-v$v already exists — no-op."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "py-v$v does not exist — will tag."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Push py-v-X.Y.Z (real PyPI release)
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          git tag "py-v$v"
+          git push origin "py-v$v"
