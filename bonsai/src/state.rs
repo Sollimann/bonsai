@@ -1,5 +1,5 @@
 use crate::event::UpdateEvent;
-use crate::sequence::{sequence, SequenceArgs};
+use crate::sequence::{reactive_sequence, sequence, ReactiveSequenceArgs, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::tracer::{first_child_id, next_sibling_id, NodeMeta, Tracer};
@@ -69,6 +69,29 @@ pub(crate) enum State<A> {
         current_index: usize,
         /// The state of the behavior currently being executed.
         current_state: Box<State<A>>,
+    },
+    /// Keeps track of a `ReactiveSequence` behavior.
+    ///
+    /// Unlike [`State::Sequence`], no `current_index` is stored — every tick
+    /// starts from index 0 and walks all children fresh. The `cursor` box is
+    /// reused across ticks; before ticking each child we overwrite `*cursor`
+    /// with `State::new(behaviors[i].clone())` so heap allocation is bounded
+    /// to a single `Box` for the composite's lifetime.
+    ReactiveSequence {
+        /// The behaviors that will be re-evaluated in order on every tick.
+        behaviors: Vec<Behavior<A>>,
+        /// Scratch slot for the child currently being ticked. Overwritten
+        /// in place before each child's tick; never re-allocated.
+        cursor: Box<State<A>>,
+    },
+    /// Same structure as [`State::ReactiveSequence`]; only the short-circuit
+    /// polarity differs (success short-circuits, all-fail returns `Failure`).
+    ReactiveSelect {
+        /// The behaviors that will be re-evaluated in order on every tick.
+        behaviors: Vec<Behavior<A>>,
+        /// Scratch slot for the child currently being ticked. Overwritten
+        /// in place before each child's tick; never re-allocated.
+        cursor: Box<State<A>>,
     },
     /// Keeps track of a `While` behavior.
     While {
@@ -158,6 +181,18 @@ impl<A: Clone> State<A> {
                     current_state: Box::new(state),
                 }
             }
+            Behavior::ReactiveSequence(behaviors) => State::ReactiveSequence {
+                behaviors,
+                // The cursor's initial contents are immaterial — they are
+                // overwritten on the first tick. Use a ZST placeholder so we
+                // don't clone (and box) a potentially deep child subtree just
+                // to throw it away.
+                cursor: Box::new(State::WaitForever),
+            },
+            Behavior::ReactiveSelect(behaviors) => State::ReactiveSelect {
+                behaviors,
+                cursor: Box::new(State::WaitForever),
+            },
             Behavior::While(condition, loop_body) => {
                 let state = State::new(loop_body[0].clone());
                 State::While {
@@ -357,6 +392,50 @@ impl<A: Clone> State<A> {
                     upd,
                     seq,
                     i,
+                    cursor,
+                    e,
+                    f,
+                    blackboard,
+                    parent_id: self_id,
+                    metas,
+                    tracer,
+                });
+                tracer.record(self_id, result.0);
+                result
+            }
+            (
+                _,
+                &mut ReactiveSequence {
+                    behaviors: ref seq,
+                    ref mut cursor,
+                },
+            ) => {
+                let result = reactive_sequence(ReactiveSequenceArgs {
+                    select: false,
+                    upd,
+                    seq,
+                    cursor,
+                    e,
+                    f,
+                    blackboard,
+                    parent_id: self_id,
+                    metas,
+                    tracer,
+                });
+                tracer.record(self_id, result.0);
+                result
+            }
+            (
+                _,
+                &mut ReactiveSelect {
+                    behaviors: ref seq,
+                    ref mut cursor,
+                },
+            ) => {
+                let result = reactive_sequence(ReactiveSequenceArgs {
+                    select: true,
+                    upd,
+                    seq,
                     cursor,
                     e,
                     f,

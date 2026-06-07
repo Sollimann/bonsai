@@ -21,6 +21,7 @@
 //! - If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
 //! - If `A` succeeds, return failure (and vice-versa): `Invert(A)`
 //! - Do `B` repeatedly while `A` runs: `While(A, [B])`
+//! - Run `B` while re-checking `A` on every tick (abort `B` if `A` flips): `ReactiveSequence([A, B])`
 //! - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 //! - Run `A` and `B` in parallell and wait for both to succeed: `WhenAll([A, B])`
 //! - Run `A` and `B` in parallell and wait for any to succeed: `WhenAny([A, B])`
@@ -119,8 +120,8 @@
 //! ```
 
 pub use behavior::Behavior::{
-    self, Action, After, AlwaysSucceed, If, Invert, Race, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
-    WhileAll,
+    self, Action, After, AlwaysSucceed, If, Invert, Race, ReactiveSelect, ReactiveSequence, Select, Sequence, Wait,
+    WaitForever, WhenAll, WhenAny, While, WhileAll,
 };
 
 pub use bt::BT;

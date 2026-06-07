@@ -114,3 +114,105 @@ where
     }
     RUNNING
 }
+
+pub struct ReactiveSequenceArgs<'a, A, E, F, B, T> {
+    pub select: bool,
+    pub upd: Option<Float>,
+    pub seq: &'a [Behavior<A>],
+    pub cursor: &'a mut Box<State<A>>,
+    pub e: &'a E,
+    pub blackboard: &'a mut B,
+    pub f: &'a mut F,
+    pub parent_id: usize,
+    pub metas: &'a [NodeMeta],
+    pub tracer: &'a mut T,
+}
+
+/// Shared driver for `ReactiveSequence` and `ReactiveSelect`.
+///
+/// Walks `seq` from index 0 every call (no resume across calls). Before
+/// ticking each child, `*cursor` is overwritten with `State::new(child.clone())`
+/// so the previous tick's running state is discarded.
+///
+/// `select` swaps short-circuit polarity:
+/// - `false` → ReactiveSequence: `Failure` short-circuits; all-`Success` → `Success`.
+/// - `true`  → ReactiveSelect:   `Success` short-circuits; all-`Failure` → `Failure`.
+///
+/// The cursor `Box` is provided by the caller and reused — this function
+/// never allocates a new `Box`. Per-child allocations come solely from
+/// `State::new(child.clone())` and are zero when the child is a leaf with a
+/// `Copy` action type.
+#[inline]
+pub fn reactive_sequence<A, E, F, B, T>(args: ReactiveSequenceArgs<A, E, F, B, T>) -> (Status, Float)
+where
+    A: Clone,
+    E: UpdateEvent,
+    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
+    T: Tracer,
+{
+    let ReactiveSequenceArgs {
+        select,
+        upd,
+        seq,
+        cursor,
+        e,
+        blackboard,
+        f,
+        parent_id,
+        metas,
+        tracer,
+    } = args;
+
+    let initial_dt = upd.unwrap_or(0.0);
+
+    // Empty children: vacuous outcome.
+    if seq.is_empty() {
+        return if select {
+            (Status::Failure, initial_dt)
+        } else {
+            (Status::Success, initial_dt)
+        };
+    }
+
+    let (terminal_status, short_circuit_status) = if select {
+        (Status::Failure, Status::Success)
+    } else {
+        (Status::Success, Status::Failure)
+    };
+
+    let mut child_id = first_child_id::<T>(parent_id);
+    let mut remaining_dt = initial_dt;
+    let mut remaining_e;
+
+    for idx in 0..seq.len() {
+        // In-place cursor reset. Drops the previous child State (may walk a
+        // subtree) and constructs the new one through the existing Box —
+        // the Box itself is NOT re-allocated.
+        **cursor = State::new(seq[idx].clone());
+
+        let ev = match upd {
+            Some(_) => {
+                remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                &remaining_e
+            }
+            None => e,
+        };
+
+        match cursor.tick(child_id, metas, ev, blackboard, f, tracer) {
+            (Running, _) => return RUNNING,
+            (s, dt) if s == short_circuit_status => return (s, dt),
+            (s, dt) if s == terminal_status => {
+                if upd.is_some() {
+                    remaining_dt = dt;
+                }
+            }
+            _ => unreachable!(),
+        }
+
+        if T::IS_RECORDING {
+            child_id = next_sibling_id::<T>(metas, child_id);
+        }
+    }
+
+    (terminal_status, remaining_dt)
+}

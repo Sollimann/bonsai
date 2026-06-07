@@ -44,6 +44,42 @@ pub enum Behavior<A> {
     /// The sequence succeeds if all the behavior succeeds.
     /// Can be thought of as a short-circuited logical AND gate.
     Sequence(Vec<Behavior<A>>),
+    /// Runs all behaviors in order, re-evaluating from the first child on every tick.
+    ///
+    /// Unlike [`Behavior::Sequence`], this variant does **not** resume from a
+    /// previously-running child. On every tick it walks the children from index 0,
+    /// resetting each child's execution state before ticking it. Earlier
+    /// "condition" children re-fire each tick and can abort a later running
+    /// child if their condition flips.
+    ///
+    /// - Returns `Failure` (short-circuit) on the first failing child.
+    /// - Returns `Running` (short-circuit) on the first running child; later
+    ///   siblings are not ticked this round but will be re-evaluated next tick.
+    /// - Returns `Success` only when every child returns `Success` in the same tick.
+    ///
+    /// # Allocation profile
+    ///
+    /// Each visit overwrites a single shared cursor `Box<State<A>>`; the `Box`
+    /// itself is allocated once when the composite is constructed and reused for
+    /// its lifetime. Per-visit cost depends on the child's shape:
+    ///
+    /// - Leaf `Action(A)` with `A: Copy`, `Wait`, `WaitForever`: zero heap
+    ///   allocations per visit.
+    /// - Decorator or composite child: O(subtree size) — both for the drop of
+    ///   the previous cursor contents and for the new `State::new`.
+    ///
+    /// For hard real-time use, prefer leaf children with `Copy` action types and
+    /// keep deeper subtrees under a regular [`Behavior::Sequence`].
+    ReactiveSequence(Vec<Behavior<A>>),
+    /// Like [`Behavior::Select`] but re-evaluates children from index 0 on every tick.
+    ///
+    /// See [`Behavior::ReactiveSequence`] for the reset-on-re-tick rationale and
+    /// the per-tick allocation profile.
+    ///
+    /// - Returns `Success` (short-circuit) on the first succeeding child.
+    /// - Returns `Running` (short-circuit) on the first running child.
+    /// - Returns `Failure` only when every child returns `Failure` in the same tick.
+    ReactiveSelect(Vec<Behavior<A>>),
     /// Loops while conditional behavior is running.
     ///
     /// Succeeds if the conditional behavior succeeds.
