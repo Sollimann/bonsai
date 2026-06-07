@@ -60,6 +60,8 @@ impl PyBehavior {
             Behavior::Select(v) => format!("Select({})", v.len()),
             Behavior::If(_, _, _) => "If(...)".to_string(),
             Behavior::Sequence(v) => format!("Sequence({})", v.len()),
+            Behavior::ReactiveSequence(v) => format!("ReactiveSequence({})", v.len()),
+            Behavior::ReactiveSelect(v) => format!("ReactiveSelect({})", v.len()),
             Behavior::While(_, body) => format!("While({})", body.len()),
             Behavior::WhileAll(_, body) => format!("WhileAll({})", body.len()),
             Behavior::WhenAll(v) => format!("WhenAll({})", v.len()),
@@ -130,6 +132,20 @@ pub fn sequence_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
 #[pyo3(name = "Select")]
 pub fn select_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
     PyBehavior::wrap(Behavior::Select(collect_children(children)))
+}
+
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "ReactiveSequence")]
+pub fn reactive_sequence_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
+    PyBehavior::wrap(Behavior::ReactiveSequence(collect_children(children)))
+}
+
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "ReactiveSelect")]
+pub fn reactive_select_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
+    PyBehavior::wrap(Behavior::ReactiveSelect(collect_children(children)))
 }
 
 #[gen_stub_pyfunction]

@@ -14,6 +14,8 @@ __all__ = [
     "If",
     "Invert",
     "Race",
+    "ReactiveSelect",
+    "ReactiveSequence",
     "Select",
     "Sequence",
     "Status",
@@ -106,6 +108,10 @@ def If(cond: Behavior, on_success: Behavior, on_failure: Behavior) -> Behavior: 
 def Invert(child: Behavior) -> Behavior: ...
 
 def Race(children: typing.Sequence[Behavior]) -> Behavior: ...
+
+def ReactiveSelect(children: typing.Sequence[Behavior]) -> Behavior: ...
+
+def ReactiveSequence(children: typing.Sequence[Behavior]) -> Behavior: ...
 
 def Select(children: typing.Sequence[Behavior]) -> Behavior: ...
 

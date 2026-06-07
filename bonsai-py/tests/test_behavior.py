@@ -1,4 +1,4 @@
-"""Behavior class + 14 factory functions + ports of Rust behavior_tests."""
+"""Behavior class + 16 factory functions + ports of Rust behavior_tests."""
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -10,7 +10,8 @@ import bonsai_bt as bt
 FACTORY_NAMES = (
     "Action", "Wait", "WaitForever",
     "Invert", "AlwaysSucceed",
-    "Sequence", "Select", "WhenAll", "WhenAny", "After", "Race",
+    "Sequence", "Select", "ReactiveSequence", "ReactiveSelect",
+    "WhenAll", "WhenAny", "After", "Race",
     "If", "While", "WhileAll",
 )
 
@@ -18,13 +19,13 @@ FACTORY_NAMES = (
 class TestFactoriesPresent:
     @pytest.mark.parametrize("name", FACTORY_NAMES)
     def test_factory_exported(self, name: str) -> None:
-        """Each of the 14 factory names is importable and callable."""
+        """Each of the 16 factory names is importable and callable."""
         assert hasattr(bt, name), f"missing factory {name}"
         assert callable(getattr(bt, name)), f"{name} not callable"
 
     def test_factory_count(self) -> None:
-        """Exactly 14 factory names tracked — guards against silent additions."""
-        assert len(FACTORY_NAMES) == 14
+        """Exactly 16 factory names tracked — guards against silent additions."""
+        assert len(FACTORY_NAMES) == 16
 
 
 def _trivial(label: str) -> bt.Behavior:
@@ -42,6 +43,8 @@ class TestFactoryConstruction:
             (lambda: bt.AlwaysSucceed(_trivial("c")), "AlwaysSucceed(...)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")]), "Sequence(2)"),
             (lambda: bt.Select([_trivial("a")]), "Select(1)"),
+            (lambda: bt.ReactiveSequence([_trivial("a"), _trivial("b")]), "ReactiveSequence(2)"),
+            (lambda: bt.ReactiveSelect([_trivial("a")]), "ReactiveSelect(1)"),
             (lambda: bt.WhenAll([_trivial("a")]), "WhenAll(1)"),
             (lambda: bt.WhenAny([_trivial("a"), _trivial("b")]), "WhenAny(2)"),
             (lambda: bt.After([_trivial("a")]), "After(1)"),
@@ -81,6 +84,8 @@ class TestValidationGuards:
         [
             lambda: bt.Sequence([]),
             lambda: bt.Select([]),
+            lambda: bt.ReactiveSequence([]),
+            lambda: bt.ReactiveSelect([]),
             lambda: bt.WhenAll([]),
             lambda: bt.WhenAny([]),
             lambda: bt.After([]),
