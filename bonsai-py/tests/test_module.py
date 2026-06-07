@@ -5,8 +5,8 @@ import bonsai_bt as bt
 
 
 def test_version_present() -> None:
-    """bt.__version__ pins the wheel version (0.12.0); bump per release."""
-    assert bt.__version__ == "0.12.0"
+    """bt.__version__ pins the wheel version (0.12.1); bump per release."""
+    assert bt.__version__ == "0.12.1"
 
 
 def test_docstring_present() -> None:
