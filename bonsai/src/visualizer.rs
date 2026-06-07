@@ -14,6 +14,8 @@ pub(crate) enum NodeType<A> {
     Select,
     If,
     Sequence,
+    ReactiveSequence,
+    ReactiveSelect,
     WhileAll,
     While,
     WhenAll,
@@ -81,6 +83,20 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
                     Self::dfs_recursive(graph, b, node_id)
                 }
             }
+            Behavior::ReactiveSequence(seq) => {
+                let node_id = graph.add_node(NodeType::ReactiveSequence);
+                graph.add_edge(parent_node, node_id, 1);
+                for b in seq {
+                    Self::dfs_recursive(graph, b, node_id)
+                }
+            }
+            Behavior::ReactiveSelect(sel) => {
+                let node_id = graph.add_node(NodeType::ReactiveSelect);
+                graph.add_edge(parent_node, node_id, 1);
+                for b in sel {
+                    Self::dfs_recursive(graph, b, node_id)
+                }
+            }
             Behavior::While(ev, seq) => {
                 let node_id = graph.add_node(NodeType::While);
                 graph.add_edge(parent_node, node_id, 1);
@@ -142,7 +158,8 @@ mod tests {
     use super::*;
     use crate::visualizer::tests::TestActions::{Dec, Inc};
     use crate::Behavior::{
-        Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
+        Action, After, AlwaysSucceed, If, Invert, ReactiveSelect, ReactiveSequence, Select, Sequence, Wait,
+        WaitForever, WhenAll, WhenAny, While,
     };
     use crate::Status::{self, Success};
     use crate::{ActionArgs, Event, UpdateArgs};
@@ -446,5 +463,42 @@ mod tests {
 
         assert_eq!(g.edge_count(), 9);
         assert_eq!(g.node_count(), 10);
+    }
+
+    #[test]
+    fn test_viz_reactive_sequence() {
+        let behavior = ReactiveSequence(vec![
+            Action(Dec),
+            Action(Inc),
+            ReactiveSequence(vec![Action(Inc), Action(Dec)]),
+        ]);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        let (_, g) = bt.get_graphviz_with_graph_instance();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        // Root + outer ReactiveSequence + 2 leaves + inner ReactiveSequence + 2 leaves = 7
+        assert_eq!(g.node_count(), 7);
+        assert_eq!(g.edge_count(), 6);
+    }
+
+    #[test]
+    fn test_viz_reactive_select() {
+        let behavior = ReactiveSelect(vec![
+            Action(Dec),
+            ReactiveSelect(vec![Action(Inc), Action(Dec)]),
+            Action(Inc),
+        ]);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        let (_, g) = bt.get_graphviz_with_graph_instance();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        assert_eq!(g.node_count(), 7);
+        assert_eq!(g.edge_count(), 6);
     }
 }

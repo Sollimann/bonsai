@@ -90,7 +90,8 @@ pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
             v.extend(body.iter());
             v
         }
-        Select(xs) | Sequence(xs) | WhenAll(xs) | WhenAny(xs) | After(xs) | Race(xs) => xs.iter().collect(),
+        Select(xs) | Sequence(xs) | ReactiveSequence(xs) | ReactiveSelect(xs) | WhenAll(xs) | WhenAny(xs)
+        | After(xs) | Race(xs) => xs.iter().collect(),
     }
 }
 
@@ -107,6 +108,8 @@ fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String
         AlwaysSucceed(_) => ("AlwaysSucceed", None),
         Select(_) => ("Selector", None),
         Sequence(_) => ("Sequence", None),
+        ReactiveSequence(_) => ("ReactiveSequence", None),
+        ReactiveSelect(_) => ("ReactiveSelect", None),
         If(..) => ("If", None),
         While(..) => ("While", None),
         WhileAll(..) => ("WhileAll", None),
@@ -149,7 +152,10 @@ pub const VISUALIZER_HTML: &str = include_str!("index.html");
 #[cfg(test)]
 mod tests {
     use super::children_of;
-    use crate::Behavior::{self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, While};
+    use crate::Behavior::{
+        self, Action, AlwaysSucceed, If, Invert, ReactiveSelect, ReactiveSequence, Select, Sequence, Wait, WaitForever,
+        While,
+    };
 
     #[derive(Clone, Debug)]
     enum Act {
@@ -209,10 +215,16 @@ mod tests {
         let items = vec![Action(Act::A), Action(Act::B), Action(Act::C)];
         let seq = Sequence(items.clone());
         let sel = Select(items.clone());
+        let r_seq = ReactiveSequence(items.clone());
+        let r_sel = ReactiveSelect(items.clone());
         let seq_kids = children_of(&seq);
         let sel_kids = children_of(&sel);
+        let r_seq_kids = children_of(&r_seq);
+        let r_sel_kids = children_of(&r_sel);
         assert_eq!(seq_kids.len(), 3);
         assert_eq!(sel_kids.len(), 3);
+        assert_eq!(r_seq_kids.len(), 3);
+        assert_eq!(r_sel_kids.len(), 3);
         for i in 0..3 {
             assert_eq!(
                 format!("{:?}", seq_kids[i]),
@@ -223,6 +235,16 @@ mod tests {
                 format!("{:?}", sel_kids[i]),
                 format!("{:?}", &items[i]),
                 "Select child {i}"
+            );
+            assert_eq!(
+                format!("{:?}", r_seq_kids[i]),
+                format!("{:?}", &items[i]),
+                "ReactiveSequence child {i}"
+            );
+            assert_eq!(
+                format!("{:?}", r_sel_kids[i]),
+                format!("{:?}", &items[i]),
+                "ReactiveSelect child {i}"
             );
         }
     }

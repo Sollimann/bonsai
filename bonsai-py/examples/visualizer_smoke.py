@@ -1,7 +1,7 @@
 """
 End-to-end demo for the WebSocket visualizer.
 
-Drives a deliberately rich 27-node tree (covering 12 of the 14 Behavior
+Drives a deliberately rich 30-node tree (covering 13 of the 16 Behavior
 factories), attaches the visualizer via `BT.with_telemetry(8910)`, and
 re-runs the tree every ~400 ms wall tick. Each leaf's status follows a
 5-step rotation with a per-action phase offset, so a varied mix of
@@ -11,13 +11,16 @@ connection survive, so the browser sees a continuous TickTrace stream
 with monotonic `tick_id`.
 
 Demonstrates `with_telemetry`, `reset_bt`, every major factory in one
-tree, and a deterministic-cycle callback contract.
+tree (including ReactiveSequence and ReactiveSelect), and a
+deterministic-cycle callback contract. The reactive composites render
+with a `6 3` dashed outline to distinguish them from regular
+Sequence / Select.
 
 Run:
     python bonsai-py/examples/visualizer_smoke.py
 
 Then open <http://127.0.0.1:8910/> in a browser.
-  1. Tree renders within ~1 s; status bar reads `connected` and `27 nodes`.
+  1. Tree renders within ~1 s; status bar reads `connected` and `30 nodes`.
   2. Every ~400 ms leaf colors shift across all subtrees.
   3. `Ctrl-C` and restart -> browser reconnects within <=1 s.
 
@@ -44,9 +47,12 @@ def build_tree() -> Behavior:
                 WhenAll([Action("aim"), Action("track")]),
             ]),
             Race([Action("dodge"), Wait(2.0)]),
-            Invert(Action("enemy_visible")),
+            ReactiveSelect([Action("enemy_visible"), Action("noise_heard")]),
         ]),
-        While(Action("has_ammo"), [Action("fire"), Wait(0.3)]),
+        ReactiveSequence([
+            Action("ammo_check"),
+            While(Action("has_ammo"), [Action("fire"), Wait(0.3)]),
+        ]),
         After([Action("cooldown"), Action("ready_signal")]),
         WhenAny([Action("victory_check"), Action("retreat_signal")]),
     ])
@@ -72,6 +78,8 @@ PHASE_OFFSET = {
     "track": 0,
     "dodge": 1,
     "enemy_visible": 2,
+    "noise_heard": 4,
+    "ammo_check": 0,
     "has_ammo": 3,
     "fire": 4,
     "cooldown": 0,
@@ -80,10 +88,10 @@ PHASE_OFFSET = {
     "retreat_signal": 3,
 }
 
-# Four leaves whose Failure would short-circuit the root Sequence before
+# Five leaves whose Failure would short-circuit the root Sequence before
 # downstream subtrees ever render. Substitute Running for Failure on these so
 # the chain reaches the bottom branches. They still show Success and Running.
-KEEP_ALIVE = {"regroup", "has_ammo", "cooldown", "ready_signal"}
+KEEP_ALIVE = {"regroup", "ammo_check", "has_ammo", "cooldown", "ready_signal"}
 
 
 def make_callback(tick_n_ref: list[int]):
