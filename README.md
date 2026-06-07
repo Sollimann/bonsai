@@ -10,6 +10,7 @@
 <!-- [![version](https://img.shields.io/badge/version-1.0.0-blue)](https://GitHub.com/Sollimann/CleanIt/releases/) -->
 [![Build Status](https://github.com/Sollimann/bonsai/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/Sollimann/bonsai/actions)
 [![Bonsai crate](https://img.shields.io/crates/v/bonsai-bt.svg)](https://crates.io/crates/bonsai-bt)
+[![PyPI](https://img.shields.io/pypi/v/bonsai-bt.svg?label=pypi%20%28bonsai-bt%29)](https://pypi.org/project/bonsai-bt/)
 [![minimum rustc 1.72](https://img.shields.io/badge/rustc-1.72+-blue.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
 [![Docs](https://docs.rs/bonsai-bt/badge.svg)](https://docs.rs/bonsai-bt)
 [![codecov](https://codecov.io/gh/Sollimann/bonsai/branch/main/graph/badge.svg?token=JX8JBPWORV)](https://codecov.io/gh/Sollimann/bonsai)
@@ -41,7 +42,13 @@ bonsai-bt = "*"
 
 ### Python
 
-Python bindings are available — see [`bonsai-py/`](bonsai-py/) for installation, examples, and a side-by-side comparison of the same BT in Rust and Python. The package wraps the same Rust crate, so the BT semantics are identical; only the API surface differs.
+Bonsai is available on PyPI as [**`bonsai-bt`**](https://pypi.org/project/bonsai-bt/):
+
+```bash
+pip install bonsai-bt
+```
+
+See [`bonsai-py/`](bonsai-py/) for examples.
 
 ## What is a Behavior Tree?
 
