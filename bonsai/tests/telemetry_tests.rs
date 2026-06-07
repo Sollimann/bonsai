@@ -1,4 +1,7 @@
-use bonsai_bt::Behavior::{self, Action, AlwaysSucceed, If, Invert, Sequence, Wait, WaitForever, While, WhileAll};
+use bonsai_bt::Behavior::{
+    self, Action, AlwaysSucceed, If, Invert, ReactiveSelect, ReactiveSequence, Sequence, Wait, WaitForever, While,
+    WhileAll,
+};
 
 #[derive(Clone, Debug)]
 enum Act {
@@ -120,4 +123,20 @@ fn node_metas_subtree_sizes_all_variants() {
         let got: Vec<usize> = metas.iter().map(|m| m.subtree_size).collect();
         assert_eq!(got, expected, "case {i}");
     }
+}
+
+/// `TreeDefinition::build` exposes the new reactive variants with the expected
+/// `node_type` strings (which flow to the visualizer's CSS hook and tooltip).
+#[test]
+fn reactive_variants_appear_in_tree_definition() {
+    use bonsai_bt::telemetry::TreeDefinition;
+    use Act::{A, B, C};
+
+    let tree: Behavior<Act> = ReactiveSequence(vec![Action(A), ReactiveSelect(vec![Action(B), Action(C)])]);
+    let def = TreeDefinition::build(&tree);
+    assert_eq!(def.root.node_type, "ReactiveSequence");
+    assert_eq!(def.root.children.len(), 2);
+    assert_eq!(def.root.children[0].node_type, "Action");
+    assert_eq!(def.root.children[1].node_type, "ReactiveSelect");
+    assert_eq!(def.root.children[1].children.len(), 2);
 }

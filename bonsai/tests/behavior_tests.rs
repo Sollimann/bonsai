@@ -1,7 +1,8 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Select, Sequence,
-    Status::Running, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
+    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, ReactiveSelect,
+    ReactiveSequence, Select, Sequence, Status::Running, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny,
+    While, WhileAll, BT,
 };
 
 /// Some test actions.
@@ -701,4 +702,151 @@ fn race_empty() {
     let (_, s, _) = tick(a, 0.1, &mut state);
     // No children means nothing can complete, stays Running
     assert_eq!(s, Running);
+}
+
+// ---------------------------------------------------------------------------
+// ReactiveSequence / ReactiveSelect
+// ---------------------------------------------------------------------------
+
+#[test]
+fn reactive_sequence_all_success() {
+    let a: i32 = 0;
+    let rs = ReactiveSequence(vec![Action(Inc), Action(Inc)]);
+    let mut bt = BT::new(rs, ());
+    let (a, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(a, 2);
+    assert_eq!(status, Success);
+    assert!(bt.is_finished());
+}
+
+#[test]
+fn reactive_sequence_failure_short_circuits() {
+    let a: i32 = 5;
+    let rs = ReactiveSequence(vec![Action(LessThan(3)), Action(Inc)]);
+    let mut bt = BT::new(rs, ());
+    let (a, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(status, Failure);
+    assert_eq!(a, 5, "later children must not be ticked on failure");
+}
+
+#[test]
+fn reactive_sequence_running_short_circuits_then_re_evaluates() {
+    // A previously-running child must NOT be resumed when an earlier
+    // condition fails on the next tick.
+    let mut a: i32 = 0;
+    let rs = ReactiveSequence(vec![Action(LessThan(3)), Action(LessThanRunningSuccess(3))]);
+    let mut bt = BT::new(rs, ());
+
+    let (acc, status, _) = tick(a, 0.0, &mut bt);
+    a = acc;
+    assert_eq!(status, Running);
+    assert_eq!(a, 0);
+
+    // Externally bump accumulator past the threshold.
+    a = 5;
+
+    let (acc, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(status, Failure, "reactive composite must abort once earlier cond fails");
+    assert_eq!(acc, 5, "the previously-running child must NOT be re-ticked");
+}
+
+#[test]
+fn reactive_sequence_resets_wait_state() {
+    // A Wait child is reset every tick, so it never completes if dt < wait time.
+    let a: i32 = 0;
+    let rs = ReactiveSequence(vec![Wait(1.0), Action(Inc)]);
+    let mut bt = BT::new(rs, ());
+    for _ in 0..5 {
+        let (_, status, _) = tick(a, 0.5, &mut bt);
+        assert_eq!(status, Running, "wait elapsed time is discarded on re-tick");
+    }
+}
+
+#[test]
+fn reactive_sequence_empty_is_success() {
+    let rs: bonsai_bt::Behavior<TestActions> = ReactiveSequence(vec![]);
+    let mut bt = BT::new(rs, ());
+    let (_, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+}
+
+#[test]
+fn reactive_select_short_circuits_on_success() {
+    let a: i32 = 5;
+    let rs = ReactiveSelect(vec![
+        Action(LessThan(3)),  // fails (5 >= 3)
+        Action(LessThan(10)), // succeeds (5 < 10)
+        Action(Inc),          // must NOT be ticked
+    ]);
+    let mut bt = BT::new(rs, ());
+    let (acc, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert_eq!(acc, 5, "short-circuited siblings must not be ticked");
+}
+
+#[test]
+fn reactive_select_all_fail_returns_failure() {
+    let a: i32 = 5;
+    let rs = ReactiveSelect(vec![Action(LessThan(0)), Action(LessThan(1))]);
+    let mut bt = BT::new(rs, ());
+    let (_, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(status, Failure);
+}
+
+#[test]
+fn reactive_select_empty_is_failure() {
+    let rs: bonsai_bt::Behavior<TestActions> = ReactiveSelect(vec![]);
+    let mut bt = BT::new(rs, ());
+    let (_, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Failure);
+}
+
+#[test]
+fn nested_reactive_sequence() {
+    let inner = ReactiveSequence(vec![Action(Inc)]);
+    let outer = ReactiveSequence(vec![Action(LessThan(2)), inner]);
+    let mut bt = BT::new(outer, ());
+    let (a, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert_eq!(a, 1);
+}
+
+#[test]
+fn reactive_inside_sequence_does_not_disturb_outer_progress() {
+    let outer = Sequence(vec![Action(Inc), ReactiveSequence(vec![Action(Inc)])]);
+    let mut bt = BT::new(outer, ());
+    let (a, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert_eq!(a, 2);
+}
+
+#[test]
+fn reactive_sequence_bt_finishes_and_can_reset() {
+    let rs = ReactiveSequence(vec![Action(Inc), Action(Inc)]);
+    let mut bt = BT::new(rs, ());
+    let (_, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert!(bt.is_finished());
+
+    bt.reset_bt();
+    let (a, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert_eq!(a, 2);
+}
+
+#[test]
+fn reactive_sequence_many_ticks_no_drift() {
+    // 1000 ticks of a small reactive composite. The test passes if no panic,
+    // no overflow, and the composite consistently reports Success.
+    // Doubles as a stability sentinel for the cursor-reuse invariant.
+    let rs = ReactiveSequence(vec![Action(Inc), Action(Inc)]);
+    let mut bt = BT::new(rs, ());
+    let mut a: i32 = 0;
+    for _ in 0..1000 {
+        let (acc, status, _) = tick(a, 0.0, &mut bt);
+        a = acc;
+        assert_eq!(status, Success);
+        bt.reset_bt();
+    }
+    assert_eq!(a, 2 * 1000);
 }

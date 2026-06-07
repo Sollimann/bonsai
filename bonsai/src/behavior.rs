@@ -180,7 +180,7 @@ mod tests {
         Float,
     };
 
-    #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+    #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
     pub(crate) enum EnemyAction {
         /// Circles forever around target pos.
         Circling,
@@ -272,5 +272,29 @@ mod tests {
         "#;
 
         let _bt_deserialized: Behavior<EnemyAction> = serde_json::from_str(bt_json).unwrap();
+    }
+
+    #[test]
+    fn serde_roundtrip_reactive_sequence() {
+        let rs: Behavior<EnemyAction> = Behavior::ReactiveSequence(vec![
+            Action(EnemyAction::Circling),
+            Action(EnemyAction::FlyTowardPlayer),
+        ]);
+        let json = serde_json::to_string(&rs).unwrap();
+        assert!(json.contains("ReactiveSequence"));
+        let back: Behavior<EnemyAction> = serde_json::from_str(&json).unwrap();
+        assert_eq!(rs, back);
+    }
+
+    #[test]
+    fn serde_roundtrip_reactive_select() {
+        let rs: Behavior<EnemyAction> = Behavior::ReactiveSelect(vec![
+            Action(EnemyAction::Circling),
+            Action(EnemyAction::FlyTowardPlayer),
+        ]);
+        let json = serde_json::to_string(&rs).unwrap();
+        assert!(json.contains("ReactiveSelect"));
+        let back: Behavior<EnemyAction> = serde_json::from_str(&json).unwrap();
+        assert_eq!(rs, back);
     }
 }

@@ -38,7 +38,7 @@
 //! state of the number accessed by the key `count`.
 //!
 //! ```rust
-//! use bonsai_bt::{Event, Success, UpdateArgs, BT};
+//! use bonsai_bt::{Event, Float, Success, UpdateArgs, BT};
 //! use std::collections::HashMap;
 //! // Some test actions.
 //! #[derive(Clone, Debug, Copy)]
@@ -50,7 +50,7 @@
 //! }
 //!
 //! // A test state machine that can increment and decrement.
-//! fn tick(mut acc: i32, dt: f64, bt: &mut BT<Actions, HashMap<String, i32>>) -> i32 {
+//! fn tick(mut acc: i32, dt: Float, bt: &mut BT<Actions, HashMap<String, i32>>) -> i32 {
 //! let e: Event = UpdateArgs { dt }.into();
 //!
 //!     let (_status, _dt) = bt.tick(&e, &mut |args, blackboard| match *args.action {
