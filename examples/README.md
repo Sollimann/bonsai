@@ -13,10 +13,10 @@ used in an application.
 
 ## Reactive composites (`ReactiveSequence` + `ReactiveSelect`)
 
-Two short console demos in one binary, showing how the reactive composites differ from their stateful counterparts:
+Two short console demos in one binary, showing the difference between the reactive composites and their stateful siblings:
 
-- **`ReactiveSequence`** — chase the enemy while it stays visible. When visibility flips off mid-chase, the running `Chase` aborts on the very next tick because the leading `EnemyVisible` condition is re-evaluated from scratch. A regular `Sequence` would resume the running child and keep chasing.
-- **`ReactiveSelect`** — priority preemption. Try `Attack` first; while the enemy is out of range, attack fails and the composite falls through to `Chase`. Once the enemy enters range, the next tick aborts the chase and switches to attack.
+- **`ReactiveSequence`** — chase while visible. When visibility flips off mid-chase, the running `Chase` aborts on the next tick because the leading `EnemyVisible` check is re-run from scratch. A regular `Sequence` would resume the running child and keep chasing.
+- **`ReactiveSelect`** — priority preemption. `Attack` is preferred over `Chase`. While the enemy is out of range, attack fails and chase runs. Once the enemy enters range, the next tick preempts the chase and runs attack.
 
 `cargo run --bin reactive_chase`
 
@@ -87,7 +87,7 @@ This simple example shows an example of using the Race behavior to time out a lo
 
 ## WebSocket visualizer (live tree inspector)
 
-A live web-based visualizer for a running behavior tree. The example builds a 30-node tree (including one `ReactiveSequence` and one `ReactiveSelect`, both rendered with a dashed circle outline), enabling the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.
+A live web-based visualizer for a running behavior tree. The example builds a 30-node tree (one `ReactiveSequence` and one `ReactiveSelect` included, both drawn with a dashed circle), enables the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.
 
 To see it in example, run the following command:
 

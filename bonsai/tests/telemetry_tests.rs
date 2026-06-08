@@ -125,8 +125,8 @@ fn node_metas_subtree_sizes_all_variants() {
     }
 }
 
-/// `TreeDefinition::build` exposes the new reactive variants with the expected
-/// `node_type` strings (which flow to the visualizer's CSS hook and tooltip).
+/// Reactive variants surface the expected `node_type` strings — those drive
+/// the visualizer's CSS class and tooltip.
 #[test]
 fn reactive_variants_appear_in_tree_definition() {
     use bonsai_bt::telemetry::TreeDefinition;

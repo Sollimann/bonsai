@@ -1,15 +1,13 @@
 //! Two reactive-composite demos in one binary.
 //!
-//! `ReactiveSequence`: chase the enemy while it is visible. When visibility
-//! flips off mid-chase, the composite aborts the running `Chase` action on
-//! the very next tick because the leading `EnemyVisible` condition is
-//! re-evaluated from scratch. A regular [`bonsai_bt::Sequence`] would resume
-//! the running child and keep chasing.
+//! `ReactiveSequence`: chase while visible. The moment visibility flips off,
+//! the running `Chase` aborts — because the leading `EnemyVisible` check is
+//! re-run from scratch each tick. A regular [`bonsai_bt::Sequence`] would
+//! resume the running child and keep chasing.
 //!
-//! `ReactiveSelect`: priority preemption. Tries `Attack` first; while the
-//! enemy is out of range, attack fails and the composite falls through to
-//! `Chase`. Once the enemy enters range, the next tick aborts the chase and
-//! runs `Attack` instead.
+//! `ReactiveSelect`: priority preemption. `Attack` is preferred; while out of
+//! range it fails and the composite falls through to `Chase`. Once the enemy
+//! enters range, the next tick preempts the chase and runs `Attack` instead.
 
 use bonsai_bt::{Action, ActionArgs, Event, ReactiveSelect, ReactiveSequence, Status, UpdateArgs, BT};
 

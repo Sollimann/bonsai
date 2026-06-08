@@ -1,15 +1,14 @@
 """
 ReactiveSequence and ReactiveSelect demos.
 
-ReactiveSequence: chase the enemy while visible, abort instantly when not.
-A regular `Sequence` resumes its running child between ticks, so once `Chase`
-starts running the leading `EnemyVisible` condition is no longer re-checked.
-A `ReactiveSequence` re-walks its children from index 0 every tick, so when
-visibility flips off on tick 3 the chase aborts on the very next tick.
+ReactiveSequence: chase while visible. A regular `Sequence` would keep
+chasing because it resumes the running child; the reactive variant re-walks
+from the first child every tick, so when visibility flips off on tick 3 the
+chase aborts immediately.
 
-ReactiveSelect: priority preemption. Tries `Attack` first; while the enemy is
-out of range, attack fails and `Chase` runs. Once the enemy enters range, the
-next tick aborts the chase and switches to attack.
+ReactiveSelect: priority preemption. `Attack` is tried first. While the
+enemy is out of range, attack fails and `Chase` runs instead. Once the enemy
+enters range, the next tick preempts the chase and runs attack.
 
 Run:
     python bonsai-py/examples/reactive_chase.py

@@ -44,41 +44,37 @@ pub enum Behavior<A> {
     /// The sequence succeeds if all the behavior succeeds.
     /// Can be thought of as a short-circuited logical AND gate.
     Sequence(Vec<Behavior<A>>),
-    /// Runs all behaviors in order, re-evaluating from the first child on every tick.
+    /// Like [`Behavior::Sequence`], but restarts from the first child every tick.
     ///
-    /// Unlike [`Behavior::Sequence`], this variant does **not** resume from a
-    /// previously-running child. On every tick it walks the children from index 0,
-    /// resetting each child's execution state before ticking it. Earlier
-    /// "condition" children re-fire each tick and can abort a later running
-    /// child if their condition flips.
+    /// A regular `Sequence` resumes whichever child was running last tick. This
+    /// variant throws that running state away each tick and walks from index 0,
+    /// so an earlier condition child can abort a later running child the moment
+    /// its condition flips.
     ///
-    /// - Returns `Failure` (short-circuit) on the first failing child.
-    /// - Returns `Running` (short-circuit) on the first running child; later
-    ///   siblings are not ticked this round but will be re-evaluated next tick.
-    /// - Returns `Success` only when every child returns `Success` in the same tick.
+    /// - First failing child → `Failure` (short-circuit).
+    /// - First running child → `Running` (short-circuit); later siblings wait
+    ///   for the next tick.
+    /// - All children succeed in one tick → `Success`.
     ///
-    /// # Allocation profile
+    /// # Allocations
     ///
-    /// Each visit overwrites a single shared cursor `Box<State<A>>`; the `Box`
-    /// itself is allocated once when the composite is constructed and reused for
-    /// its lifetime. Per-visit cost depends on the child's shape:
+    /// One cursor `Box` per composite, allocated once and reused for life.
+    /// Per-tick cost depends on the child:
     ///
-    /// - Leaf `Action(A)` with `A: Copy`, `Wait`, `WaitForever`: zero heap
-    ///   allocations per visit.
-    /// - Decorator or composite child: O(subtree size) — both for the drop of
-    ///   the previous cursor contents and for the new `State::new`.
+    /// - Leaf `Action` (with `Copy` data), `Wait`, `WaitForever`: zero heap.
+    /// - Decorator or nested composite: O(subtree size) per visit.
     ///
-    /// For hard real-time use, prefer leaf children with `Copy` action types and
-    /// keep deeper subtrees under a regular [`Behavior::Sequence`].
+    /// For hard real-time, keep direct children as leaves and put deeper
+    /// subtrees under a regular [`Behavior::Sequence`].
     ReactiveSequence(Vec<Behavior<A>>),
-    /// Like [`Behavior::Select`] but re-evaluates children from index 0 on every tick.
+    /// Like [`Behavior::Select`], but restarts from the first child every tick.
     ///
-    /// See [`Behavior::ReactiveSequence`] for the reset-on-re-tick rationale and
-    /// the per-tick allocation profile.
+    /// See [`Behavior::ReactiveSequence`] for the reset semantics and the
+    /// per-tick allocation profile.
     ///
-    /// - Returns `Success` (short-circuit) on the first succeeding child.
-    /// - Returns `Running` (short-circuit) on the first running child.
-    /// - Returns `Failure` only when every child returns `Failure` in the same tick.
+    /// - First succeeding child → `Success` (short-circuit).
+    /// - First running child → `Running` (short-circuit).
+    /// - All children fail in one tick → `Failure`.
     ReactiveSelect(Vec<Behavior<A>>),
     /// Loops while conditional behavior is running.
     ///

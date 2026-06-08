@@ -415,9 +415,8 @@ fn tick_id_monotonic_and_survives_reset() {
     assert_eq!(t2.tick_id, 2, "tick_id continues past reset");
 }
 
-/// `ReactiveSequence([A, B])` records the root + every visited child on every
-/// tick — no sparse-trace behavior, because a reactive composite re-walks
-/// from index 0 each call rather than resuming a single running child.
+/// Every tick re-walks all children, so the trace is never sparse — every
+/// visited child shows up each time, not just the one that was running.
 #[test]
 fn reactive_sequence_records_root_and_visited_children() {
     use Act::*;
@@ -439,8 +438,8 @@ fn reactive_sequence_records_root_and_visited_children() {
     assert_eq!(t1.states.get(&2), Some(&Running), "Action(B)");
     assert_eq!(t1.states.len(), 3);
 
-    // Tick 2: A and B are BOTH re-ticked (contrast with `Sequence`, which
-    // would only re-tick the running child B). Make B succeed this time.
+    // Tick 2: A is re-ticked from scratch (a regular Sequence would skip it
+    // and only resume B). Make B succeed this time.
     let (_r2, t2) = bt
         .tick_recording(&e, &mut |args: ActionArgs<Event, Act>, _| match *args.action {
             A | B => (Success, args.dt),
@@ -448,14 +447,17 @@ fn reactive_sequence_records_root_and_visited_children() {
         })
         .unwrap();
 
-    assert_eq!(t2.states.get(&0), Some(&Success), "root completes once all succeed");
-    assert_eq!(t2.states.get(&1), Some(&Success), "Action(A) re-ticked every tick");
-    assert_eq!(t2.states.get(&2), Some(&Success), "Action(B) re-ticked every tick");
-    assert_eq!(t2.states.len(), 3, "no sparse trace under reactive semantics");
+    assert_eq!(
+        t2.states.get(&0),
+        Some(&Success),
+        "root succeeds when all children succeed"
+    );
+    assert_eq!(t2.states.get(&1), Some(&Success), "A re-ticked");
+    assert_eq!(t2.states.get(&2), Some(&Success), "B re-ticked");
+    assert_eq!(t2.states.len(), 3, "trace stays dense — no sparse semantics");
 }
 
-/// `ReactiveSelect([A, B])` short-circuits on first Success, so later siblings
-/// are NOT in the trace.
+/// Short-circuits on first Success, so later siblings never enter the trace.
 #[test]
 fn reactive_select_short_circuit_omits_later_siblings() {
     use Act::*;
@@ -463,11 +465,11 @@ fn reactive_select_short_circuit_omits_later_siblings() {
     let mut bt = BT::new(tree, ());
     let e = dt_event(1.0);
 
-    // A succeeds → composite Success short-circuits, B is never visited.
+    // A succeeds → composite returns Success and skips B.
     let (_r, trace) = bt
         .tick_recording(&e, &mut |args: ActionArgs<Event, Act>, _| match *args.action {
             A => (Success, args.dt),
-            _ => panic!("B should not be ticked after A succeeds in ReactiveSelect"),
+            _ => panic!("B should not be ticked after A succeeds"),
         })
         .unwrap();
 

@@ -1,20 +1,16 @@
 """
 End-to-end demo for the WebSocket visualizer.
 
-Drives a deliberately rich 30-node tree (covering 13 of the 16 Behavior
-factories), attaches the visualizer via `BT.with_telemetry(8910)`, and
-re-runs the tree every ~400 ms wall tick. Each leaf's status follows a
-5-step rotation with a per-action phase offset, so a varied mix of
-green / yellow / red is visible at any moment. After each complete run,
-`reset_bt()` rewinds the cursor; `tick_count` and the telemetry
-connection survive, so the browser sees a continuous TickTrace stream
-with monotonic `tick_id`.
+Drives a 30-node tree (13 of the 16 Behavior factories) at ~400 ms/tick.
+`BT.with_telemetry(8910)` opens the WebSocket; `reset_bt()` rewinds the
+cursor each cycle while `tick_count` and the telemetry connection survive,
+so the browser sees a continuous TickTrace stream with a monotonic
+`tick_id`. Each leaf's status follows a 5-step rotation with a per-action
+phase offset, so a varied mix of green / yellow / red is visible at any
+moment.
 
-Demonstrates `with_telemetry`, `reset_bt`, every major factory in one
-tree (including ReactiveSequence and ReactiveSelect), and a
-deterministic-cycle callback contract. The reactive composites render
-with a `6 3` dashed outline to distinguish them from regular
-Sequence / Select.
+`ReactiveSequence` and `ReactiveSelect` are both in the tree, rendered with
+a `6 3` dashed circle so they stand out from regular `Sequence` / `Select`.
 
 Run:
     python bonsai-py/examples/visualizer_smoke.py

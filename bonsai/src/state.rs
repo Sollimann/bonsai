@@ -72,25 +72,21 @@ pub(crate) enum State<A> {
     },
     /// Keeps track of a `ReactiveSequence` behavior.
     ///
-    /// Unlike [`State::Sequence`], no `current_index` is stored — every tick
-    /// starts from index 0 and walks all children fresh. The `cursor` box is
-    /// reused across ticks; before ticking each child we overwrite `*cursor`
-    /// with `State::new(behaviors[i].clone())` so heap allocation is bounded
-    /// to a single `Box` for the composite's lifetime.
+    /// No `current_index` because every tick walks the children from 0. The
+    /// `cursor` box is allocated once and overwritten in place before each
+    /// child's tick, so the composite uses a single `Box` for its lifetime.
     ReactiveSequence {
-        /// The behaviors that will be re-evaluated in order on every tick.
+        /// Children, re-walked in order on every tick.
         behaviors: Vec<Behavior<A>>,
-        /// Scratch slot for the child currently being ticked. Overwritten
-        /// in place before each child's tick; never re-allocated.
+        /// Scratch slot for the child being ticked. Overwritten in place; never re-allocated.
         cursor: Box<State<A>>,
     },
-    /// Same structure as [`State::ReactiveSequence`]; only the short-circuit
-    /// polarity differs (success short-circuits, all-fail returns `Failure`).
+    /// Same shape as [`State::ReactiveSequence`]; success short-circuits and
+    /// all-fail returns `Failure`.
     ReactiveSelect {
-        /// The behaviors that will be re-evaluated in order on every tick.
+        /// Children, re-walked in order on every tick.
         behaviors: Vec<Behavior<A>>,
-        /// Scratch slot for the child currently being ticked. Overwritten
-        /// in place before each child's tick; never re-allocated.
+        /// Scratch slot for the child being ticked. Overwritten in place; never re-allocated.
         cursor: Box<State<A>>,
     },
     /// Keeps track of a `While` behavior.
@@ -183,10 +179,8 @@ impl<A: Clone> State<A> {
             }
             Behavior::ReactiveSequence(behaviors) => State::ReactiveSequence {
                 behaviors,
-                // The cursor's initial contents are immaterial — they are
-                // overwritten on the first tick. Use a ZST placeholder so we
-                // don't clone (and box) a potentially deep child subtree just
-                // to throw it away.
+                // ZST placeholder — overwritten on the first tick, so cloning
+                // a real child here would just be thrown away.
                 cursor: Box::new(State::WaitForever),
             },
             Behavior::ReactiveSelect(behaviors) => State::ReactiveSelect {

@@ -731,8 +731,8 @@ fn reactive_sequence_failure_short_circuits() {
 
 #[test]
 fn reactive_sequence_running_short_circuits_then_re_evaluates() {
-    // A previously-running child must NOT be resumed when an earlier
-    // condition fails on the next tick.
+    // If an earlier condition fails next tick, the previously-running child
+    // must NOT be resumed.
     let mut a: i32 = 0;
     let rs = ReactiveSequence(vec![Action(LessThan(3)), Action(LessThanRunningSuccess(3))]);
     let mut bt = BT::new(rs, ());
@@ -742,7 +742,7 @@ fn reactive_sequence_running_short_circuits_then_re_evaluates() {
     assert_eq!(status, Running);
     assert_eq!(a, 0);
 
-    // Externally bump accumulator past the threshold.
+    // Bump accumulator past the threshold so the leading condition now fails.
     a = 5;
 
     let (acc, status, _) = tick(a, 0.0, &mut bt);
@@ -752,7 +752,7 @@ fn reactive_sequence_running_short_circuits_then_re_evaluates() {
 
 #[test]
 fn reactive_sequence_resets_wait_state() {
-    // A Wait child is reset every tick, so it never completes if dt < wait time.
+    // Wait gets reset every tick, so it never completes if dt < wait time.
     let a: i32 = 0;
     let rs = ReactiveSequence(vec![Wait(1.0), Action(Inc)]);
     let mut bt = BT::new(rs, ());
@@ -773,11 +773,7 @@ fn reactive_sequence_empty_is_success() {
 #[test]
 fn reactive_select_short_circuits_on_success() {
     let a: i32 = 5;
-    let rs = ReactiveSelect(vec![
-        Action(LessThan(3)),  // fails (5 >= 3)
-        Action(LessThan(10)), // succeeds (5 < 10)
-        Action(Inc),          // must NOT be ticked
-    ]);
+    let rs = ReactiveSelect(vec![Action(LessThan(3)), Action(LessThan(10)), Action(Inc)]);
     let mut bt = BT::new(rs, ());
     let (acc, status, _) = tick(a, 0.0, &mut bt);
     assert_eq!(status, Success);
@@ -836,9 +832,8 @@ fn reactive_sequence_bt_finishes_and_can_reset() {
 
 #[test]
 fn reactive_sequence_many_ticks_no_drift() {
-    // 1000 ticks of a small reactive composite. The test passes if no panic,
-    // no overflow, and the composite consistently reports Success.
-    // Doubles as a stability sentinel for the cursor-reuse invariant.
+    // 1000 cycles — guards against panic, overflow, or drift in the cursor
+    // reuse path. The composite must report Success every single time.
     let rs = ReactiveSequence(vec![Action(Inc), Action(Inc)]);
     let mut bt = BT::new(rs, ());
     let mut a: i32 = 0;

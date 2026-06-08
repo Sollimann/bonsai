@@ -16,8 +16,8 @@
 //! 1. Tree renders within ~1 s; status bar reads `connected` and `30 nodes`.
 //! 2. All distinct node-type labels visible (note: `Select` shows as
 //!    `Selector` — see `classify` in `telemetry.rs` for the rename map).
-//!    `ReactiveSequence` and `ReactiveSelect` render with a `6 3` dashed
-//!    outline distinguishing them from regular `Sequence` / `Select`.
+//!    `ReactiveSequence` and `ReactiveSelect` use a `6 3` dashed circle so
+//!    they stand out from regular `Sequence` / `Select`.
 //! 3. `Wait` leaves display dynamic labels: `Wait(2.00s)` and `Wait(0.30s)`.
 //! 4. Every ~400 ms the leaf colors shift across **all** subtrees. Every leaf
 //!    cycles through Success (green), Running (yellow), and Failure (red) on
@@ -70,7 +70,7 @@
 //! `[cond, ok, ko]`, `While` is `[cond, body0, body1, …]`, decorators wrap one
 //! child, composites preserve order. Skipped variants: `WaitForever` (always
 //! Running, no visual signal), `WhileAll` (renders identically to `While`),
-//! and `Invert` (no longer in the tree after the reactive composite swap).
+//! and `Invert` (dropped when the reactive composites took its slot).
 
 use bonsai_bt::{
     Action, After, AlwaysSucceed, Behavior, Event, If, Race, ReactiveSelect, ReactiveSequence, Select, Sequence,

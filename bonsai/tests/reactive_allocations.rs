@@ -1,12 +1,11 @@
 //! Proves that ticking a `ReactiveSequence` with leaf `Copy` children does
-//! zero heap allocations after the first warmup tick.
+//! zero heap allocations after a warmup tick.
 //!
 //! # Why counting is per-thread
 //!
-//! `#[global_allocator]` is process-wide and Cargo runs tests in parallel,
-//! so a shared counter would also count allocations from every other test
-//! running at the same time. We use a thread-local flag that's only on
-//! inside this test, so other threads' allocations are ignored.
+//! `#[global_allocator]` is process-wide and Cargo runs tests in parallel.
+//! A shared counter would catch every other test's allocations too, so we
+//! gate the count behind a thread-local flag that's only set inside this test.
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -53,8 +52,8 @@ static A: CountingAllocator = CountingAllocator;
 #[test]
 fn reactive_sequence_steady_state_is_zero_alloc() {
     // Two leaf children with `Copy` actions (i32). The second always returns
-    // Running, so the composite stays Running every tick and we never have to
-    // call `reset_bt` — which itself allocates a fresh State tree.
+    // Running, so the composite never finishes and we never call `reset_bt` —
+    // which itself allocates a fresh State tree.
     //
     // Action codes: 0 = Success, 1 = Running.
     let tree = ReactiveSequence(vec![Action(0_i32), Action(1_i32)]);
@@ -67,11 +66,11 @@ fn reactive_sequence_steady_state_is_zero_alloc() {
         _ => unreachable!(),
     };
 
-    // Warmup tick — first run may allocate (e.g. telemetry setup). Skip it.
+    // Warmup tick — the first run may allocate (e.g. telemetry setup).
     let _ = bt.tick(&e, &mut step);
 
-    // Start measuring. Set the thread-local flag before the global one so
-    // any allocation between these two lines is counted.
+    // Start measuring. Flip the thread-local flag before the global one so
+    // any allocation between these two lines is still counted.
     THIS_THREAD_COUNT.with(|c| c.set(0));
     THIS_THREAD_MEASURING.with(|c| c.set(true));
     ANY_THREAD_MEASURING.store(true, Ordering::Relaxed);
@@ -80,7 +79,7 @@ fn reactive_sequence_steady_state_is_zero_alloc() {
         let _ = bt.tick(&e, &mut step);
     }
 
-    // Stop measuring — unwind in reverse order.
+    // Stop measuring — unwind in reverse order so nothing slips through.
     ANY_THREAD_MEASURING.store(false, Ordering::Relaxed);
     THIS_THREAD_MEASURING.with(|c| c.set(false));
 
