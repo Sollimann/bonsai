@@ -21,13 +21,20 @@ cd bonsai-py && maturin develop --release && cd ..
 
 After that, just `source .venv/bin/activate` + `python bonsai-py/examples/<name>.py` in any new shell.
 
-## Examples (7)
+## Examples (8)
 
 ### [simple_npc_ai.py](simple_npc_ai.py) — console NPC
 NPC runs and shoots until action points are exhausted, then rests and dies. Demonstrates `WhileAll`, blackboard mutation via `@dataclass`, structural-`match` callback.
 
 ```bash
 python bonsai-py/examples/simple_npc_ai.py
+```
+
+### [reactive_chase.py](reactive_chase.py) — `ReactiveSequence` + `ReactiveSelect`
+Two short demos in one script. `ReactiveSequence` chases the enemy while visible and aborts the running `Chase` the moment visibility flips off (a regular `Sequence` would resume and keep chasing). `ReactiveSelect` prefers `Attack` over `Chase`; while out of range it falls through to chase, and preempts the running chase as soon as the enemy enters range. Demonstrates the reactive composites' re-walk-from-zero semantics.
+
+```bash
+python bonsai-py/examples/reactive_chase.py
 ```
 
 ### [race_timeout.py](race_timeout.py) — `Race` between work and timeout
@@ -46,7 +53,7 @@ python bonsai-py/examples/graphviz_demo.py > tree.dot
 ```
 
 ### [visualizer_smoke.py](visualizer_smoke.py) — live web visualizer
-Drives a deliberately rich 27-node tree at ~400 ms/tick with a 5-step status rotation and per-leaf phase offset; the browser shows continuous color animation. Demonstrates `BT.with_telemetry(port)`, `reset_bt()`, and every major factory.
+Drives a deliberately rich 30-node tree at ~400 ms/tick with a 5-step status rotation and per-leaf phase offset; the browser shows continuous color animation. Includes one `ReactiveSequence` and one `ReactiveSelect`, both rendered with a dashed circle outline to distinguish them from their stateful siblings. Demonstrates `BT.with_telemetry(port)`, `reset_bt()`, and every major factory.
 
 ```bash
 python bonsai-py/examples/visualizer_smoke.py
