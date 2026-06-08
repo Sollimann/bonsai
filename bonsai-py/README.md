@@ -1,9 +1,30 @@
-# bonsai-bt - Python bindings
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Sollimann/bonsai/main/docs/resources/gifs/bonsai.gif" width="350" alt="Bonsai logo">
+</p>
+
+[![PyPI](https://img.shields.io/pypi/v/bonsai-bt.svg)](https://pypi.org/project/bonsai-bt/)
+[![Python](https://img.shields.io/pypi/pyversions/bonsai-bt.svg)](https://pypi.org/project/bonsai-bt/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Python bindings for the [bonsai-bt](https://github.com/sollimann/bonsai)
 behavior-tree library.
 
+## Install
+
+```bash
+pip install bonsai-bt
+```
+
+The package is published on PyPI as [**`bonsai-bt`**](https://pypi.org/project/bonsai-bt/) and imported as `bonsai_bt`:
+
+```python
+import bonsai_bt as bt
+```
+
 ## Installation (dev)
+
+For building from source — needed if you're contributing to the Rust core or developing against an unpublished version:
 
 ```bash
 python -m venv .venv
