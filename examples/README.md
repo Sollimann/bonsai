@@ -1,5 +1,11 @@
 # Examples
 
+The examples below are minimal, made-up scenarios to help you get going. For real-world usage of `bonsai-bt` in the wild, see:
+
+* [utahrobotics/utah-lunabotics-2026](https://github.com/utahrobotics/utah-lunabotics-2026) — orchestrates core autonomy on a lunar rover. The team placed 3rd out of 50 in the autonomy challenge at [NASA Lunabotics 2026](https://www.nasa.gov/learning-resources/lunabotics-challenge/).
+* [catornot/bp-ort](https://github.com/catornot/bp-ort) — NPC plugins for Titanfall 2 mod servers (Northstar). [Live demo](https://www.youtube.com/watch?v=uT3aAuB4ej4&t=60s).
+* [AnotherlandServer/anotherland](https://github.com/AnotherlandServer/anotherland) — NPC behaviors for the Anotherland MMORPG.
+
 `cargo build --package examples`
 
 ## Game NPC AI console application
