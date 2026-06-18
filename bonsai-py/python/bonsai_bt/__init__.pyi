@@ -14,8 +14,6 @@ __all__ = [
     "If",
     "Invert",
     "Race",
-    "ReactiveSelect",
-    "ReactiveSequence",
     "Select",
     "Sequence",
     "Status",
@@ -109,13 +107,21 @@ def Invert(child: Behavior) -> Behavior: ...
 
 def Race(children: typing.Sequence[Behavior]) -> Behavior: ...
 
-def ReactiveSelect(children: typing.Sequence[Behavior]) -> Behavior: ...
+def Select(children: typing.Sequence[Behavior], memory: builtins.bool = True) -> Behavior:
+    r"""
+    `Select(children, memory=True)`.
 
-def ReactiveSequence(children: typing.Sequence[Behavior]) -> Behavior: ...
+    `memory=True` (default) resumes the running child across ticks.
+    `memory=False` restarts from the first child every tick.
+    """
 
-def Select(children: typing.Sequence[Behavior]) -> Behavior: ...
+def Sequence(children: typing.Sequence[Behavior], memory: builtins.bool = True) -> Behavior:
+    r"""
+    `Sequence(children, memory=True)`.
 
-def Sequence(children: typing.Sequence[Behavior]) -> Behavior: ...
+    `memory=True` (default) resumes the running child across ticks.
+    `memory=False` restarts from the first child every tick.
+    """
 
 def Wait(seconds: builtins.float) -> Behavior: ...
 

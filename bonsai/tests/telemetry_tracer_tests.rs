@@ -3,9 +3,8 @@
 //! correct (id, Status) entries for every variant, including sparse semantics.
 
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, ReactiveSelect,
-    ReactiveSequence, Running, Select, Sequence, Status, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny,
-    While, WhileAll, BT,
+    Action, ActionArgs, After, AlwaysSucceed, Behavior, Event, Failure, Float, If, Invert, Race, Running, Status,
+    Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
 };
 use std::collections::HashMap;
 
@@ -24,11 +23,11 @@ fn dt_event(dt: Float) -> Event {
     UpdateArgs { dt }.into()
 }
 
-/// Test 2 — `Sequence([A, B])`, A=Success, B=Running on tick 1.
+/// Test 2 — `Behavior::sequence([A, B])`, A=Success, B=Running on tick 1.
 #[test]
 fn sequence_mixed_success_running() {
     use Act::*;
-    let tree = Sequence(vec![Action(A), Action(B)]);
+    let tree = Behavior::sequence(vec![Action(A), Action(B)]);
     let mut bt = BT::new(tree, ());
     let e = dt_event(1.0);
 
@@ -46,12 +45,12 @@ fn sequence_mixed_success_running() {
     assert_eq!(trace.states.len(), 3);
 }
 
-/// Test 3 — `Sequence([A, B, C])` advances past A,B on tick 1; tick 2 only
+/// Test 3 — `Behavior::sequence([A, B, C])` advances past A,B on tick 1; tick 2 only
 /// re-ticks C, giving a sparse trace.
 #[test]
 fn sequence_sparse_on_subsequent_tick() {
     use Act::*;
-    let tree = Sequence(vec![Action(A), Action(B), Action(C)]);
+    let tree = Behavior::sequence(vec![Action(A), Action(B), Action(C)]);
     let mut bt = BT::new(tree, 0u32);
     let e = dt_event(1.0);
 
@@ -210,7 +209,7 @@ fn when_all_partial_completion_sparse_on_next_tick() {
 fn all_variants_id_coverage_smoke() {
     // Tree (DFS preorder ids in comments):
     //  0 Sequence
-    //  1   Select(A_fail, B_succ)               // Select succeeds via B
+    //  1   Behavior::select(A_fail, B_succ)               // Select succeeds via B
     //  2     Action(A)  -> Failure              // 1st A call
     //  3     Action(B)  -> Success
     //  4   If(Cond->Success, AlwaysSucceed(Action(C)->Failure), OnF)
@@ -239,8 +238,8 @@ fn all_variants_id_coverage_smoke() {
     // 26   Wait(0.0)                             // succeeds
 
     use Act::*;
-    let tree = Sequence(vec![
-        Select(vec![Action(A), Action(B)]),
+    let tree = Behavior::sequence(vec![
+        Behavior::select(vec![Action(A), Action(B)]),
         If(
             Box::new(Action(Cond)),
             Box::new(AlwaysSucceed(Box::new(Action(C)))),
@@ -396,7 +395,7 @@ fn race_short_circuit_records_winner_and_root() {
 #[test]
 fn tick_id_monotonic_and_survives_reset() {
     use Act::*;
-    let tree = Sequence(vec![Action(A)]);
+    let tree = Behavior::sequence(vec![Action(A)]);
     let mut bt = BT::new(tree, ());
     let e = dt_event(1.0);
 
@@ -418,9 +417,9 @@ fn tick_id_monotonic_and_survives_reset() {
 /// Every tick re-walks all children, so the trace is never sparse — every
 /// visited child shows up each time, not just the one that was running.
 #[test]
-fn reactive_sequence_records_root_and_visited_children() {
+fn memoryless_sequence_records_root_and_visited_children() {
     use Act::*;
-    let tree = ReactiveSequence(vec![Action(A), Action(B)]);
+    let tree = Behavior::memoryless_sequence(vec![Action(A), Action(B)]);
     let mut bt = BT::new(tree, ());
     let e = dt_event(1.0);
 
@@ -433,7 +432,7 @@ fn reactive_sequence_records_root_and_visited_children() {
         })
         .unwrap();
 
-    assert_eq!(t1.states.get(&0), Some(&Running), "ReactiveSequence root");
+    assert_eq!(t1.states.get(&0), Some(&Running), "MemorylessSequence root");
     assert_eq!(t1.states.get(&1), Some(&Success), "Action(A)");
     assert_eq!(t1.states.get(&2), Some(&Running), "Action(B)");
     assert_eq!(t1.states.len(), 3);
@@ -459,9 +458,9 @@ fn reactive_sequence_records_root_and_visited_children() {
 
 /// Short-circuits on first Success, so later siblings never enter the trace.
 #[test]
-fn reactive_select_short_circuit_omits_later_siblings() {
+fn memoryless_select_short_circuit_omits_later_siblings() {
     use Act::*;
-    let tree = ReactiveSelect(vec![Action(A), Action(B)]);
+    let tree = Behavior::memoryless_selector(vec![Action(A), Action(B)]);
     let mut bt = BT::new(tree, ());
     let e = dt_event(1.0);
 
@@ -473,7 +472,7 @@ fn reactive_select_short_circuit_omits_later_siblings() {
         })
         .unwrap();
 
-    assert_eq!(trace.states.get(&0), Some(&Success), "ReactiveSelect root");
+    assert_eq!(trace.states.get(&0), Some(&Success), "MemorylessSelector root");
     assert_eq!(trace.states.get(&1), Some(&Success), "Action(A)");
     assert!(!trace.states.contains_key(&2), "Action(B) not visited");
     assert_eq!(trace.states.len(), 2);

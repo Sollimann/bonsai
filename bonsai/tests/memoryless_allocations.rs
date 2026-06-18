@@ -1,5 +1,5 @@
-//! Proves that ticking a `ReactiveSequence` with leaf `Copy` children does
-//! zero heap allocations after a warmup tick.
+//! Proves that ticking a memoryless `Sequence` (`memory = false`) with leaf
+//! `Copy` children does zero heap allocations after a warmup tick.
 //!
 //! # Why counting is per-thread
 //!
@@ -11,7 +11,7 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use bonsai_bt::{Action, ActionArgs, Event, ReactiveSequence, Status, UpdateArgs, BT};
+use bonsai_bt::{Action, ActionArgs, Behavior, Event, Status, UpdateArgs, BT};
 
 /// Fast process-wide check: when false, skip the per-thread lookup entirely.
 /// One relaxed atomic load per allocation.
@@ -50,13 +50,13 @@ unsafe impl GlobalAlloc for CountingAllocator {
 static A: CountingAllocator = CountingAllocator;
 
 #[test]
-fn reactive_sequence_steady_state_is_zero_alloc() {
+fn memoryless_sequence_steady_state_is_zero_alloc() {
     // Two leaf children with `Copy` actions (i32). The second always returns
     // Running, so the composite never finishes and we never call `reset_bt` —
     // which itself allocates a fresh State tree.
     //
     // Action codes: 0 = Success, 1 = Running.
-    let tree = ReactiveSequence(vec![Action(0_i32), Action(1_i32)]);
+    let tree = Behavior::memoryless_sequence(vec![Action(0_i32), Action(1_i32)]);
     let mut bt = BT::new(tree, ());
 
     let e: Event = UpdateArgs { dt: 0.0 }.into();
@@ -86,7 +86,7 @@ fn reactive_sequence_steady_state_is_zero_alloc() {
     let allocs = THIS_THREAD_COUNT.with(|c| c.get());
     assert_eq!(
         allocs, 0,
-        "reactive composite tick path must not allocate with leaf Copy children; \
+        "memoryless composite tick path must not allocate with leaf Copy children; \
          observed {allocs} allocations across 100 ticks"
     );
 }

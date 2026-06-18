@@ -21,7 +21,7 @@
 //! - If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
 //! - If `A` succeeds, return failure (and vice-versa): `Invert(A)`
 //! - Do `B` repeatedly while `A` runs: `While(A, [B])`
-//! - Run `B` while re-checking `A` on every tick (abort `B` if `A` flips): `ReactiveSequence([A, B])`
+//! - Run `B` while re-checking `A` on every tick (abort `B` if `A` flips): a memoryless `Sequence([A, B])` (`memory = false`)
 //! - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 //! - Run `A` and `B` in parallell and wait for both to succeed: `WhenAll([A, B])`
 //! - Run `A` and `B` in parallell and wait for any to succeed: `WhenAny([A, B])`
@@ -78,10 +78,10 @@
 //! fn main() {
 //!     use crate::Actions::{Inc, Dec};
 //!     use std::collections::HashMap;
-//!     use bonsai_bt::{Action, Sequence, Wait};
+//!     use bonsai_bt::{Action, Behavior, Wait};
 //!
 //!     // create the behavior
-//!     let behavior = Sequence(vec![
+//!     let behavior = Behavior::sequence(vec![
 //!         Wait(1.0),
 //!         Action(Inc),
 //!         Wait(1.0),
@@ -120,8 +120,8 @@
 //! ```
 
 pub use behavior::Behavior::{
-    self, Action, After, AlwaysSucceed, If, Invert, Race, ReactiveSelect, ReactiveSequence, Select, Sequence, Wait,
-    WaitForever, WhenAll, WhenAny, While, WhileAll,
+    self, Action, After, AlwaysSucceed, If, Invert, Race, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
+    WhileAll,
 };
 
 pub use bt::BT;

@@ -90,8 +90,8 @@ pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
             v.extend(body.iter());
             v
         }
-        Select(xs) | Sequence(xs) | ReactiveSequence(xs) | ReactiveSelect(xs) | WhenAll(xs) | WhenAny(xs)
-        | After(xs) | Race(xs) => xs.iter().collect(),
+        Select { children, .. } | Sequence { children, .. } => children.iter().collect(),
+        WhenAll(xs) | WhenAny(xs) | After(xs) | Race(xs) => xs.iter().collect(),
     }
 }
 
@@ -106,10 +106,10 @@ fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String
         WaitForever => ("WaitForever", None),
         Invert(_) => ("Inverter", None),
         AlwaysSucceed(_) => ("AlwaysSucceed", None),
-        Select(_) => ("Selector", None),
-        Sequence(_) => ("Sequence", None),
-        ReactiveSequence(_) => ("ReactiveSequence", None),
-        ReactiveSelect(_) => ("ReactiveSelect", None),
+        Select { memory: true, .. } => ("Selector", None),
+        Select { memory: false, .. } => ("MemorylessSelector", None),
+        Sequence { memory: true, .. } => ("Sequence", None),
+        Sequence { memory: false, .. } => ("MemorylessSequence", None),
         If(..) => ("If", None),
         While(..) => ("While", None),
         WhileAll(..) => ("WhileAll", None),
@@ -152,10 +152,7 @@ pub const VISUALIZER_HTML: &str = include_str!("index.html");
 #[cfg(test)]
 mod tests {
     use super::children_of;
-    use crate::Behavior::{
-        self, Action, AlwaysSucceed, If, Invert, ReactiveSelect, ReactiveSequence, Select, Sequence, Wait, WaitForever,
-        While,
-    };
+    use crate::Behavior::{self, Action, AlwaysSucceed, If, Invert, Wait, WaitForever, While};
 
     #[derive(Clone, Debug)]
     enum Act {
@@ -213,10 +210,10 @@ mod tests {
     #[test]
     fn children_of_composites_preserve_order() {
         let items = vec![Action(Act::A), Action(Act::B), Action(Act::C)];
-        let seq = Sequence(items.clone());
-        let sel = Select(items.clone());
-        let r_seq = ReactiveSequence(items.clone());
-        let r_sel = ReactiveSelect(items.clone());
+        let seq = Behavior::sequence(items.clone());
+        let sel = Behavior::select(items.clone());
+        let r_seq = Behavior::memoryless_sequence(items.clone());
+        let r_sel = Behavior::memoryless_selector(items.clone());
         let seq_kids = children_of(&seq);
         let sel_kids = children_of(&sel);
         let r_seq_kids = children_of(&r_seq);
@@ -239,12 +236,12 @@ mod tests {
             assert_eq!(
                 format!("{:?}", r_seq_kids[i]),
                 format!("{:?}", &items[i]),
-                "ReactiveSequence child {i}"
+                "MemorylessSequence child {i}"
             );
             assert_eq!(
                 format!("{:?}", r_sel_kids[i]),
                 format!("{:?}", &items[i]),
-                "ReactiveSelect child {i}"
+                "MemorylessSelector child {i}"
             );
         }
     }

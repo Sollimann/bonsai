@@ -48,7 +48,7 @@ use bonsai_bt::{Behavior, Event, Status, UpdateArgs, BT};
 enum Greet { Hello, Goodbye }
 
 fn main() {
-    let tree = Behavior::Sequence(vec![
+    let tree = Behavior::sequence(vec![
         Behavior::Action(Greet::Hello),
         Behavior::Wait(1.0),
         Behavior::Action(Greet::Goodbye),

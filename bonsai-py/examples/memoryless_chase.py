@@ -1,17 +1,17 @@
 """
-ReactiveSequence and ReactiveSelect demos.
+Memoryless Sequence / Select demos (``memory=False``).
 
-ReactiveSequence: chase while visible. A regular `Sequence` would keep
-chasing because it resumes the running child; the reactive variant re-walks
-from the first child every tick, so when visibility flips off on tick 3 the
-chase aborts immediately.
+Sequence(..., memory=False): chase while visible. A regular (memory) `Sequence`
+would keep chasing because it resumes the running child; the memoryless variant
+re-walks from the first child every tick, so when visibility flips off on tick 3
+the chase aborts immediately.
 
-ReactiveSelect: priority preemption. `Attack` is tried first. While the
-enemy is out of range, attack fails and `Chase` runs instead. Once the enemy
+Select(..., memory=False): priority preemption. `Attack` is tried first. While
+the enemy is out of range, attack fails and `Chase` runs instead. Once the enemy
 enters range, the next tick preempts the chase and runs attack.
 
 Run:
-    python bonsai-py/examples/reactive_chase.py
+    python bonsai-py/examples/memoryless_chase.py
 """
 from __future__ import annotations
 
@@ -58,11 +58,11 @@ def make_priority_callback(world: World):
 
 
 def run_chase_demo() -> None:
-    print("=== ReactiveSequence: chase the enemy while it stays visible ===")
+    print("=== Memoryless Sequence: chase the enemy while it stays visible ===")
     print("Setup: enemy starts visible. At tick 3 it vanishes from sight.\n")
 
     world = World(visible=True)
-    tree = bt.ReactiveSequence([bt.Action("visible"), bt.Action("chase")])
+    tree = bt.Sequence([bt.Action("visible"), bt.Action("chase")], memory=False)
     machine = bt.BT(tree, {})
     callback = make_chase_callback(world)
 
@@ -85,11 +85,11 @@ def run_chase_demo() -> None:
 
 
 def run_priority_demo() -> None:
-    print("\n=== ReactiveSelect: prefer attack when in range; otherwise chase ===")
+    print("\n=== Memoryless Select: prefer attack when in range; otherwise chase ===")
     print("Setup: enemy starts out of range. At tick 3 it closes to melee.\n")
 
     world = World()
-    tree = bt.ReactiveSelect([bt.Action("attack"), bt.Action("chase")])
+    tree = bt.Select([bt.Action("attack"), bt.Action("chase")], memory=False)
     machine = bt.BT(tree, {})
     callback = make_priority_callback(world)
 

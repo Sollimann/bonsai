@@ -15,7 +15,7 @@ __all__ = [
     # factories (leaves, decorators, composites, control flow)
     "Action", "Wait", "WaitForever",
     "Invert", "AlwaysSucceed",
-    "Sequence", "Select", "ReactiveSequence", "ReactiveSelect",
+    "Sequence", "Select",
     "WhenAll", "WhenAny", "After", "Race",
     "If", "While", "WhileAll",
     # constants

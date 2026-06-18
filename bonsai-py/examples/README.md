@@ -30,11 +30,11 @@ NPC runs and shoots until action points are exhausted, then rests and dies. Demo
 python bonsai-py/examples/simple_npc_ai.py
 ```
 
-### [reactive_chase.py](reactive_chase.py) — `ReactiveSequence` + `ReactiveSelect`
-Two short demos in one script. `ReactiveSequence` chases while visible and aborts the running `Chase` the moment visibility flips off (a regular `Sequence` would resume and keep chasing). `ReactiveSelect` prefers `Attack` over `Chase`; while out of range it falls through to chase, then preempts the chase as soon as the enemy enters range. Shows the reactive composites' re-walk-from-zero semantics.
+### [memoryless_chase.py](memoryless_chase.py) — memoryless `Sequence` / `Select` (`memory=False`)
+Two short demos in one script. A memoryless `Sequence([...], memory=False)` chases while visible and aborts the running `Chase` the moment visibility flips off (a regular `Sequence` would resume and keep chasing). A memoryless `Select([...], memory=False)` prefers `Attack` over `Chase`; while out of range it falls through to chase, then preempts the chase as soon as the enemy enters range. Shows the memoryless composites' re-walk-from-zero semantics.
 
 ```bash
-python bonsai-py/examples/reactive_chase.py
+python bonsai-py/examples/memoryless_chase.py
 ```
 
 ### [race_timeout.py](race_timeout.py) — `Race` between work and timeout
@@ -53,7 +53,7 @@ python bonsai-py/examples/graphviz_demo.py > tree.dot
 ```
 
 ### [visualizer_smoke.py](visualizer_smoke.py) — live web visualizer
-Drives a 30-node tree at ~400 ms/tick with a 5-step status rotation and per-leaf phase offset; the browser shows continuous color animation. Includes one `ReactiveSequence` and one `ReactiveSelect`, both drawn with a dashed circle. Demonstrates `BT.with_telemetry(port)`, `reset_bt()`, and every major factory.
+Drives a 30-node tree at ~400 ms/tick with a 5-step status rotation and per-leaf phase offset; the browser shows continuous color animation. Demonstrates `BT.with_telemetry(port)`, `reset_bt()`, and every major factory.
 
 ```bash
 python bonsai-py/examples/visualizer_smoke.py

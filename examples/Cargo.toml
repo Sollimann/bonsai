@@ -57,5 +57,5 @@ name = "visualizer_smoke"
 path = "src/visualizer_smoke/main.rs"
 
 [[bin]]
-name = "reactive_chase"
-path = "src/reactive_chase/main.rs"
+name = "memoryless_chase"
+path = "src/memoryless_chase/main.rs"

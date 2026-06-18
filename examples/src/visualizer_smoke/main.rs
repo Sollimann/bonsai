@@ -16,8 +16,9 @@
 //! 1. Tree renders within ~1 s; status bar reads `connected` and `30 nodes`.
 //! 2. All distinct node-type labels visible (note: `Select` shows as
 //!    `Selector` — see `classify` in `telemetry.rs` for the rename map).
-//!    `ReactiveSequence` and `ReactiveSelect` use a `6 3` dashed circle so
-//!    they stand out from regular `Sequence` / `Select`.
+//!    Memoryless composites (`memory = false`) show as `MemorylessSequence` /
+//!    `MemorylessSelector` with a `6 3` dashed circle so they stand out from
+//!    regular `Sequence` / `Select`.
 //! 3. `Wait` leaves display dynamic labels: `Wait(2.00s)` and `Wait(0.30s)`.
 //! 4. Every ~400 ms the leaf colors shift across **all** subtrees. Every leaf
 //!    cycles through Success (green), Running (yellow), and Failure (red) on
@@ -49,10 +50,10 @@
 //! │   ├── 12 Race
 //! │   │   ├── 13 Action("dodge")
 //! │   │   └── 14 Wait(2.0)              (timeout arm)
-//! │   └── 15 ReactiveSelect
+//! │   └── 15 MemorylessSelector
 //! │       ├── 16 Action("enemy_visible")
 //! │       └── 17 Action("noise_heard")
-//! ├── 18 ReactiveSequence
+//! ├── 18 MemorylessSequence
 //! │   ├── 19 Action("ammo_check")
 //! │   └── 20 While
 //! │       ├── 21 Action("has_ammo")     (cond)
@@ -70,30 +71,29 @@
 //! `[cond, ok, ko]`, `While` is `[cond, body0, body1, …]`, decorators wrap one
 //! child, composites preserve order. Skipped variants: `WaitForever` (always
 //! Running, no visual signal), `WhileAll` (renders identically to `While`),
-//! and `Invert` (dropped when the reactive composites took its slot).
+//! and `Invert` (dropped when the memoryless composites took its slot).
 
 use bonsai_bt::{
-    Action, After, AlwaysSucceed, Behavior, Event, If, Race, ReactiveSelect, ReactiveSequence, Select, Sequence,
-    Status, UpdateArgs, Wait, WhenAll, WhenAny, While, BT,
+    Action, After, AlwaysSucceed, Behavior, Event, If, Race, Status, UpdateArgs, Wait, WhenAll, WhenAny, While, BT,
 };
 use std::time::Duration;
 
 fn build_tree() -> Behavior<&'static str> {
-    Sequence(vec![
+    Behavior::sequence(vec![
         If(
             Box::new(Action("low_hp")),
             Box::new(AlwaysSucceed(Box::new(Action("flee")))),
             Box::new(Action("regroup")),
         ),
-        Select(vec![
-            Sequence(vec![
+        Behavior::select(vec![
+            Behavior::sequence(vec![
                 Action("acquire_target"),
                 WhenAll(vec![Action("aim"), Action("track")]),
             ]),
             Race(vec![Action("dodge"), Wait(2.0)]),
-            ReactiveSelect(vec![Action("enemy_visible"), Action("noise_heard")]),
+            Behavior::memoryless_selector(vec![Action("enemy_visible"), Action("noise_heard")]),
         ]),
-        ReactiveSequence(vec![
+        Behavior::memoryless_sequence(vec![
             Action("ammo_check"),
             While(Box::new(Action("has_ammo")), vec![Action("fire"), Wait(0.3)]),
         ]),
@@ -154,7 +154,7 @@ fn main() {
             // at id 27) ever get visited. Five leaves are chain-critical —
             // their Failure propagates straight up to the root:
             //   - regroup       → If's on_failure branch → If Failure
-            //   - ammo_check    → ReactiveSequence Failure (short-circuit)
+            //   - ammo_check    → MemorylessSequence Failure (short-circuit)
             //   - has_ammo      → While Failure
             //   - cooldown,
             //     ready_signal  → After Failure

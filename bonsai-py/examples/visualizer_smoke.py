@@ -9,8 +9,10 @@ so the browser sees a continuous TickTrace stream with a monotonic
 phase offset, so a varied mix of green / yellow / red is visible at any
 moment.
 
-`ReactiveSequence` and `ReactiveSelect` are both in the tree, rendered with
-a `6 3` dashed circle so they stand out from regular `Sequence` / `Select`.
+Memoryless composites (`Sequence(..., memory=False)` and
+`Select(..., memory=False)`) are both in the tree, rendered as
+`MemorylessSequence` / `MemorylessSelector` with a `6 3` dashed circle so they
+stand out from regular `Sequence` / `Select`.
 
 Run:
     python bonsai-py/examples/visualizer_smoke.py
@@ -43,12 +45,12 @@ def build_tree() -> Behavior:
                 WhenAll([Action("aim"), Action("track")]),
             ]),
             Race([Action("dodge"), Wait(2.0)]),
-            ReactiveSelect([Action("enemy_visible"), Action("noise_heard")]),
+            Select([Action("enemy_visible"), Action("noise_heard")], memory=False),
         ]),
-        ReactiveSequence([
+        Sequence([
             Action("ammo_check"),
             While(Action("has_ammo"), [Action("fire"), Wait(0.3)]),
-        ]),
+        ], memory=False),
         After([Action("cooldown"), Action("ready_signal")]),
         WhenAny([Action("victory_check"), Action("retreat_signal")]),
     ])

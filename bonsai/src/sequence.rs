@@ -115,7 +115,7 @@ where
     RUNNING
 }
 
-pub struct ReactiveSequenceArgs<'a, A, E, F, B, T> {
+pub struct MemorylessSequenceArgs<'a, A, E, F, B, T> {
     pub select: bool,
     pub upd: Option<Float>,
     pub seq: &'a [Behavior<A>],
@@ -128,27 +128,26 @@ pub struct ReactiveSequenceArgs<'a, A, E, F, B, T> {
     pub tracer: &'a mut T,
 }
 
-/// Shared driver for `ReactiveSequence` and `ReactiveSelect`.
+/// Shared driver for memoryless `Sequence` and `Select` (`memory = false`).
 ///
-/// Walks `seq` from index 0 on every call; previous-tick running state is
-/// discarded by overwriting `*cursor` before each child's tick.
+/// Walks `seq` from index 0 each call, overwriting `*cursor` before each child
+/// so the previous tick's running state is discarded.
 ///
 /// `select` flips the short-circuit polarity:
-/// - `false` → ReactiveSequence: `Failure` short-circuits; all-`Success` → `Success`.
-/// - `true`  → ReactiveSelect:   `Success` short-circuits; all-`Failure` → `Failure`.
+/// - `false` → Sequence: `Failure` short-circuits; all-`Success` → `Success`.
+/// - `true`  → Select:   `Success` short-circuits; all-`Failure` → `Failure`.
 ///
-/// The caller owns the cursor `Box` — this function reuses it and never
-/// allocates a new one. The only per-child allocation is `child.clone()`,
-/// which is free for `Copy` action types.
+/// Reuses the caller's cursor `Box`; the only per-child allocation is
+/// `child.clone()`, which is free for `Copy` action types.
 #[inline]
-pub fn reactive_sequence<A, E, F, B, T>(args: ReactiveSequenceArgs<A, E, F, B, T>) -> (Status, Float)
+pub fn memoryless_sequence<A, E, F, B, T>(args: MemorylessSequenceArgs<A, E, F, B, T>) -> (Status, Float)
 where
     A: Clone,
     E: UpdateEvent,
     F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
     T: Tracer,
 {
-    let ReactiveSequenceArgs {
+    let MemorylessSequenceArgs {
         select,
         upd,
         seq,
@@ -182,8 +181,7 @@ where
     let mut remaining_e;
 
     for child in seq {
-        // In-place reset: drops the previous child State and constructs
-        // the new one through the existing Box (the Box is not re-allocated).
+        // Reset in place: reuses the Box, no new allocation.
         **cursor = State::new(child.clone());
 
         let ev = match upd {

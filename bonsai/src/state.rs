@@ -1,5 +1,5 @@
 use crate::event::UpdateEvent;
-use crate::sequence::{reactive_sequence, sequence, ReactiveSequenceArgs, SequenceArgs};
+use crate::sequence::{memoryless_sequence, sequence, MemorylessSequenceArgs, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::tracer::{first_child_id, next_sibling_id, NodeMeta, Tracer};
@@ -70,23 +70,20 @@ pub(crate) enum State<A> {
         /// The state of the behavior currently being executed.
         current_state: Box<State<A>>,
     },
-    /// Keeps track of a `ReactiveSequence` behavior.
-    ///
-    /// No `current_index` because every tick walks the children from 0. The
-    /// `cursor` box is allocated once and overwritten in place before each
-    /// child's tick, so the composite uses a single `Box` for its lifetime.
-    ReactiveSequence {
-        /// Children, re-walked in order on every tick.
+    /// A memoryless `Sequence` (`memory = false`). Re-walks children from 0 each
+    /// tick, so there is no index. `cursor` is reused in place for each child.
+    MemorylessSequence {
+        /// Children, re-walked in order each tick.
         behaviors: Vec<Behavior<A>>,
-        /// Scratch slot for the child being ticked. Overwritten in place; never re-allocated.
+        /// Scratch slot for the child being ticked. Reused, never re-allocated.
         cursor: Box<State<A>>,
     },
-    /// Same shape as [`State::ReactiveSequence`]; success short-circuits and
-    /// all-fail returns `Failure`.
-    ReactiveSelect {
-        /// Children, re-walked in order on every tick.
+    /// A memoryless `Select` (`memory = false`). Same shape as
+    /// [`State::MemorylessSequence`]; success short-circuits, all-fail is `Failure`.
+    MemorylessSelector {
+        /// Children, re-walked in order each tick.
         behaviors: Vec<Behavior<A>>,
-        /// Scratch slot for the child being ticked. Overwritten in place; never re-allocated.
+        /// Scratch slot for the child being ticked. Reused, never re-allocated.
         cursor: Box<State<A>>,
     },
     /// Keeps track of a `While` behavior.
@@ -161,32 +158,37 @@ impl<A: Clone> State<A> {
                     current_state: Box::new(state),
                 }
             }
-            Behavior::Select(behaviors) => {
-                let state = State::new(behaviors[0].clone());
-                State::Select {
-                    behaviors,
-                    current_index: 0,
-                    current_state: Box::new(state),
+            Behavior::Select { children, memory } => {
+                if memory {
+                    let state = State::new(children[0].clone());
+                    State::Select {
+                        behaviors: children,
+                        current_index: 0,
+                        current_state: Box::new(state),
+                    }
+                } else {
+                    State::MemorylessSelector {
+                        behaviors: children,
+                        // Placeholder; overwritten on the first tick.
+                        cursor: Box::new(State::WaitForever),
+                    }
                 }
             }
-            Behavior::Sequence(behaviors) => {
-                let state = State::new(behaviors[0].clone());
-                State::Sequence {
-                    behaviors,
-                    current_index: 0,
-                    current_state: Box::new(state),
+            Behavior::Sequence { children, memory } => {
+                if memory {
+                    let state = State::new(children[0].clone());
+                    State::Sequence {
+                        behaviors: children,
+                        current_index: 0,
+                        current_state: Box::new(state),
+                    }
+                } else {
+                    State::MemorylessSequence {
+                        behaviors: children,
+                        cursor: Box::new(State::WaitForever),
+                    }
                 }
             }
-            Behavior::ReactiveSequence(behaviors) => State::ReactiveSequence {
-                behaviors,
-                // ZST placeholder — overwritten on the first tick, so cloning
-                // a real child here would just be thrown away.
-                cursor: Box::new(State::WaitForever),
-            },
-            Behavior::ReactiveSelect(behaviors) => State::ReactiveSelect {
-                behaviors,
-                cursor: Box::new(State::WaitForever),
-            },
             Behavior::While(condition, loop_body) => {
                 let state = State::new(loop_body[0].clone());
                 State::While {
@@ -399,12 +401,12 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut ReactiveSequence {
+                &mut MemorylessSequence {
                     behaviors: ref seq,
                     ref mut cursor,
                 },
             ) => {
-                let result = reactive_sequence(ReactiveSequenceArgs {
+                let result = memoryless_sequence(MemorylessSequenceArgs {
                     select: false,
                     upd,
                     seq,
@@ -421,12 +423,12 @@ impl<A: Clone> State<A> {
             }
             (
                 _,
-                &mut ReactiveSelect {
+                &mut MemorylessSelector {
                     behaviors: ref seq,
                     ref mut cursor,
                 },
             ) => {
-                let result = reactive_sequence(ReactiveSequenceArgs {
+                let result = memoryless_sequence(MemorylessSequenceArgs {
                     select: true,
                     upd,
                     seq,

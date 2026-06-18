@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bonsai_bt::{Action, Event, Float, Sequence, Success, UpdateArgs, Wait, BT};
+use bonsai_bt::{Action, Behavior, Event, Float, Success, UpdateArgs, Wait, BT};
 
 use crate::blackboard_tests::TestActions::{Dec, Inc};
 
@@ -42,7 +42,7 @@ fn tick(mut acc: i32, dt: Float, bt: &mut BT<TestActions, HashMap<String, i32>>)
 #[test]
 fn test_crate_bt() {
     let a: i32 = 0;
-    let seq = Sequence(vec![
+    let seq = Behavior::sequence(vec![
         Wait(1.0),
         Action(Inc),
         Wait(1.0),

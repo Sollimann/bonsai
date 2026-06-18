@@ -11,14 +11,14 @@ used in an application.
 
 `cargo run --bin simple_npc_ai`
 
-## Reactive composites (`ReactiveSequence` + `ReactiveSelect`)
+## Memoryless composites (`Sequence`/`Select` with `memory = false`)
 
-Two short console demos in one binary, showing the difference between the reactive composites and their stateful siblings:
+Two short console demos in one binary, showing the difference between memoryless composites and their stateful (memory) siblings:
 
-- **`ReactiveSequence`** — chase while visible. When visibility flips off mid-chase, the running `Chase` aborts on the next tick because the leading `EnemyVisible` check is re-run from scratch. A regular `Sequence` would resume the running child and keep chasing.
-- **`ReactiveSelect`** — priority preemption. `Attack` is preferred over `Chase`. While the enemy is out of range, attack fails and chase runs. Once the enemy enters range, the next tick preempts the chase and runs attack.
+- **memoryless `Sequence`** (`Behavior::memoryless_sequence`) — chase while visible. When visibility flips off mid-chase, the running `Chase` aborts on the next tick because the leading `EnemyVisible` check is re-run from scratch. A regular (memory) `Sequence` would resume the running child and keep chasing.
+- **memoryless `Select`** (`Behavior::memoryless_selector`) — priority preemption. `Attack` is preferred over `Chase`. While the enemy is out of range, attack fails and chase runs. Once the enemy enters range, the next tick preempts the chase and runs attack.
 
-`cargo run --bin reactive_chase`
+`cargo run --bin memoryless_chase`
 
 ## Boids flocking
 
@@ -87,7 +87,7 @@ This simple example shows an example of using the Race behavior to time out a lo
 
 ## WebSocket visualizer (live tree inspector)
 
-A live web-based visualizer for a running behavior tree. The example builds a 30-node tree (one `ReactiveSequence` and one `ReactiveSelect` included, both drawn with a dashed circle), enables the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.
+A live web-based visualizer for a running behavior tree. The example builds a 30-node tree (one memoryless `Sequence` and one memoryless `Select` included — `memory = false`, both drawn with a dashed circle), enables the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.
 
 To see it in example, run the following command:
 

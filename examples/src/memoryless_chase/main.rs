@@ -1,15 +1,16 @@
-//! Two reactive-composite demos in one binary.
+//! Two memoryless-composite demos in one binary.
 //!
-//! `ReactiveSequence`: chase while visible. The moment visibility flips off,
-//! the running `Chase` aborts — because the leading `EnemyVisible` check is
-//! re-run from scratch each tick. A regular [`bonsai_bt::Sequence`] would
-//! resume the running child and keep chasing.
+//! Memoryless `Sequence` (`memory = false`): chase while visible. The moment
+//! visibility flips off, the running `Chase` aborts — because the leading
+//! `EnemyVisible` check is re-run from scratch each tick. A regular (memory)
+//! [`bonsai_bt::Sequence`] would resume the running child and keep chasing.
 //!
-//! `ReactiveSelect`: priority preemption. `Attack` is preferred; while out of
-//! range it fails and the composite falls through to `Chase`. Once the enemy
-//! enters range, the next tick preempts the chase and runs `Attack` instead.
+//! Memoryless `Select` (`memory = false`): priority preemption. `Attack` is
+//! preferred; while out of range it fails and the composite falls through to
+//! `Chase`. Once the enemy enters range, the next tick preempts the chase and
+//! runs `Attack` instead.
 
-use bonsai_bt::{Action, ActionArgs, Event, ReactiveSelect, ReactiveSequence, Status, UpdateArgs, BT};
+use bonsai_bt::{Action, ActionArgs, Behavior, Event, Status, UpdateArgs, BT};
 
 #[derive(Clone, Copy, Debug)]
 enum Act {
@@ -27,10 +28,10 @@ struct World {
 }
 
 fn run_chase_demo() {
-    println!("=== ReactiveSequence: chase the enemy while it stays visible ===");
+    println!("=== Memoryless Sequence: chase the enemy while it stays visible ===");
     println!("Setup: enemy starts visible. At tick 3 it vanishes from sight.\n");
 
-    let tree = ReactiveSequence(vec![Action(Act::EnemyVisible), Action(Act::Chase)]);
+    let tree = Behavior::memoryless_sequence(vec![Action(Act::EnemyVisible), Action(Act::Chase)]);
     let mut bt = BT::new(
         tree,
         World {
@@ -83,10 +84,10 @@ fn run_chase_demo() {
 }
 
 fn run_priority_demo() {
-    println!("\n=== ReactiveSelect: prefer attack when in range; otherwise chase ===");
+    println!("\n=== Memoryless Select: prefer attack when in range; otherwise chase ===");
     println!("Setup: enemy starts out of range. At tick 3 it closes to melee.\n");
 
-    let tree = ReactiveSelect(vec![Action(Act::Attack), Action(Act::Chase)]);
+    let tree = Behavior::memoryless_selector(vec![Action(Act::Attack), Action(Act::Chase)]);
     let mut bt = BT::new(tree, World::default());
 
     for t in 0..6 {

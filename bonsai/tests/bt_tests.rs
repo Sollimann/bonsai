@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::bt_tests::TestActions::{Dec, Inc, LessThan};
-use bonsai_bt::{Action, Behavior::Select, Event, Failure, Float, Success, UpdateArgs, BT};
+use bonsai_bt::{Action, Behavior, Event, Failure, Float, Success, UpdateArgs, BT};
 
 /// Some test actions.
 #[derive(Clone, Debug)]
@@ -48,7 +48,7 @@ fn tick(mut acc: i32, dt: Float, bt: &mut BT<TestActions, HashMap<String, i32>>)
 #[test]
 fn test_select_succeed_on_second_last() {
     let a: i32 = 3;
-    let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
+    let sel = Behavior::select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
 
     let h: HashMap<String, i32> = HashMap::new();
     let mut bt = BT::new(sel, h);

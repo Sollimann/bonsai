@@ -1,5 +1,5 @@
 use bonsai_bt::{
-    Behavior::{Action, Sequence, Wait, WaitForever, WhenAny, While},
+    Behavior::{self, Action, Wait, WaitForever, WhenAny, While},
     BT,
 };
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ fn main() {
 
     // create ai behavior
     let circling = Action(AttackDrone::Circling);
-    let circle_until_player_within_distance = Sequence(vec![
+    let circle_until_player_within_distance = Behavior::sequence(vec![
         While(Box::new(Wait(5.0)), vec![circling.clone()]),
         While(
             Box::new(Action(AttackDrone::PlayerWithinDistance(50.0))),
@@ -37,7 +37,7 @@ fn main() {
     ]);
     let give_up_or_attack = WhenAny(vec![
         Action(AttackDrone::PlayerFarAwayFromTarget(100.0)),
-        Sequence(vec![
+        Behavior::sequence(vec![
             Action(AttackDrone::PlayerWithinDistance(10.0)),
             Action(AttackDrone::AttackPlayer(0.1)),
         ]),

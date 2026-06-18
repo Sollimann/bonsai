@@ -1,8 +1,7 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, ReactiveSelect,
-    ReactiveSequence, Select, Sequence, Status::Running, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny,
-    While, WhileAll, BT,
+    Action, ActionArgs, After, AlwaysSucceed, Behavior, Event, Failure, Float, If, Invert, Race, Status::Running,
+    Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
 };
 
 /// Some test actions.
@@ -86,7 +85,7 @@ fn tick_with_ref(acc: &mut i32, dt: Float, state: &mut BT<TestActions, ()>) {
 fn test_immediate_termination() {
     let mut a: i32 = 0;
 
-    let seq = Sequence(vec![Action(Inc), Action(Inc)]);
+    let seq = Behavior::sequence(vec![Action(Inc), Action(Inc)]);
     let mut state = BT::new(seq, ());
     tick_with_ref(&mut a, 0.0, &mut state);
     assert_eq!(a, 2);
@@ -106,7 +105,7 @@ fn while_wait_sequence_twice() {
     let mut a: i32 = 0;
     let w = While(
         Box::new(Wait(2.001)),
-        vec![Sequence(vec![Wait(0.5), Action(Inc), Wait(0.5), Action(Inc)])],
+        vec![Behavior::sequence(vec![Wait(0.5), Action(Inc), Wait(0.5), Action(Inc)])],
     );
     let mut state = BT::new(w, ());
     tick_with_ref(&mut a, 1.0, &mut state);
@@ -123,7 +122,7 @@ fn while_wait_sequence_twice() {
 #[test]
 fn wait_sec() {
     let a: i32 = 0;
-    let seq = Sequence(vec![Wait(1.0), Action(Inc)]);
+    let seq = Behavior::sequence(vec![Wait(1.0), Action(Inc)]);
     let mut state = BT::new(seq, ());
     let (a, _, _) = tick(a, 1.0, &mut state);
     assert_eq!(a, 1);
@@ -134,7 +133,7 @@ fn wait_sec() {
 #[test]
 fn wait_half_sec() {
     let a: i32 = 0;
-    let seq = Sequence(vec![Wait(1.0), Action(Inc)]);
+    let seq = Behavior::sequence(vec![Wait(1.0), Action(Inc)]);
     let mut state = BT::new(seq, ());
     let (a, _, _) = tick(a, 0.5, &mut state);
     assert_eq!(a, 0);
@@ -146,7 +145,7 @@ fn wait_half_sec() {
 #[test]
 fn sequence_of_one_event() {
     let a: i32 = 0;
-    let seq = Sequence(vec![Action(Inc)]);
+    let seq = Behavior::sequence(vec![Action(Inc)]);
     let mut state = BT::new(seq, ());
     let (a, _, _) = tick(a, 1.0, &mut state);
     assert_eq!(a, 1);
@@ -156,7 +155,7 @@ fn sequence_of_one_event() {
 #[test]
 fn wait_two_waits() {
     let a: i32 = 0;
-    let seq = Sequence(vec![Wait(0.5), Wait(0.5), Action(Inc)]);
+    let seq = Behavior::sequence(vec![Wait(0.5), Wait(0.5), Action(Inc)]);
     let mut state = BT::new(seq, ());
     let (a, _, _) = tick(a, 1.0, &mut state);
     assert_eq!(a, 1);
@@ -177,7 +176,7 @@ fn loop_ten_times() {
 #[test]
 fn when_all_wait() {
     let a: i32 = 0;
-    let all = Sequence(vec![
+    let all = Behavior::sequence(vec![
         // Wait in parallel.
         WhenAll(vec![Wait(0.5), Wait(1.0)]),
         Action(Inc),
@@ -194,7 +193,7 @@ fn while_wait_sequence() {
     let mut a: i32 = 0;
     let w = While(
         Box::new(Wait(9.999999)),
-        vec![Sequence(vec![Wait(0.5), Action(Inc), Wait(0.5), Action(Inc)])],
+        vec![Behavior::sequence(vec![Wait(0.5), Action(Inc), Wait(0.5), Action(Inc)])],
     );
     let mut state = BT::new(w, ());
     for _ in 0..100 {
@@ -207,7 +206,10 @@ fn while_wait_sequence() {
 #[test]
 fn while_wait_forever_sequence() {
     let mut a: i32 = 0;
-    let w = While(Box::new(WaitForever), vec![Sequence(vec![Action(Inc), Wait(1.0)])]);
+    let w = While(
+        Box::new(WaitForever),
+        vec![Behavior::sequence(vec![Action(Inc), Wait(1.0)])],
+    );
     let mut state = BT::new(w, ());
     (a, _, _) = tick(a, 1.001, &mut state);
     assert_eq!(a, 2);
@@ -244,8 +246,8 @@ fn test_if_less_than() {
 #[test]
 fn when_all_if() {
     let a: i32 = 0;
-    let inc = Sequence(vec![Action(Inc), Action(Inc)]);
-    let dec = Sequence(vec![Action(Dec), Action(Dec)]);
+    let inc = Behavior::sequence(vec![Action(Inc), Action(Inc)]);
+    let dec = Behavior::sequence(vec![Action(Dec), Action(Dec)]);
     let _if = If(Box::new(Action(LessThan(1))), Box::new(inc), Box::new(dec));
 
     // Run sequence over and over for 2 seconds
@@ -277,7 +279,7 @@ fn test_alter_wait_time() {
 #[test]
 fn test_select_succeed_on_first() {
     let a: i32 = 0;
-    let sel = Select(vec![Action(Inc), Action(Inc), Action(Inc)]);
+    let sel = Behavior::select(vec![Action(Inc), Action(Inc), Action(Inc)]);
     let mut state = BT::new(sel, ());
 
     let (a, _, _) = tick(a, 0.1, &mut state);
@@ -290,7 +292,7 @@ fn test_select_succeed_on_first() {
 #[test]
 fn test_select_needs_reset() {
     let a: i32 = 3;
-    let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
+    let sel = Behavior::select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
     let mut state = BT::new(sel, ());
 
     let (a, s, _) = tick(a, 0.1, &mut state);
@@ -313,7 +315,7 @@ fn test_select_needs_reset() {
 #[test]
 fn test_select_and_when_all() {
     let a: i32 = 3;
-    let sel = Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
+    let sel = Behavior::select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)]);
     let whenall = WhenAll(vec![Wait(0.35), sel]);
     let mut state = BT::new(whenall, ());
 
@@ -328,7 +330,11 @@ fn test_select_and_when_all() {
 #[test]
 fn test_select_and_invert() {
     let a: i32 = 3;
-    let sel = Invert(Box::new(Select(vec![Action(LessThan(1)), Action(Dec), Action(Inc)])));
+    let sel = Invert(Box::new(Behavior::select(vec![
+        Action(LessThan(1)),
+        Action(Dec),
+        Action(Inc),
+    ])));
     let mut state = BT::new(sel, ());
 
     // Running + Failure = Failure
@@ -352,7 +358,7 @@ fn test_select_and_invert() {
 #[test]
 fn test_always_succeed() {
     let a: i32 = 3;
-    let sel = Sequence(vec![
+    let sel = Behavior::sequence(vec![
         Wait(0.5),
         Action(LessThan(2)),
         Wait(0.5),
@@ -533,8 +539,8 @@ fn test_repeat_sequence3() {
 
 #[test]
 fn test_repeat_sequence_nested() {
-    let dec2 = Sequence(vec![Action(Dec), Action(Dec)]);
-    let inc1 = Sequence(vec![Action(Inc)]);
+    let dec2 = Behavior::sequence(vec![Action(Dec), Action(Dec)]);
+    let inc1 = Behavior::sequence(vec![Action(Inc)]);
 
     let nested = WhileAll(Box::new(Action(LessThanRunningSuccess(5))), vec![Action(Inc), inc1]);
 
@@ -705,13 +711,13 @@ fn race_empty() {
 }
 
 // ---------------------------------------------------------------------------
-// ReactiveSequence / ReactiveSelect
+// Memoryless Sequence / Select (memory = false)
 // ---------------------------------------------------------------------------
 
 #[test]
-fn reactive_sequence_all_success() {
+fn memoryless_sequence_all_success() {
     let a: i32 = 0;
-    let rs = ReactiveSequence(vec![Action(Inc), Action(Inc)]);
+    let rs = Behavior::memoryless_sequence(vec![Action(Inc), Action(Inc)]);
     let mut bt = BT::new(rs, ());
     let (a, status, _) = tick(a, 0.0, &mut bt);
     assert_eq!(a, 2);
@@ -720,9 +726,9 @@ fn reactive_sequence_all_success() {
 }
 
 #[test]
-fn reactive_sequence_failure_short_circuits() {
+fn memoryless_sequence_failure_short_circuits() {
     let a: i32 = 5;
-    let rs = ReactiveSequence(vec![Action(LessThan(3)), Action(Inc)]);
+    let rs = Behavior::memoryless_sequence(vec![Action(LessThan(3)), Action(Inc)]);
     let mut bt = BT::new(rs, ());
     let (a, status, _) = tick(a, 0.0, &mut bt);
     assert_eq!(status, Failure);
@@ -730,11 +736,11 @@ fn reactive_sequence_failure_short_circuits() {
 }
 
 #[test]
-fn reactive_sequence_running_short_circuits_then_re_evaluates() {
+fn memoryless_sequence_running_short_circuits_then_re_evaluates() {
     // If an earlier condition fails next tick, the previously-running child
     // must NOT be resumed.
     let mut a: i32 = 0;
-    let rs = ReactiveSequence(vec![Action(LessThan(3)), Action(LessThanRunningSuccess(3))]);
+    let rs = Behavior::memoryless_sequence(vec![Action(LessThan(3)), Action(LessThanRunningSuccess(3))]);
     let mut bt = BT::new(rs, ());
 
     let (acc, status, _) = tick(a, 0.0, &mut bt);
@@ -746,15 +752,18 @@ fn reactive_sequence_running_short_circuits_then_re_evaluates() {
     a = 5;
 
     let (acc, status, _) = tick(a, 0.0, &mut bt);
-    assert_eq!(status, Failure, "reactive composite must abort once earlier cond fails");
+    assert_eq!(
+        status, Failure,
+        "memoryless composite must abort once earlier cond fails"
+    );
     assert_eq!(acc, 5, "the previously-running child must NOT be re-ticked");
 }
 
 #[test]
-fn reactive_sequence_resets_wait_state() {
+fn memoryless_sequence_resets_wait_state() {
     // Wait gets reset every tick, so it never completes if dt < wait time.
     let a: i32 = 0;
-    let rs = ReactiveSequence(vec![Wait(1.0), Action(Inc)]);
+    let rs = Behavior::memoryless_sequence(vec![Wait(1.0), Action(Inc)]);
     let mut bt = BT::new(rs, ());
     for _ in 0..5 {
         let (_, status, _) = tick(a, 0.5, &mut bt);
@@ -763,17 +772,17 @@ fn reactive_sequence_resets_wait_state() {
 }
 
 #[test]
-fn reactive_sequence_empty_is_success() {
-    let rs: bonsai_bt::Behavior<TestActions> = ReactiveSequence(vec![]);
+fn memoryless_sequence_empty_is_success() {
+    let rs: bonsai_bt::Behavior<TestActions> = Behavior::memoryless_sequence(vec![]);
     let mut bt = BT::new(rs, ());
     let (_, status, _) = tick(0, 0.0, &mut bt);
     assert_eq!(status, Success);
 }
 
 #[test]
-fn reactive_select_short_circuits_on_success() {
+fn memoryless_select_short_circuits_on_success() {
     let a: i32 = 5;
-    let rs = ReactiveSelect(vec![Action(LessThan(3)), Action(LessThan(10)), Action(Inc)]);
+    let rs = Behavior::memoryless_selector(vec![Action(LessThan(3)), Action(LessThan(10)), Action(Inc)]);
     let mut bt = BT::new(rs, ());
     let (acc, status, _) = tick(a, 0.0, &mut bt);
     assert_eq!(status, Success);
@@ -781,26 +790,26 @@ fn reactive_select_short_circuits_on_success() {
 }
 
 #[test]
-fn reactive_select_all_fail_returns_failure() {
+fn memoryless_select_all_fail_returns_failure() {
     let a: i32 = 5;
-    let rs = ReactiveSelect(vec![Action(LessThan(0)), Action(LessThan(1))]);
+    let rs = Behavior::memoryless_selector(vec![Action(LessThan(0)), Action(LessThan(1))]);
     let mut bt = BT::new(rs, ());
     let (_, status, _) = tick(a, 0.0, &mut bt);
     assert_eq!(status, Failure);
 }
 
 #[test]
-fn reactive_select_empty_is_failure() {
-    let rs: bonsai_bt::Behavior<TestActions> = ReactiveSelect(vec![]);
+fn memoryless_select_empty_is_failure() {
+    let rs: bonsai_bt::Behavior<TestActions> = Behavior::memoryless_selector(vec![]);
     let mut bt = BT::new(rs, ());
     let (_, status, _) = tick(0, 0.0, &mut bt);
     assert_eq!(status, Failure);
 }
 
 #[test]
-fn nested_reactive_sequence() {
-    let inner = ReactiveSequence(vec![Action(Inc)]);
-    let outer = ReactiveSequence(vec![Action(LessThan(2)), inner]);
+fn nested_memoryless_sequence() {
+    let inner = Behavior::memoryless_sequence(vec![Action(Inc)]);
+    let outer = Behavior::memoryless_sequence(vec![Action(LessThan(2)), inner]);
     let mut bt = BT::new(outer, ());
     let (a, status, _) = tick(0, 0.0, &mut bt);
     assert_eq!(status, Success);
@@ -808,8 +817,8 @@ fn nested_reactive_sequence() {
 }
 
 #[test]
-fn reactive_inside_sequence_does_not_disturb_outer_progress() {
-    let outer = Sequence(vec![Action(Inc), ReactiveSequence(vec![Action(Inc)])]);
+fn memoryless_inside_sequence_does_not_disturb_outer_progress() {
+    let outer = Behavior::sequence(vec![Action(Inc), Behavior::memoryless_sequence(vec![Action(Inc)])]);
     let mut bt = BT::new(outer, ());
     let (a, status, _) = tick(0, 0.0, &mut bt);
     assert_eq!(status, Success);
@@ -817,8 +826,8 @@ fn reactive_inside_sequence_does_not_disturb_outer_progress() {
 }
 
 #[test]
-fn reactive_sequence_bt_finishes_and_can_reset() {
-    let rs = ReactiveSequence(vec![Action(Inc), Action(Inc)]);
+fn memoryless_sequence_bt_finishes_and_can_reset() {
+    let rs = Behavior::memoryless_sequence(vec![Action(Inc), Action(Inc)]);
     let mut bt = BT::new(rs, ());
     let (_, status, _) = tick(0, 0.0, &mut bt);
     assert_eq!(status, Success);
@@ -831,10 +840,10 @@ fn reactive_sequence_bt_finishes_and_can_reset() {
 }
 
 #[test]
-fn reactive_sequence_many_ticks_no_drift() {
+fn memoryless_sequence_many_ticks_no_drift() {
     // 1000 cycles — guards against panic, overflow, or drift in the cursor
     // reuse path. The composite must report Success every single time.
-    let rs = ReactiveSequence(vec![Action(Inc), Action(Inc)]);
+    let rs = Behavior::memoryless_sequence(vec![Action(Inc), Action(Inc)]);
     let mut bt = BT::new(rs, ());
     let mut a: i32 = 0;
     for _ in 0..1000 {

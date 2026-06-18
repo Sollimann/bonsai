@@ -185,7 +185,7 @@ async fn drone_tick(
 
 #[tokio::main]
 async fn main() {
-    use bonsai_bt::{Action, Select, Sequence, While};
+    use bonsai_bt::{Action, Behavior, While};
     use std::collections::HashMap;
     use std::thread::sleep;
     use std::time::Duration;
@@ -195,14 +195,14 @@ async fn main() {
     let land = Action(DroneAction::Land);
     let is_battery_level_ok = Action(DroneAction::CheckBattery);
 
-    let fly_if_healthy = Sequence(vec![
+    let fly_if_healthy = Behavior::sequence(vec![
         is_battery_level_ok,
         Action(DroneAction::FlyToPoint(10.0, 10.0, 10.0)),
     ]);
 
     // if battery is low, then land
     let fly_to_dock = Action(DroneAction::FlyToPoint(0.0, 0.0, 0.0));
-    let mission_with_fallback = Select(vec![fly_if_healthy, fly_to_dock]);
+    let mission_with_fallback = Behavior::select(vec![fly_if_healthy, fly_to_dock]);
 
     let behavior = While(
         Box::new(avoid_others),
