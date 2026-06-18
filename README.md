@@ -50,6 +50,10 @@ pip install bonsai-bt
 
 See [`bonsai-py/`](bonsai-py/) for examples.
 
+## Example of use
+
+See [Examples](examples/README.md) folder.
+
 ## What is a Behavior Tree?
 
 A _Behavior Tree_ (BT) is a data structure in which we can set the rules of how certain _behavior's_ can occur, and the order in which they would execute. BTs are a very efficient way of creating complex systems that are both modular and reactive. These properties are crucial in many applications, which has led to the spread of BT from computer game programming to many branches of AI and Robotics.
@@ -79,16 +83,3 @@ See the `Behavior` enum for more information.
 To make sure that the behavior tree is always responsive, it is important that the actions that are created executes instantly so that they do not block the tree traversal. If you have long-running tasks/functions that can take seconds or minutes to execute - either `async` or `sync` - then we can dispatch those jobs into background threads, and get status of the task through a channel.
 
 see *async drone* example in the `/examples` folder for more details.
-
-## Example of use
-
-See [Examples](examples/README.md) folder.
-
-## Similar Crates
-
-Bonsai is inspired by many other crates out there, here's a few worth mentioning:
-
-* [ai_behavior](https://github.com/PistonDevelopers/ai_behavior) (bonsai is a continuation of this crate)
-* [aspen](https://gitlab.com/neachdainn/aspen)
-* [behavior-tree](https://github.com/darthdeus/behavior-tree)
-* [stackbt](https://github.com/eaglgenes101/stackbt)
