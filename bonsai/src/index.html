@@ -34,11 +34,24 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   display: flex; gap: 24px; font-size: 12px;
 }
 #status-bar #conn-status { font-weight: 600; }
+#status-bar button {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+#status-bar button:hover { background: #2a2a2a; }
 
 #tree-svg {
   width: 100vw; height: 100vh; display: block;
   padding-top: 36px;
+  cursor: grab;
 }
+#tree-svg:active { cursor: grabbing; }
 
 .edge {
   fill: none; stroke: var(--edge); stroke-width: 1.5;
@@ -105,6 +118,7 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   <span id="conn-status">connecting…</span>
   <span id="tick-counter">tick: —</span>
   <span id="tree-meta"></span>
+  <button id="reset-view" type="button" title="Reset zoom and pan">Reset view</button>
 </div>
 <div id="legend">
   <div class="legend-title">legend</div>
@@ -124,6 +138,7 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   const connStatusEl   = document.getElementById('conn-status');
   const tickCounterEl  = document.getElementById('tick-counter');
   const treeMetaEl     = document.getElementById('tree-meta');
+  const resetViewBtn   = document.getElementById('reset-view');
 
   let receivedTreeDef  = false;
   let idToElement      = new Map();
@@ -131,12 +146,37 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   let prevTickStateIds = new Set();
   let reconnectDelayMs = RECONNECT_INITIAL_MS;
 
+  let contentGroup     = null; // wrapper <g> that zoom/pan transforms
+  let zoomBehavior     = null;
+
   const NODE_RADIUS = 8;
   const NODE_DX     = 30;
   const NODE_DY     = 220;
   const LABEL_MAX   = 30;
+  const ZOOM_MIN    = 0.1;
+  const ZOOM_MAX   = 8;
 
   const STATUS_CLASSES = ['status-running', 'status-success', 'status-failure'];
+
+  function initZoom() {
+    const svg = d3.select('#tree-svg');
+    zoomBehavior = d3.zoom()
+      .scaleExtent([ZOOM_MIN, ZOOM_MAX])
+      .on('zoom', (event) => {
+        if (contentGroup) contentGroup.attr('transform', event.transform);
+      });
+    svg.call(zoomBehavior).on('dblclick.zoom', null);
+  }
+
+  function resetView() {
+    if (!zoomBehavior) return;
+    d3.select('#tree-svg')
+      .transition().duration(250)
+      .call(zoomBehavior.transform, d3.zoomIdentity);
+  }
+
+  resetViewBtn.addEventListener('click', resetView);
+  initZoom();
 
   function connect() {
     connStatusEl.textContent = 'connecting…';
@@ -171,6 +211,7 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
       idToElement.clear();
       idToEdgeElement.clear(); // Reset edge map
       prevTickStateIds.clear();
+      contentGroup = null;
       d3.select('#tree-svg').selectAll('*').remove();
       tickCounterEl.textContent = 'tick: —';
       treeMetaEl.textContent = '';
@@ -199,7 +240,13 @@ body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     const svg = d3.select('#tree-svg')
       .attr('viewBox', [-pad, xMin - pad, yMax + 2 * pad, xMax - xMin + 2 * pad].join(' '));
 
-    const g = svg.append('g');
+    // Stable wrapper group that zoom/pan transforms. Recreated fresh per tree.
+    svg.selectAll('g.tree-content').remove();
+    contentGroup = svg.append('g').attr('class', 'tree-content');
+    if (zoomBehavior) {
+      svg.call(zoomBehavior.transform, d3.zoomIdentity);
+    }
+    const g = contentGroup;
 
     // Clear edge map before rendering
     idToEdgeElement.clear();
