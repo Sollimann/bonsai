@@ -11,7 +11,7 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use bonsai_bt::{Action, ActionArgs, Behavior, Event, Status, UpdateArgs, BT};
+use bonsai_bt::{Action, ActionArgs, Event, Sequence, Status, UpdateArgs, BT};
 
 /// Fast process-wide check: when false, skip the per-thread lookup entirely.
 /// One relaxed atomic load per allocation.
@@ -56,7 +56,7 @@ fn memoryless_sequence_steady_state_is_zero_alloc() {
     // which itself allocates a fresh State tree.
     //
     // Action codes: 0 = Success, 1 = Running.
-    let tree = Behavior::memoryless_sequence(vec![Action(0_i32), Action(1_i32)]);
+    let tree = Sequence(vec![Action(0_i32), Action(1_i32)]).memory(false);
     let mut bt = BT::new(tree, ());
 
     let e: Event = UpdateArgs { dt: 0.0 }.into();

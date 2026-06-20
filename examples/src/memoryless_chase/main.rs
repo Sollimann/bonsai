@@ -10,7 +10,7 @@
 //! `Chase`. Once the enemy enters range, the next tick preempts the chase and
 //! runs `Attack` instead.
 
-use bonsai_bt::{Action, ActionArgs, Behavior, Event, Status, UpdateArgs, BT};
+use bonsai_bt::{Action, ActionArgs, Event, Select, Sequence, Status, UpdateArgs, BT};
 
 #[derive(Clone, Copy, Debug)]
 enum Act {
@@ -31,7 +31,7 @@ fn run_chase_demo() {
     println!("=== Memoryless Sequence: chase the enemy while it stays visible ===");
     println!("Setup: enemy starts visible. At tick 3 it vanishes from sight.\n");
 
-    let tree = Behavior::memoryless_sequence(vec![Action(Act::EnemyVisible), Action(Act::Chase)]);
+    let tree = Sequence(vec![Action(Act::EnemyVisible), Action(Act::Chase)]).memory(false);
     let mut bt = BT::new(
         tree,
         World {
@@ -87,7 +87,7 @@ fn run_priority_demo() {
     println!("\n=== Memoryless Select: prefer attack when in range; otherwise chase ===");
     println!("Setup: enemy starts out of range. At tick 3 it closes to melee.\n");
 
-    let tree = Behavior::memoryless_selector(vec![Action(Act::Attack), Action(Act::Chase)]);
+    let tree = Select(vec![Action(Act::Attack), Action(Act::Chase)]).memory(false);
     let mut bt = BT::new(tree, World::default());
 
     for t in 0..6 {

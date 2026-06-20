@@ -158,37 +158,31 @@ impl<A: Clone> State<A> {
                     current_state: Box::new(state),
                 }
             }
-            Behavior::Select { children, memory } => {
-                if memory {
-                    let state = State::new(children[0].clone());
-                    State::Select {
-                        behaviors: children,
-                        current_index: 0,
-                        current_state: Box::new(state),
-                    }
-                } else {
-                    State::MemorylessSelector {
-                        behaviors: children,
-                        // Placeholder; overwritten on the first tick.
-                        cursor: Box::new(State::WaitForever),
-                    }
+            Behavior::Select(behaviors) => {
+                let state = State::new(behaviors[0].clone());
+                State::Select {
+                    behaviors,
+                    current_index: 0,
+                    current_state: Box::new(state),
                 }
             }
-            Behavior::Sequence { children, memory } => {
-                if memory {
-                    let state = State::new(children[0].clone());
-                    State::Sequence {
-                        behaviors: children,
-                        current_index: 0,
-                        current_state: Box::new(state),
-                    }
-                } else {
-                    State::MemorylessSequence {
-                        behaviors: children,
-                        cursor: Box::new(State::WaitForever),
-                    }
+            Behavior::MemorylessSelector(behaviors) => State::MemorylessSelector {
+                behaviors,
+                // Placeholder; overwritten on the first tick.
+                cursor: Box::new(State::WaitForever),
+            },
+            Behavior::Sequence(behaviors) => {
+                let state = State::new(behaviors[0].clone());
+                State::Sequence {
+                    behaviors,
+                    current_index: 0,
+                    current_state: Box::new(state),
                 }
             }
+            Behavior::MemorylessSequence(behaviors) => State::MemorylessSequence {
+                behaviors,
+                cursor: Box::new(State::WaitForever),
+            },
             Behavior::While(condition, loop_body) => {
                 let state = State::new(loop_body[0].clone());
                 State::While {

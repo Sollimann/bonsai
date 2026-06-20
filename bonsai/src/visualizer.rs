@@ -69,23 +69,29 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
                 let right = *failure;
                 Self::dfs_recursive(graph, right, node_id);
             }
-            Behavior::Select { children, memory } => {
-                let node_id = graph.add_node(if memory {
-                    NodeType::Select
-                } else {
-                    NodeType::MemorylessSelector
-                });
+            Behavior::Select(children) => {
+                let node_id = graph.add_node(NodeType::Select);
                 graph.add_edge(parent_node, node_id, 1);
                 for b in children {
                     Self::dfs_recursive(graph, b, node_id)
                 }
             }
-            Behavior::Sequence { children, memory } => {
-                let node_id = graph.add_node(if memory {
-                    NodeType::Sequence
-                } else {
-                    NodeType::MemorylessSequence
-                });
+            Behavior::MemorylessSelector(children) => {
+                let node_id = graph.add_node(NodeType::MemorylessSelector);
+                graph.add_edge(parent_node, node_id, 1);
+                for b in children {
+                    Self::dfs_recursive(graph, b, node_id)
+                }
+            }
+            Behavior::Sequence(children) => {
+                let node_id = graph.add_node(NodeType::Sequence);
+                graph.add_edge(parent_node, node_id, 1);
+                for b in children {
+                    Self::dfs_recursive(graph, b, node_id)
+                }
+            }
+            Behavior::MemorylessSequence(children) => {
+                let node_id = graph.add_node(NodeType::MemorylessSequence);
                 graph.add_edge(parent_node, node_id, 1);
                 for b in children {
                     Self::dfs_recursive(graph, b, node_id)
@@ -100,7 +106,7 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
                 Self::dfs_recursive(graph, left, node_id);
 
                 // right
-                let right = Behavior::sequence(seq);
+                let right = Behavior::Sequence(seq);
                 Self::dfs_recursive(graph, right, node_id)
             }
             Behavior::WhileAll(ev, seq) => {
@@ -112,7 +118,7 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
                 Self::dfs_recursive(graph, left, node_id);
 
                 // right
-                let right = Behavior::sequence(seq);
+                let right = Behavior::Sequence(seq);
                 Self::dfs_recursive(graph, right, node_id)
             }
             Behavior::WhenAll(all) => {
@@ -151,7 +157,9 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
 mod tests {
     use super::*;
     use crate::visualizer::tests::TestActions::{Dec, Inc};
-    use crate::Behavior::{self, Action, After, AlwaysSucceed, If, Invert, Wait, WaitForever, WhenAll, WhenAny, While};
+    use crate::Behavior::{
+        self, Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
+    };
     use crate::Status::{self, Success};
     use crate::{ActionArgs, Event, UpdateArgs};
     use petgraph::dot::{Config, Dot};
@@ -190,10 +198,10 @@ mod tests {
         use petgraph::dot::{Config, Dot};
         use petgraph::Graph;
 
-        let behavior = Behavior::sequence(vec![
+        let behavior = Sequence(vec![
             Action(Dec),
             Action(Dec),
-            Behavior::sequence(vec![Action(Inc), Behavior::sequence(vec![Action(Inc)])]),
+            Sequence(vec![Action(Inc), Sequence(vec![Action(Inc)])]),
         ]);
 
         let h: HashMap<String, i32> = HashMap::new();
@@ -208,13 +216,9 @@ mod tests {
 
     #[test]
     fn test_viz_select_and_action() {
-        let behavior = Behavior::select(vec![
+        let behavior = Select(vec![
             Action(Dec),
-            Behavior::select(vec![
-                Action(Inc),
-                Behavior::sequence(vec![Action(Inc), Action(Dec)]),
-                Action(Inc),
-            ]),
+            Select(vec![Action(Inc), Sequence(vec![Action(Inc), Action(Dec)]), Action(Inc)]),
             Action(Dec),
         ]);
 
@@ -230,11 +234,11 @@ mod tests {
 
     #[test]
     fn test_viz_sequence_action_wait() {
-        let behavior = Behavior::sequence(vec![
+        let behavior = Sequence(vec![
             Action(Dec),
             Wait(10.0),
             Action(Dec),
-            Behavior::select(vec![Wait(5.0), Behavior::sequence(vec![Action(Inc), Action(Dec)])]),
+            Select(vec![Wait(5.0), Sequence(vec![Action(Inc), Action(Dec)])]),
         ]);
 
         let h: HashMap<String, i32> = HashMap::new();
@@ -278,9 +282,9 @@ mod tests {
     #[test]
     fn test_viz_while_select_sequence_wait() {
         let behavior = While(
-            Box::new(Behavior::select(vec![
+            Box::new(Select(vec![
                 Wait(5.0),
-                Behavior::sequence(vec![Action(Inc), Action(Dec)]),
+                Sequence(vec![Action(Inc), Action(Dec)]),
                 Action(Inc),
             ])),
             vec![Wait(0.5), Action(Inc), Wait(0.5)],
@@ -298,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_invert() {
-        let behavior = Behavior::sequence(vec![Invert(Box::new(Action(Inc))), Action(Dec)]);
+        let behavior = Sequence(vec![Invert(Box::new(Action(Inc))), Action(Dec)]);
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
@@ -312,10 +316,10 @@ mod tests {
 
     #[test]
     fn test_sequence_invert_select() {
-        let behavior = Behavior::sequence(vec![
+        let behavior = Sequence(vec![
             Action(Dec),
             Action(Dec),
-            Invert(Box::new(Behavior::select(vec![Action(Inc), Action(Dec)]))),
+            Invert(Box::new(Select(vec![Action(Inc), Action(Dec)]))),
             Action(Dec),
         ]);
 
@@ -331,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_always_succeed() {
-        let behavior = Behavior::sequence(vec![AlwaysSucceed(Box::new(Action(Inc))), Action(Dec)]);
+        let behavior = Sequence(vec![AlwaysSucceed(Box::new(Action(Inc))), Action(Dec)]);
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
@@ -345,10 +349,10 @@ mod tests {
 
     #[test]
     fn test_sequence_always_succeed_select() {
-        let behavior = Behavior::sequence(vec![
+        let behavior = Sequence(vec![
             Action(Dec),
             Action(Dec),
-            AlwaysSucceed(Box::new(Behavior::select(vec![Action(Inc), Action(Dec)]))),
+            AlwaysSucceed(Box::new(Select(vec![Action(Inc), Action(Dec)]))),
             Action(Dec),
         ]);
 
@@ -365,16 +369,13 @@ mod tests {
     #[test]
     fn test_complex_while_select_sequence() {
         let _while = While(
-            Box::new(Behavior::select(vec![
-                Wait(5.0),
-                Behavior::sequence(vec![Action(Inc), Action(Dec)]),
-            ])),
+            Box::new(Select(vec![Wait(5.0), Sequence(vec![Action(Inc), Action(Dec)])])),
             vec![Wait(0.5), Action(Inc), Action(Inc)],
         );
 
-        let seq = Behavior::sequence(vec![Action(Inc), Action(Dec)]);
+        let seq = Sequence(vec![Action(Inc), Action(Dec)]);
 
-        let behavior = Behavior::select(vec![_while, Action(Inc), seq, Action(Dec)]);
+        let behavior = Select(vec![_while, Action(Inc), seq, Action(Dec)]);
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
@@ -388,17 +389,14 @@ mod tests {
     #[test]
     fn test_while_invert() {
         let _while = While(
-            Box::new(Behavior::select(vec![
-                Wait(5.0),
-                Behavior::sequence(vec![Action(Inc), Action(Dec)]),
-            ])),
+            Box::new(Select(vec![Wait(5.0), Sequence(vec![Action(Inc), Action(Dec)])])),
             vec![Wait(0.5), Action(Inc), Invert(Box::new(Wait(0.5)))],
         );
 
-        // let _select = Behavior::select(vec![Wait(5.0), Behavior::sequence(vec![Action(Inc), Action(Dec)])]);
-        let _select = Behavior::sequence(vec![Action(Inc), Action(Dec)]);
+        // let _select = Select(vec![Wait(5.0), Sequence(vec![Action(Inc), Action(Dec)])]);
+        let _select = Sequence(vec![Action(Inc), Action(Dec)]);
 
-        let behavior = Behavior::select(vec![Invert(Box::new(_while)), _select, Action(Inc), Action(Dec)]);
+        let behavior = Select(vec![Invert(Box::new(_while)), _select, Action(Inc), Action(Dec)]);
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
@@ -412,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_if() {
-        let condition = Behavior::sequence(vec![AlwaysSucceed(Box::new(Action(Inc))), Action(Dec)]);
+        let condition = Sequence(vec![AlwaysSucceed(Box::new(Action(Inc))), Action(Dec)]);
         let behavior = If(
             Box::new(condition),
             Box::new(Action(Inc)), // if true
@@ -468,11 +466,12 @@ mod tests {
 
     #[test]
     fn test_viz_memoryless_sequence() {
-        let behavior = Behavior::memoryless_sequence(vec![
+        let behavior = Sequence(vec![
             Action(Dec),
             Action(Inc),
-            Behavior::memoryless_sequence(vec![Action(Inc), Action(Dec)]),
-        ]);
+            Sequence(vec![Action(Inc), Action(Dec)]).memory(false),
+        ])
+        .memory(false);
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);
@@ -487,11 +486,12 @@ mod tests {
 
     #[test]
     fn test_viz_memoryless_select() {
-        let behavior = Behavior::memoryless_selector(vec![
+        let behavior = Select(vec![
             Action(Dec),
-            Behavior::memoryless_selector(vec![Action(Inc), Action(Dec)]),
+            Select(vec![Action(Inc), Action(Dec)]).memory(false),
             Action(Inc),
-        ]);
+        ])
+        .memory(false);
 
         let h: HashMap<String, i32> = HashMap::new();
         let mut bt = BT::new(behavior, h);

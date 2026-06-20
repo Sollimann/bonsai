@@ -1,5 +1,7 @@
 use bonsai_bt::Behavior::Wait;
-use bonsai_bt::{Behavior, Behavior::Action, Behavior::Race, Event, Float, Status, Timer, UpdateArgs, BT, RUNNING};
+use bonsai_bt::{
+    Behavior::Action, Behavior::Race, Behavior::Sequence, Event, Float, Status, Timer, UpdateArgs, BT, RUNNING,
+};
 use futures::FutureExt;
 use rand::Rng;
 use std::collections::HashMap;
@@ -90,9 +92,9 @@ async fn tick(
 async fn main() {
     const TIMEOUT_S: Float = 0.6;
 
-    let behavior = Behavior::sequence(vec![Race(vec![
+    let behavior = Sequence(vec![Race(vec![
         Action(MissionAction::DoWork),
-        Behavior::sequence(vec![Wait(TIMEOUT_S), Action(MissionAction::OnTimeout)]),
+        Sequence(vec![Wait(TIMEOUT_S), Action(MissionAction::OnTimeout)]),
     ])]);
 
     let mut bt = BT::new(behavior, HashMap::new());

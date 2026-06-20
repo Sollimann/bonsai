@@ -74,29 +74,31 @@
 //! and `Invert` (dropped when the memoryless composites took its slot).
 
 use bonsai_bt::{
-    Action, After, AlwaysSucceed, Behavior, Event, If, Race, Status, UpdateArgs, Wait, WhenAll, WhenAny, While, BT,
+    Action, After, AlwaysSucceed, Behavior, Event, If, Race, Select, Sequence, Status, UpdateArgs, Wait, WhenAll,
+    WhenAny, While, BT,
 };
 use std::time::Duration;
 
 fn build_tree() -> Behavior<&'static str> {
-    Behavior::sequence(vec![
+    Sequence(vec![
         If(
             Box::new(Action("low_hp")),
             Box::new(AlwaysSucceed(Box::new(Action("flee")))),
             Box::new(Action("regroup")),
         ),
-        Behavior::select(vec![
-            Behavior::sequence(vec![
+        Select(vec![
+            Sequence(vec![
                 Action("acquire_target"),
                 WhenAll(vec![Action("aim"), Action("track")]),
             ]),
             Race(vec![Action("dodge"), Wait(2.0)]),
-            Behavior::memoryless_selector(vec![Action("enemy_visible"), Action("noise_heard")]),
+            Select(vec![Action("enemy_visible"), Action("noise_heard")]).memory(false),
         ]),
-        Behavior::memoryless_sequence(vec![
+        Sequence(vec![
             Action("ammo_check"),
             While(Box::new(Action("has_ammo")), vec![Action("fire"), Wait(0.3)]),
-        ]),
+        ])
+        .memory(false),
         After(vec![Action("cooldown"), Action("ready_signal")]),
         WhenAny(vec![Action("victory_check"), Action("retreat_signal")]),
     ])

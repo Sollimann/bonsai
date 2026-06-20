@@ -21,8 +21,8 @@ used in an application.
 
 Two short console demos in one binary, showing the difference between memoryless composites and their stateful (memory) siblings:
 
-- **memoryless `Sequence`** (`Behavior::memoryless_sequence`) — chase while visible. When visibility flips off mid-chase, the running `Chase` aborts on the next tick because the leading `EnemyVisible` check is re-run from scratch. A regular (memory) `Sequence` would resume the running child and keep chasing.
-- **memoryless `Select`** (`Behavior::memoryless_selector`) — priority preemption. `Attack` is preferred over `Chase`. While the enemy is out of range, attack fails and chase runs. Once the enemy enters range, the next tick preempts the chase and runs attack.
+- **memoryless `Sequence`** (`Sequence(...).memory(false)`) — chase while visible. When visibility flips off mid-chase, the running `Chase` aborts on the next tick because the leading `EnemyVisible` check is re-run from scratch. A regular `Sequence` would resume the running child and keep chasing.
+- **memoryless `Select`** (`Select(...).memory(false)`) — priority preemption. `Attack` is preferred over `Chase`. While the enemy is out of range, attack fails and chase runs. Once the enemy enters range, the next tick preempts the chase and runs attack.
 
 `cargo run --bin memoryless_chase`
 

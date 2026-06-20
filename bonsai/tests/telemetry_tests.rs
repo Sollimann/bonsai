@@ -1,4 +1,6 @@
-use bonsai_bt::Behavior::{self, Action, AlwaysSucceed, If, Invert, Wait, WaitForever, While, WhileAll};
+use bonsai_bt::Behavior::{
+    self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, While, WhileAll,
+};
 
 #[derive(Clone, Debug)]
 enum Act {
@@ -11,7 +13,7 @@ enum Act {
 /// Verify that `build_node_metas` assigns correct subtree sizes and that the
 /// preorder IDs align with `TreeDefinition::build` for the same tree.
 ///
-/// Tree: Behavior::sequence([Action(A), Behavior::sequence([Action(B), Action(C)]), Action(D)])
+/// Tree: Sequence([Action(A), Sequence([Action(B), Action(C)]), Action(D)])
 ///
 ///   id 0: outer Sequence   subtree_size = 6
 ///   id 1: Action(A)        subtree_size = 1
@@ -24,11 +26,7 @@ fn node_metas_subtree_sizes() {
     use bonsai_bt::Action;
     use Act::*;
 
-    let behavior = Behavior::sequence(vec![
-        Action(A),
-        Behavior::sequence(vec![Action(B), Action(C)]),
-        Action(D),
-    ]);
+    let behavior = Sequence(vec![Action(A), Sequence(vec![Action(B), Action(C)]), Action(D)]);
 
     let metas = bonsai_bt::telemetry::build_node_metas(&behavior);
 
@@ -50,11 +48,7 @@ fn node_metas_ids_match_tree_definition() {
     use bonsai_bt::Action;
     use Act::*;
 
-    let behavior = Behavior::sequence(vec![
-        Action(A),
-        Behavior::sequence(vec![Action(B), Action(C)]),
-        Action(D),
-    ]);
+    let behavior = Sequence(vec![Action(A), Sequence(vec![Action(B), Action(C)]), Action(D)]);
 
     let metas = build_node_metas(&behavior);
     let def = TreeDefinition::build(&behavior);
@@ -92,7 +86,7 @@ fn node_metas_subtree_sizes_all_variants() {
         (WaitForever, vec![1]),
         // --- empty composite ---
         // Root node with no children: still counts as 1.
-        (Behavior::sequence(vec![]), vec![1]),
+        (Sequence(vec![]), vec![1]),
         // --- single-child decorators ---
         // Invert(A): root(2) + leaf(1)
         (Invert(Box::new(Action(A))), vec![2, 1]),
@@ -109,7 +103,7 @@ fn node_metas_subtree_sizes_all_variants() {
         (
             If(
                 Box::new(Action(A)),
-                Box::new(Behavior::sequence(vec![Action(B), Action(C)])),
+                Box::new(Sequence(vec![Action(B), Action(C)])),
                 Box::new(Action(D)),
             ),
             vec![6, 1, 3, 1, 1, 1],
@@ -137,10 +131,7 @@ fn memoryless_variants_appear_in_tree_definition() {
     use bonsai_bt::telemetry::TreeDefinition;
     use Act::{A, B, C};
 
-    let tree: Behavior<Act> = Behavior::memoryless_sequence(vec![
-        Action(A),
-        Behavior::memoryless_selector(vec![Action(B), Action(C)]),
-    ]);
+    let tree: Behavior<Act> = Sequence(vec![Action(A), Select(vec![Action(B), Action(C)]).memory(false)]).memory(false);
     let def = TreeDefinition::build(&tree);
     assert_eq!(def.root.node_type, "MemorylessSequence");
     assert_eq!(def.root.children.len(), 2);

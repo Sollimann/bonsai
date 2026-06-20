@@ -84,9 +84,9 @@ impl<A: Clone, B> BT<A, B> {
     ///
     /// # Example
     /// ```no_run
-    /// # use bonsai_bt::{Action, BT, Behavior};
+    /// # use bonsai_bt::{Action, BT, Sequence};
     /// # use std::collections::HashMap;
-    /// let behavior = Behavior::sequence(vec![Action("step")]);
+    /// let behavior = Sequence(vec![Action("step")]);
     /// let bb: HashMap<String, i32> = HashMap::new();
     /// let mut bt = BT::new(behavior, bb).with_telemetry(8910)?;
     /// # Ok::<(), std::io::Error>(())
@@ -151,9 +151,9 @@ impl<A: Clone, B> BT<A, B> {
     ///
     /// # Example
     /// ```no_run
-    /// # use bonsai_bt::{Action, BT, Behavior};
+    /// # use bonsai_bt::{Action, BT, Sequence};
     /// # use std::collections::HashMap;
-    /// let behavior = Behavior::sequence(vec![Action("step")]);
+    /// let behavior = Sequence(vec![Action("step")]);
     /// let bb: HashMap<String, i32> = HashMap::new();
     /// // Expose to the LAN — anyone who can reach this host can view the tree.
     /// let mut bt = BT::new(behavior, bb).with_telemetry_at("0.0.0.0", 8910)?;
