@@ -84,7 +84,7 @@ impl<A: Clone, B> BT<A, B> {
     ///
     /// # Example
     /// ```no_run
-    /// # use bonsai_bt::{Action, BT, Behavior::Sequence};
+    /// # use bonsai_bt::{Action, BT, Sequence};
     /// # use std::collections::HashMap;
     /// let behavior = Sequence(vec![Action("step")]);
     /// let bb: HashMap<String, i32> = HashMap::new();
@@ -151,7 +151,7 @@ impl<A: Clone, B> BT<A, B> {
     ///
     /// # Example
     /// ```no_run
-    /// # use bonsai_bt::{Action, BT, Behavior::Sequence};
+    /// # use bonsai_bt::{Action, BT, Sequence};
     /// # use std::collections::HashMap;
     /// let behavior = Sequence(vec![Action("step")]);
     /// let bb: HashMap<String, i32> = HashMap::new();

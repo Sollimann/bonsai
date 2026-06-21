@@ -1,4 +1,6 @@
-use bonsai_bt::Behavior::{self, Action, AlwaysSucceed, If, Invert, Sequence, Wait, WaitForever, While, WhileAll};
+use bonsai_bt::Behavior::{
+    self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, While, WhileAll,
+};
 
 #[derive(Clone, Debug)]
 enum Act {
@@ -120,4 +122,20 @@ fn node_metas_subtree_sizes_all_variants() {
         let got: Vec<usize> = metas.iter().map(|m| m.subtree_size).collect();
         assert_eq!(got, expected, "case {i}");
     }
+}
+
+/// Memoryless variants surface the expected `node_type` strings — those drive
+/// the visualizer's CSS class and tooltip.
+#[test]
+fn memoryless_variants_appear_in_tree_definition() {
+    use bonsai_bt::telemetry::TreeDefinition;
+    use Act::{A, B, C};
+
+    let tree: Behavior<Act> = Sequence(vec![Action(A), Select(vec![Action(B), Action(C)]).memory(false)]).memory(false);
+    let def = TreeDefinition::build(&tree);
+    assert_eq!(def.root.node_type, "MemorylessSequence");
+    assert_eq!(def.root.children.len(), 2);
+    assert_eq!(def.root.children[0].node_type, "Action");
+    assert_eq!(def.root.children[1].node_type, "MemorylessSelector");
+    assert_eq!(def.root.children[1].children.len(), 2);
 }

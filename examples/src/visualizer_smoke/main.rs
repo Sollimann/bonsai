@@ -1,6 +1,6 @@
 //! End-to-end demo for the WebSocket visualizer.
 //!
-//! Drives a real `BT` over a deliberately rich 27-node tree, attaches the
+//! Drives a real `BT` over a deliberately rich 30-node tree, attaches the
 //! visualizer via `BT::with_telemetry(8910)`, and re-runs the tree every wall
 //! tick (~400 ms). Exercises every `node_type` CSS hook, label formatter, and
 //! status color, plus `tick` auto-routing to `tick_recording` (no explicit
@@ -13,9 +13,12 @@
 //! ```
 //!
 //! Then open <http://127.0.0.1:8910/> in a browser.
-//! 1. Tree renders within ~1 s; status bar reads `connected` and `27 nodes`.
+//! 1. Tree renders within ~1 s; status bar reads `connected` and `30 nodes`.
 //! 2. All distinct node-type labels visible (note: `Select` shows as
-//!    `Selector`, `Invert` as `Inverter` — see `classify` in `telemetry.rs`).
+//!    `Selector` — see `classify` in `telemetry.rs` for the rename map).
+//!    Memoryless composites (`memory = false`) show as `MemorylessSequence` /
+//!    `MemorylessSelector` with a `6 3` dashed circle so they stand out from
+//!    regular `Sequence` / `Select`.
 //! 3. `Wait` leaves display dynamic labels: `Wait(2.00s)` and `Wait(0.30s)`.
 //! 4. Every ~400 ms the leaf colors shift across **all** subtrees. Every leaf
 //!    cycles through Success (green), Running (yellow), and Failure (red) on
@@ -29,7 +32,7 @@
 //! Hover any node to see its full label via the SVG `<title>` tooltip
 //! (labels longer than 30 chars are truncated in the rendered text).
 //!
-//! # Tree (27 nodes, DFS preorder IDs, 12 of 14 `Behavior` variants)
+//! # Tree (30 nodes, DFS preorder IDs, 13 of 16 `Behavior` variants)
 //!
 //! ```text
 //! 0  Sequence (root)
@@ -47,28 +50,32 @@
 //! │   ├── 12 Race
 //! │   │   ├── 13 Action("dodge")
 //! │   │   └── 14 Wait(2.0)              (timeout arm)
-//! │   └── 15 Invert
-//! │       └── 16 Action("enemy_visible")
-//! ├── 17 While
-//! │   ├── 18 Action("has_ammo")         (cond)
-//! │   ├── 19 Action("fire")             (body)
-//! │   └── 20 Wait(0.3)                  (body)
-//! ├── 21 After
-//! │   ├── 22 Action("cooldown")
-//! │   └── 23 Action("ready_signal")
-//! └── 24 WhenAny
-//!     ├── 25 Action("victory_check")
-//!     └── 26 Action("retreat_signal")
+//! │   └── 15 MemorylessSelector
+//! │       ├── 16 Action("enemy_visible")
+//! │       └── 17 Action("noise_heard")
+//! ├── 18 MemorylessSequence
+//! │   ├── 19 Action("ammo_check")
+//! │   └── 20 While
+//! │       ├── 21 Action("has_ammo")     (cond)
+//! │       ├── 22 Action("fire")         (body)
+//! │       └── 23 Wait(0.3)              (body)
+//! ├── 24 After
+//! │   ├── 25 Action("cooldown")
+//! │   └── 26 Action("ready_signal")
+//! └── 27 WhenAny
+//!     ├── 28 Action("victory_check")
+//!     └── 29 Action("retreat_signal")
 //! ```
 //!
 //! ID assignment follows `bonsai_bt::telemetry::children_of` — `If` is
 //! `[cond, ok, ko]`, `While` is `[cond, body0, body1, …]`, decorators wrap one
 //! child, composites preserve order. Skipped variants: `WaitForever` (always
-//! Running, no visual signal) and `WhileAll` (renders identically to `While`).
+//! Running, no visual signal), `WhileAll` (renders identically to `While`),
+//! and `Invert` (dropped when the memoryless composites took its slot).
 
 use bonsai_bt::{
-    Action, After, AlwaysSucceed, Behavior, Event, If, Invert, Race, Select, Sequence, Status, UpdateArgs, Wait,
-    WhenAll, WhenAny, While, BT,
+    Action, After, AlwaysSucceed, Behavior, Event, If, Race, Select, Sequence, Status, UpdateArgs, Wait, WhenAll,
+    WhenAny, While, BT,
 };
 use std::time::Duration;
 
@@ -85,9 +92,13 @@ fn build_tree() -> Behavior<&'static str> {
                 WhenAll(vec![Action("aim"), Action("track")]),
             ]),
             Race(vec![Action("dodge"), Wait(2.0)]),
-            Invert(Box::new(Action("enemy_visible"))),
+            Select(vec![Action("enemy_visible"), Action("noise_heard")]).memory(false),
         ]),
-        While(Box::new(Action("has_ammo")), vec![Action("fire"), Wait(0.3)]),
+        Sequence(vec![
+            Action("ammo_check"),
+            While(Box::new(Action("has_ammo")), vec![Action("fire"), Wait(0.3)]),
+        ])
+        .memory(false),
         After(vec![Action("cooldown"), Action("ready_signal")]),
         WhenAny(vec![Action("victory_check"), Action("retreat_signal")]),
     ])
@@ -128,6 +139,8 @@ fn main() {
                 "track" => 0,
                 "dodge" => 1,
                 "enemy_visible" => 2,
+                "noise_heard" => 4,
+                "ammo_check" => 0,
                 "has_ammo" => 3,
                 "fire" => 4,
                 "cooldown" => 0,
@@ -139,18 +152,22 @@ fn main() {
             let idx = ((tick_n + phase) % CYCLE.len() as u64) as usize;
             let mut status = CYCLE[idx];
             // The root is a Sequence: any child returning Failure short-
-            // circuits *before* downstream siblings (After at id 21, WhenAny
-            // at id 24) ever get visited. Four leaves are chain-critical —
+            // circuits *before* downstream siblings (After at id 24, WhenAny
+            // at id 27) ever get visited. Five leaves are chain-critical —
             // their Failure propagates straight up to the root:
             //   - regroup       → If's on_failure branch → If Failure
+            //   - ammo_check    → MemorylessSequence Failure (short-circuit)
             //   - has_ammo      → While Failure
             //   - cooldown,
             //     ready_signal  → After Failure
             // Substitute Running for Failure on these so the chain reaches
-            // the bottom branches. These four nodes still show Success
-            // (green) and Running (yellow); the other thirteen leaves keep
-            // cycling through all three statuses including red.
-            if matches!(*args.action, "regroup" | "has_ammo" | "cooldown" | "ready_signal") && status == Status::Failure
+            // the bottom branches. These five nodes still show Success
+            // (green) and Running (yellow); the other leaves keep cycling
+            // through all three statuses including red.
+            if matches!(
+                *args.action,
+                "regroup" | "ammo_check" | "has_ammo" | "cooldown" | "ready_signal"
+            ) && status == Status::Failure
             {
                 status = Status::Running;
             }

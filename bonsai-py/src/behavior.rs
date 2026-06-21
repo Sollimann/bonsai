@@ -58,8 +58,10 @@ impl PyBehavior {
             Behavior::Invert(_) => "Invert(...)".to_string(),
             Behavior::AlwaysSucceed(_) => "AlwaysSucceed(...)".to_string(),
             Behavior::Select(v) => format!("Select({})", v.len()),
+            Behavior::MemorylessSelector(v) => format!("Select({}, memory=False)", v.len()),
             Behavior::If(_, _, _) => "If(...)".to_string(),
             Behavior::Sequence(v) => format!("Sequence({})", v.len()),
+            Behavior::MemorylessSequence(v) => format!("Sequence({}, memory=False)", v.len()),
             Behavior::While(_, body) => format!("While({})", body.len()),
             Behavior::WhileAll(_, body) => format!("WhileAll({})", body.len()),
             Behavior::WhenAll(v) => format!("WhenAll({})", v.len()),
@@ -118,18 +120,26 @@ pub fn always_succeed_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
 
 // ----- Composites (Vec<children>) -----------------------------------------
 
+/// `Sequence(children, memory=True)`.
+///
+/// `memory=True` (default) resumes the running child across ticks.
+/// `memory=False` restarts from the first child every tick.
 #[gen_stub_pyfunction]
 #[pyfunction]
-#[pyo3(name = "Sequence")]
-pub fn sequence_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
-    PyBehavior::wrap(Behavior::Sequence(collect_children(children)))
+#[pyo3(name = "Sequence", signature = (children, memory = true))]
+pub fn sequence_fn(children: Vec<PyRef<'_, PyBehavior>>, memory: bool) -> PyBehavior {
+    PyBehavior::wrap(Behavior::Sequence(collect_children(children)).memory(memory))
 }
 
+/// `Select(children, memory=True)`.
+///
+/// `memory=True` (default) resumes the running child across ticks.
+/// `memory=False` restarts from the first child every tick.
 #[gen_stub_pyfunction]
 #[pyfunction]
-#[pyo3(name = "Select")]
-pub fn select_fn(children: Vec<PyRef<'_, PyBehavior>>) -> PyBehavior {
-    PyBehavior::wrap(Behavior::Select(collect_children(children)))
+#[pyo3(name = "Select", signature = (children, memory = true))]
+pub fn select_fn(children: Vec<PyRef<'_, PyBehavior>>, memory: bool) -> PyBehavior {
+    PyBehavior::wrap(Behavior::Select(collect_children(children)).memory(memory))
 }
 
 #[gen_stub_pyfunction]

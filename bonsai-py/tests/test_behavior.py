@@ -10,7 +10,8 @@ import bonsai_bt as bt
 FACTORY_NAMES = (
     "Action", "Wait", "WaitForever",
     "Invert", "AlwaysSucceed",
-    "Sequence", "Select", "WhenAll", "WhenAny", "After", "Race",
+    "Sequence", "Select",
+    "WhenAll", "WhenAny", "After", "Race",
     "If", "While", "WhileAll",
 )
 
@@ -18,7 +19,7 @@ FACTORY_NAMES = (
 class TestFactoriesPresent:
     @pytest.mark.parametrize("name", FACTORY_NAMES)
     def test_factory_exported(self, name: str) -> None:
-        """Each of the 14 factory names is importable and callable."""
+        """Each of the 16 factory names is importable and callable."""
         assert hasattr(bt, name), f"missing factory {name}"
         assert callable(getattr(bt, name)), f"{name} not callable"
 
@@ -42,6 +43,8 @@ class TestFactoryConstruction:
             (lambda: bt.AlwaysSucceed(_trivial("c")), "AlwaysSucceed(...)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")]), "Sequence(2)"),
             (lambda: bt.Select([_trivial("a")]), "Select(1)"),
+            (lambda: bt.Sequence([_trivial("a"), _trivial("b")], memory=False), "Sequence(2, memory=False)"),
+            (lambda: bt.Select([_trivial("a")], memory=False), "Select(1, memory=False)"),
             (lambda: bt.WhenAll([_trivial("a")]), "WhenAll(1)"),
             (lambda: bt.WhenAny([_trivial("a"), _trivial("b")]), "WhenAny(2)"),
             (lambda: bt.After([_trivial("a")]), "After(1)"),
@@ -81,6 +84,8 @@ class TestValidationGuards:
         [
             lambda: bt.Sequence([]),
             lambda: bt.Select([]),
+            lambda: bt.Sequence([], memory=False),
+            lambda: bt.Select([], memory=False),
             lambda: bt.WhenAll([]),
             lambda: bt.WhenAny([]),
             lambda: bt.After([]),

@@ -114,3 +114,99 @@ where
     }
     RUNNING
 }
+
+pub struct MemorylessSequenceArgs<'a, A, E, F, B, T> {
+    pub select: bool,
+    pub upd: Option<Float>,
+    pub seq: &'a [Behavior<A>],
+    pub cursor: &'a mut Box<State<A>>,
+    pub e: &'a E,
+    pub blackboard: &'a mut B,
+    pub f: &'a mut F,
+    pub parent_id: usize,
+    pub metas: &'a [NodeMeta],
+    pub tracer: &'a mut T,
+}
+
+/// Shared driver for memoryless `Sequence` and `Select` (`memory = false`).
+///
+/// Walks `seq` from index 0 each call, overwriting `*cursor` before each child
+/// so the previous tick's running state is discarded.
+///
+/// `select` flips the short-circuit polarity:
+/// - `false` → Sequence: `Failure` short-circuits; all-`Success` → `Success`.
+/// - `true`  → Select:   `Success` short-circuits; all-`Failure` → `Failure`.
+///
+/// Reuses the caller's cursor `Box`; the only per-child allocation is
+/// `child.clone()`, which is free for `Copy` action types.
+#[inline]
+pub fn memoryless_sequence<A, E, F, B, T>(args: MemorylessSequenceArgs<A, E, F, B, T>) -> (Status, Float)
+where
+    A: Clone,
+    E: UpdateEvent,
+    F: FnMut(ActionArgs<E, A>, &mut B) -> (Status, Float),
+    T: Tracer,
+{
+    let MemorylessSequenceArgs {
+        select,
+        upd,
+        seq,
+        cursor,
+        e,
+        blackboard,
+        f,
+        parent_id,
+        metas,
+        tracer,
+    } = args;
+
+    let initial_dt = upd.unwrap_or(0.0);
+
+    if seq.is_empty() {
+        return if select {
+            (Status::Failure, initial_dt)
+        } else {
+            (Status::Success, initial_dt)
+        };
+    }
+
+    let (terminal_status, short_circuit_status) = if select {
+        (Status::Failure, Status::Success)
+    } else {
+        (Status::Success, Status::Failure)
+    };
+
+    let mut child_id = first_child_id::<T>(parent_id);
+    let mut remaining_dt = initial_dt;
+    let mut remaining_e;
+
+    for child in seq {
+        // Reset in place: reuses the Box, no new allocation.
+        **cursor = State::new(child.clone());
+
+        let ev = match upd {
+            Some(_) => {
+                remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                &remaining_e
+            }
+            None => e,
+        };
+
+        match cursor.tick(child_id, metas, ev, blackboard, f, tracer) {
+            (Running, _) => return RUNNING,
+            (s, dt) if s == short_circuit_status => return (s, dt),
+            (s, dt) if s == terminal_status => {
+                if upd.is_some() {
+                    remaining_dt = dt;
+                }
+            }
+            _ => unreachable!(),
+        }
+
+        if T::IS_RECORDING {
+            child_id = next_sibling_id::<T>(metas, child_id);
+        }
+    }
+
+    (terminal_status, remaining_dt)
+}

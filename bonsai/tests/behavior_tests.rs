@@ -702,3 +702,148 @@ fn race_empty() {
     // No children means nothing can complete, stays Running
     assert_eq!(s, Running);
 }
+
+// ---------------------------------------------------------------------------
+// Memoryless Sequence / Select (memory = false)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn memoryless_sequence_all_success() {
+    let a: i32 = 0;
+    let rs = Sequence(vec![Action(Inc), Action(Inc)]).memory(false);
+    let mut bt = BT::new(rs, ());
+    let (a, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(a, 2);
+    assert_eq!(status, Success);
+    assert!(bt.is_finished());
+}
+
+#[test]
+fn memoryless_sequence_failure_short_circuits() {
+    let a: i32 = 5;
+    let rs = Sequence(vec![Action(LessThan(3)), Action(Inc)]).memory(false);
+    let mut bt = BT::new(rs, ());
+    let (a, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(status, Failure);
+    assert_eq!(a, 5, "later children must not be ticked on failure");
+}
+
+#[test]
+fn memoryless_sequence_running_short_circuits_then_re_evaluates() {
+    // If an earlier condition fails next tick, the previously-running child
+    // must NOT be resumed.
+    let mut a: i32 = 0;
+    let rs = Sequence(vec![Action(LessThan(3)), Action(LessThanRunningSuccess(3))]).memory(false);
+    let mut bt = BT::new(rs, ());
+
+    let (acc, status, _) = tick(a, 0.0, &mut bt);
+    a = acc;
+    assert_eq!(status, Running);
+    assert_eq!(a, 0);
+
+    // Bump accumulator past the threshold so the leading condition now fails.
+    a = 5;
+
+    let (acc, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(
+        status, Failure,
+        "memoryless composite must abort once earlier cond fails"
+    );
+    assert_eq!(acc, 5, "the previously-running child must NOT be re-ticked");
+}
+
+#[test]
+fn memoryless_sequence_resets_wait_state() {
+    // Wait gets reset every tick, so it never completes if dt < wait time.
+    let a: i32 = 0;
+    let rs = Sequence(vec![Wait(1.0), Action(Inc)]).memory(false);
+    let mut bt = BT::new(rs, ());
+    for _ in 0..5 {
+        let (_, status, _) = tick(a, 0.5, &mut bt);
+        assert_eq!(status, Running, "wait elapsed time is discarded on re-tick");
+    }
+}
+
+#[test]
+fn memoryless_sequence_empty_is_success() {
+    let rs: bonsai_bt::Behavior<TestActions> = Sequence(vec![]).memory(false);
+    let mut bt = BT::new(rs, ());
+    let (_, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+}
+
+#[test]
+fn memoryless_select_short_circuits_on_success() {
+    let a: i32 = 5;
+    let rs = Select(vec![Action(LessThan(3)), Action(LessThan(10)), Action(Inc)]).memory(false);
+    let mut bt = BT::new(rs, ());
+    let (acc, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert_eq!(acc, 5, "short-circuited siblings must not be ticked");
+}
+
+#[test]
+fn memoryless_select_all_fail_returns_failure() {
+    let a: i32 = 5;
+    let rs = Select(vec![Action(LessThan(0)), Action(LessThan(1))]).memory(false);
+    let mut bt = BT::new(rs, ());
+    let (_, status, _) = tick(a, 0.0, &mut bt);
+    assert_eq!(status, Failure);
+}
+
+#[test]
+fn memoryless_select_empty_is_failure() {
+    let rs: bonsai_bt::Behavior<TestActions> = Select(vec![]).memory(false);
+    let mut bt = BT::new(rs, ());
+    let (_, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Failure);
+}
+
+#[test]
+fn nested_memoryless_sequence() {
+    let inner = Sequence(vec![Action(Inc)]).memory(false);
+    let outer = Sequence(vec![Action(LessThan(2)), inner]).memory(false);
+    let mut bt = BT::new(outer, ());
+    let (a, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert_eq!(a, 1);
+}
+
+#[test]
+fn memoryless_inside_sequence_does_not_disturb_outer_progress() {
+    let outer = Sequence(vec![Action(Inc), Sequence(vec![Action(Inc)]).memory(false)]);
+    let mut bt = BT::new(outer, ());
+    let (a, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert_eq!(a, 2);
+}
+
+#[test]
+fn memoryless_sequence_bt_finishes_and_can_reset() {
+    let rs = Sequence(vec![Action(Inc), Action(Inc)]).memory(false);
+    let mut bt = BT::new(rs, ());
+    let (_, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert!(bt.is_finished());
+
+    bt.reset_bt();
+    let (a, status, _) = tick(0, 0.0, &mut bt);
+    assert_eq!(status, Success);
+    assert_eq!(a, 2);
+}
+
+#[test]
+fn memoryless_sequence_many_ticks_no_drift() {
+    // 1000 cycles — guards against panic, overflow, or drift in the cursor
+    // reuse path. The composite must report Success every single time.
+    let rs = Sequence(vec![Action(Inc), Action(Inc)]).memory(false);
+    let mut bt = BT::new(rs, ());
+    let mut a: i32 = 0;
+    for _ in 0..1000 {
+        let (acc, status, _) = tick(a, 0.0, &mut bt);
+        a = acc;
+        assert_eq!(status, Success);
+        bt.reset_bt();
+    }
+    assert_eq!(a, 2 * 1000);
+}

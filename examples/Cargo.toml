@@ -55,3 +55,7 @@ path = "src/race_timeout/main.rs"
 [[bin]]
 name = "visualizer_smoke"
 path = "src/visualizer_smoke/main.rs"
+
+[[bin]]
+name = "memoryless_chase"
+path = "src/memoryless_chase/main.rs"

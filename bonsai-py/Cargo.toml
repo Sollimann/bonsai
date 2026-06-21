@@ -1,6 +1,6 @@
 [package]
 name = "bonsai-py"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2021"
 rust-version = "1.80.0"
 description = "Python bindings for the bonsai-bt behavior tree library"
@@ -28,5 +28,5 @@ path = "src/bin/stub_gen.rs"
 # list lets `cargo run --bin stub_gen` link libpython for the regular binary
 # path; maturin still activates it for the wheel build.
 pyo3 = { version = "0.28", features = ["abi3-py310"] }
-bonsai-bt = { path = "../bonsai", version = "0.12", features = ["visualize"] }
+bonsai-bt = { path = "../bonsai", version = "0.13", features = ["visualize"] }
 pyo3-stub-gen = "0.22.3"

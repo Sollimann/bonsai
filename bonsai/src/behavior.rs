@@ -30,20 +30,32 @@ pub enum Behavior<A> {
     Invert(Box<Behavior<A>>),
     /// Ignores failures and returns `Success`.
     AlwaysSucceed(Box<Behavior<A>>),
-    /// Runs behaviors one by one until a behavior succeeds.
+    /// Runs behaviors one by one until one succeeds.
     ///
-    /// If a behavior fails it will try the next one.
-    /// Fails if the last behavior fails.
-    /// Can be thought of as a short-circuited logical OR gate.
+    /// Tries the next behavior if one fails. Fails if the last fails.
+    /// A short-circuited logical OR gate.
+    ///
+    /// Resumes the running child across ticks. Use `.memory(false)` to restart
+    /// from the first child every tick instead.
     Select(Vec<Behavior<A>>),
     /// `If(condition, success, failure)`
     If(Box<Behavior<A>>, Box<Behavior<A>>, Box<Behavior<A>>),
-    /// Runs behaviors one by one until all succeeded.
+    /// Runs behaviors one by one until all succeed.
     ///
-    /// The sequence fails if a behavior fails.
-    /// The sequence succeeds if all the behavior succeeds.
-    /// Can be thought of as a short-circuited logical AND gate.
+    /// Fails if any behavior fails. Succeeds if all succeed.
+    /// A short-circuited logical AND gate.
+    ///
+    /// Resumes the running child across ticks. Use `.memory(false)` to restart
+    /// from the first child every tick instead.
     Sequence(Vec<Behavior<A>>),
+    /// Reactive `Sequence`: re-walks children from the first one every tick.
+    /// Built via `Sequence(...).memory(false)`, not constructed directly.
+    #[doc(hidden)]
+    MemorylessSequence(Vec<Behavior<A>>),
+    /// Reactive `Select`: re-walks children from the first one every tick.
+    /// Built via `Select(...).memory(false)`, not constructed directly.
+    #[doc(hidden)]
+    MemorylessSelector(Vec<Behavior<A>>),
     /// Loops while conditional behavior is running.
     ///
     /// Succeeds if the conditional behavior succeeds.
@@ -136,15 +148,32 @@ pub enum Behavior<A> {
     Race(Vec<Behavior<A>>),
 }
 
+impl<A> Behavior<A> {
+    /// Set whether a `Sequence` or `Select` keeps memory across ticks.
+    ///
+    /// `true` (the default) resumes the running child each tick; `false` restarts
+    /// from the first child every tick (reactive). No effect on other node types.
+    #[must_use]
+    pub fn memory(self, on: bool) -> Self {
+        match (self, on) {
+            (Behavior::Sequence(c), false) => Behavior::MemorylessSequence(c),
+            (Behavior::Select(c), false) => Behavior::MemorylessSelector(c),
+            (Behavior::MemorylessSequence(c), true) => Behavior::Sequence(c),
+            (Behavior::MemorylessSelector(c), true) => Behavior::Select(c),
+            (other, _) => other,
+        }
+    }
+}
+
 #[cfg(test)]
 #[cfg(feature = "serde")]
 mod tests {
     use crate::{
-        Behavior::{self, Action, Sequence, Wait, WaitForever, WhenAny, While},
+        Behavior::{self, Action, Select, Sequence, Wait, WaitForever, WhenAny, While},
         Float,
     };
 
-    #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+    #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
     pub(crate) enum EnemyAction {
         /// Circles forever around target pos.
         Circling,
@@ -236,5 +265,39 @@ mod tests {
         "#;
 
         let _bt_deserialized: Behavior<EnemyAction> = serde_json::from_str(bt_json).unwrap();
+    }
+
+    #[test]
+    fn serde_roundtrip_memoryless_sequence() {
+        let rs: Behavior<EnemyAction> = Sequence(vec![
+            Action(EnemyAction::Circling),
+            Action(EnemyAction::FlyTowardPlayer),
+        ])
+        .memory(false);
+        let json = serde_json::to_string(&rs).unwrap();
+        assert!(json.contains("MemorylessSequence"));
+        let back: Behavior<EnemyAction> = serde_json::from_str(&json).unwrap();
+        assert_eq!(rs, back);
+    }
+
+    #[test]
+    fn serde_roundtrip_memoryless_select() {
+        let rs: Behavior<EnemyAction> = Select(vec![
+            Action(EnemyAction::Circling),
+            Action(EnemyAction::FlyTowardPlayer),
+        ])
+        .memory(false);
+        let json = serde_json::to_string(&rs).unwrap();
+        assert!(json.contains("MemorylessSelector"));
+        let back: Behavior<EnemyAction> = serde_json::from_str(&json).unwrap();
+        assert_eq!(rs, back);
+    }
+
+    #[test]
+    fn serde_deserializes_tuple_sequence() {
+        // The original array form deserializes into the tuple `Sequence` variant.
+        let json = r#"{ "Sequence": [{ "Action": "Circling" }] }"#;
+        let back: Behavior<EnemyAction> = serde_json::from_str(json).unwrap();
+        assert_eq!(back, Sequence(vec![Action(EnemyAction::Circling)]));
     }
 }

@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-use crate::{state::State, Behavior, Float, Select, Sequence, BT};
+use crate::{state::State, Behavior, Float, BT};
 use petgraph::{graph::Graph, stable_graph::NodeIndex, Direction::Outgoing};
 use std::{collections::VecDeque, fmt::Debug};
 
@@ -14,6 +14,8 @@ pub(crate) enum NodeType<A> {
     Select,
     If,
     Sequence,
+    MemorylessSequence,
+    MemorylessSelector,
     WhileAll,
     While,
     WhenAll,
@@ -67,17 +69,31 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
                 let right = *failure;
                 Self::dfs_recursive(graph, right, node_id);
             }
-            Behavior::Select(sel) => {
+            Behavior::Select(children) => {
                 let node_id = graph.add_node(NodeType::Select);
                 graph.add_edge(parent_node, node_id, 1);
-                for b in sel {
+                for b in children {
                     Self::dfs_recursive(graph, b, node_id)
                 }
             }
-            Behavior::Sequence(seq) => {
+            Behavior::MemorylessSelector(children) => {
+                let node_id = graph.add_node(NodeType::MemorylessSelector);
+                graph.add_edge(parent_node, node_id, 1);
+                for b in children {
+                    Self::dfs_recursive(graph, b, node_id)
+                }
+            }
+            Behavior::Sequence(children) => {
                 let node_id = graph.add_node(NodeType::Sequence);
                 graph.add_edge(parent_node, node_id, 1);
-                for b in seq {
+                for b in children {
+                    Self::dfs_recursive(graph, b, node_id)
+                }
+            }
+            Behavior::MemorylessSequence(children) => {
+                let node_id = graph.add_node(NodeType::MemorylessSequence);
+                graph.add_edge(parent_node, node_id, 1);
+                for b in children {
                     Self::dfs_recursive(graph, b, node_id)
                 }
             }
@@ -90,7 +106,7 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
                 Self::dfs_recursive(graph, left, node_id);
 
                 // right
-                let right = Sequence(seq);
+                let right = Behavior::Sequence(seq);
                 Self::dfs_recursive(graph, right, node_id)
             }
             Behavior::WhileAll(ev, seq) => {
@@ -102,7 +118,7 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
                 Self::dfs_recursive(graph, left, node_id);
 
                 // right
-                let right = Sequence(seq);
+                let right = Behavior::Sequence(seq);
                 Self::dfs_recursive(graph, right, node_id)
             }
             Behavior::WhenAll(all) => {
@@ -142,7 +158,7 @@ mod tests {
     use super::*;
     use crate::visualizer::tests::TestActions::{Dec, Inc};
     use crate::Behavior::{
-        Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
+        self, Action, After, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, WhenAll, WhenAny, While,
     };
     use crate::Status::{self, Success};
     use crate::{ActionArgs, Event, UpdateArgs};
@@ -446,5 +462,44 @@ mod tests {
 
         assert_eq!(g.edge_count(), 9);
         assert_eq!(g.node_count(), 10);
+    }
+
+    #[test]
+    fn test_viz_memoryless_sequence() {
+        let behavior = Sequence(vec![
+            Action(Dec),
+            Action(Inc),
+            Sequence(vec![Action(Inc), Action(Dec)]).memory(false),
+        ])
+        .memory(false);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        let (_, g) = bt.get_graphviz_with_graph_instance();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        // Root + outer MemorylessSequence + 2 leaves + inner MemorylessSequence + 2 leaves = 7
+        assert_eq!(g.node_count(), 7);
+        assert_eq!(g.edge_count(), 6);
+    }
+
+    #[test]
+    fn test_viz_memoryless_select() {
+        let behavior = Select(vec![
+            Action(Dec),
+            Select(vec![Action(Inc), Action(Dec)]).memory(false),
+            Action(Inc),
+        ])
+        .memory(false);
+
+        let h: HashMap<String, i32> = HashMap::new();
+        let mut bt = BT::new(behavior, h);
+        let (_, g) = bt.get_graphviz_with_graph_instance();
+
+        println!("{:?}", Dot::with_config(&g, &[Config::EdgeNoLabel]));
+
+        assert_eq!(g.node_count(), 7);
+        assert_eq!(g.edge_count(), 6);
     }
 }

@@ -90,7 +90,14 @@ pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
             v.extend(body.iter());
             v
         }
-        Select(xs) | Sequence(xs) | WhenAll(xs) | WhenAny(xs) | After(xs) | Race(xs) => xs.iter().collect(),
+        Select(xs)
+        | Sequence(xs)
+        | MemorylessSequence(xs)
+        | MemorylessSelector(xs)
+        | WhenAll(xs)
+        | WhenAny(xs)
+        | After(xs)
+        | Race(xs) => xs.iter().collect(),
     }
 }
 
@@ -106,7 +113,9 @@ fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String
         Invert(_) => ("Inverter", None),
         AlwaysSucceed(_) => ("AlwaysSucceed", None),
         Select(_) => ("Selector", None),
+        MemorylessSelector(_) => ("MemorylessSelector", None),
         Sequence(_) => ("Sequence", None),
+        MemorylessSequence(_) => ("MemorylessSequence", None),
         If(..) => ("If", None),
         While(..) => ("While", None),
         WhileAll(..) => ("WhileAll", None),
@@ -209,10 +218,16 @@ mod tests {
         let items = vec![Action(Act::A), Action(Act::B), Action(Act::C)];
         let seq = Sequence(items.clone());
         let sel = Select(items.clone());
+        let r_seq = Sequence(items.clone()).memory(false);
+        let r_sel = Select(items.clone()).memory(false);
         let seq_kids = children_of(&seq);
         let sel_kids = children_of(&sel);
+        let r_seq_kids = children_of(&r_seq);
+        let r_sel_kids = children_of(&r_sel);
         assert_eq!(seq_kids.len(), 3);
         assert_eq!(sel_kids.len(), 3);
+        assert_eq!(r_seq_kids.len(), 3);
+        assert_eq!(r_sel_kids.len(), 3);
         for i in 0..3 {
             assert_eq!(
                 format!("{:?}", seq_kids[i]),
@@ -223,6 +238,16 @@ mod tests {
                 format!("{:?}", sel_kids[i]),
                 format!("{:?}", &items[i]),
                 "Select child {i}"
+            );
+            assert_eq!(
+                format!("{:?}", r_seq_kids[i]),
+                format!("{:?}", &items[i]),
+                "MemorylessSequence child {i}"
+            );
+            assert_eq!(
+                format!("{:?}", r_sel_kids[i]),
+                format!("{:?}", &items[i]),
+                "MemorylessSelector child {i}"
             );
         }
     }

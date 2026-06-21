@@ -413,3 +413,67 @@ fn tick_id_monotonic_and_survives_reset() {
         .unwrap();
     assert_eq!(t2.tick_id, 2, "tick_id continues past reset");
 }
+
+/// Every tick re-walks all children, so the trace is never sparse — every
+/// visited child shows up each time, not just the one that was running.
+#[test]
+fn memoryless_sequence_records_root_and_visited_children() {
+    use Act::*;
+    let tree = Sequence(vec![Action(A), Action(B)]).memory(false);
+    let mut bt = BT::new(tree, ());
+    let e = dt_event(1.0);
+
+    // Tick 1: A=Success, B=Running → composite Running.
+    let (_r1, t1) = bt
+        .tick_recording(&e, &mut |args: ActionArgs<Event, Act>, _| match *args.action {
+            A => (Success, args.dt),
+            B => (Running, 0.0),
+            _ => unreachable!(),
+        })
+        .unwrap();
+
+    assert_eq!(t1.states.get(&0), Some(&Running), "MemorylessSequence root");
+    assert_eq!(t1.states.get(&1), Some(&Success), "Action(A)");
+    assert_eq!(t1.states.get(&2), Some(&Running), "Action(B)");
+    assert_eq!(t1.states.len(), 3);
+
+    // Tick 2: A is re-ticked from scratch (a regular Sequence would skip it
+    // and only resume B). Make B succeed this time.
+    let (_r2, t2) = bt
+        .tick_recording(&e, &mut |args: ActionArgs<Event, Act>, _| match *args.action {
+            A | B => (Success, args.dt),
+            _ => unreachable!(),
+        })
+        .unwrap();
+
+    assert_eq!(
+        t2.states.get(&0),
+        Some(&Success),
+        "root succeeds when all children succeed"
+    );
+    assert_eq!(t2.states.get(&1), Some(&Success), "A re-ticked");
+    assert_eq!(t2.states.get(&2), Some(&Success), "B re-ticked");
+    assert_eq!(t2.states.len(), 3, "trace stays dense — no sparse semantics");
+}
+
+/// Short-circuits on first Success, so later siblings never enter the trace.
+#[test]
+fn memoryless_select_short_circuit_omits_later_siblings() {
+    use Act::*;
+    let tree = Select(vec![Action(A), Action(B)]).memory(false);
+    let mut bt = BT::new(tree, ());
+    let e = dt_event(1.0);
+
+    // A succeeds → composite returns Success and skips B.
+    let (_r, trace) = bt
+        .tick_recording(&e, &mut |args: ActionArgs<Event, Act>, _| match *args.action {
+            A => (Success, args.dt),
+            _ => panic!("B should not be ticked after A succeeds"),
+        })
+        .unwrap();
+
+    assert_eq!(trace.states.get(&0), Some(&Success), "MemorylessSelector root");
+    assert_eq!(trace.states.get(&1), Some(&Success), "Action(A)");
+    assert!(!trace.states.contains_key(&2), "Action(B) not visited");
+    assert_eq!(trace.states.len(), 2);
+}

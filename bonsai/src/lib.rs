@@ -21,6 +21,7 @@
 //! - If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
 //! - If `A` succeeds, return failure (and vice-versa): `Invert(A)`
 //! - Do `B` repeatedly while `A` runs: `While(A, [B])`
+//! - Run `B` while re-checking `A` on every tick (abort `B` if `A` flips): `Sequence([A, B]).memory(false)`
 //! - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 //! - Run `A` and `B` in parallell and wait for both to succeed: `WhenAll([A, B])`
 //! - Run `A` and `B` in parallell and wait for any to succeed: `WhenAny([A, B])`
@@ -37,7 +38,7 @@
 //! state of the number accessed by the key `count`.
 //!
 //! ```rust
-//! use bonsai_bt::{Event, Success, UpdateArgs, BT};
+//! use bonsai_bt::{Event, Float, Success, UpdateArgs, BT};
 //! use std::collections::HashMap;
 //! // Some test actions.
 //! #[derive(Clone, Debug, Copy)]
@@ -49,7 +50,7 @@
 //! }
 //!
 //! // A test state machine that can increment and decrement.
-//! fn tick(mut acc: i32, dt: f64, bt: &mut BT<Actions, HashMap<String, i32>>) -> i32 {
+//! fn tick(mut acc: i32, dt: Float, bt: &mut BT<Actions, HashMap<String, i32>>) -> i32 {
 //! let e: Event = UpdateArgs { dt }.into();
 //!
 //!     let (_status, _dt) = bt.tick(&e, &mut |args, blackboard| match *args.action {

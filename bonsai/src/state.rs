@@ -1,5 +1,5 @@
 use crate::event::UpdateEvent;
-use crate::sequence::{sequence, SequenceArgs};
+use crate::sequence::{memoryless_sequence, sequence, MemorylessSequenceArgs, SequenceArgs};
 use crate::state::State::*;
 use crate::status::Status::*;
 use crate::tracer::{first_child_id, next_sibling_id, NodeMeta, Tracer};
@@ -69,6 +69,22 @@ pub(crate) enum State<A> {
         current_index: usize,
         /// The state of the behavior currently being executed.
         current_state: Box<State<A>>,
+    },
+    /// A memoryless `Sequence` (`memory = false`). Re-walks children from 0 each
+    /// tick, so there is no index. `cursor` is reused in place for each child.
+    MemorylessSequence {
+        /// Children, re-walked in order each tick.
+        behaviors: Vec<Behavior<A>>,
+        /// Scratch slot for the child being ticked. Reused, never re-allocated.
+        cursor: Box<State<A>>,
+    },
+    /// A memoryless `Select` (`memory = false`). Same shape as
+    /// [`State::MemorylessSequence`]; success short-circuits, all-fail is `Failure`.
+    MemorylessSelector {
+        /// Children, re-walked in order each tick.
+        behaviors: Vec<Behavior<A>>,
+        /// Scratch slot for the child being ticked. Reused, never re-allocated.
+        cursor: Box<State<A>>,
     },
     /// Keeps track of a `While` behavior.
     While {
@@ -150,6 +166,11 @@ impl<A: Clone> State<A> {
                     current_state: Box::new(state),
                 }
             }
+            Behavior::MemorylessSelector(behaviors) => State::MemorylessSelector {
+                behaviors,
+                // Placeholder; overwritten on the first tick.
+                cursor: Box::new(State::WaitForever),
+            },
             Behavior::Sequence(behaviors) => {
                 let state = State::new(behaviors[0].clone());
                 State::Sequence {
@@ -158,6 +179,10 @@ impl<A: Clone> State<A> {
                     current_state: Box::new(state),
                 }
             }
+            Behavior::MemorylessSequence(behaviors) => State::MemorylessSequence {
+                behaviors,
+                cursor: Box::new(State::WaitForever),
+            },
             Behavior::While(condition, loop_body) => {
                 let state = State::new(loop_body[0].clone());
                 State::While {
@@ -357,6 +382,50 @@ impl<A: Clone> State<A> {
                     upd,
                     seq,
                     i,
+                    cursor,
+                    e,
+                    f,
+                    blackboard,
+                    parent_id: self_id,
+                    metas,
+                    tracer,
+                });
+                tracer.record(self_id, result.0);
+                result
+            }
+            (
+                _,
+                &mut MemorylessSequence {
+                    behaviors: ref seq,
+                    ref mut cursor,
+                },
+            ) => {
+                let result = memoryless_sequence(MemorylessSequenceArgs {
+                    select: false,
+                    upd,
+                    seq,
+                    cursor,
+                    e,
+                    f,
+                    blackboard,
+                    parent_id: self_id,
+                    metas,
+                    tracer,
+                });
+                tracer.record(self_id, result.0);
+                result
+            }
+            (
+                _,
+                &mut MemorylessSelector {
+                    behaviors: ref seq,
+                    ref mut cursor,
+                },
+            ) => {
+                let result = memoryless_sequence(MemorylessSequenceArgs {
+                    select: true,
+                    upd,
+                    seq,
                     cursor,
                     e,
                     f,

@@ -17,6 +17,15 @@ used in an application.
 
 `cargo run --bin simple_npc_ai`
 
+## Memoryless composites (`Sequence`/`Select` with `memory = false`)
+
+Two short console demos in one binary, showing the difference between memoryless composites and their stateful (memory) siblings:
+
+- **memoryless `Sequence`** (`Sequence(...).memory(false)`) — chase while visible. When visibility flips off mid-chase, the running `Chase` aborts on the next tick because the leading `EnemyVisible` check is re-run from scratch. A regular `Sequence` would resume the running child and keep chasing.
+- **memoryless `Select`** (`Select(...).memory(false)`) — priority preemption. `Attack` is preferred over `Chase`. While the enemy is out of range, attack fails and chase runs. Once the enemy enters range, the next tick preempts the chase and runs attack.
+
+`cargo run --bin memoryless_chase`
+
 ## Boids flocking
 
 Constructing boids flocking behavior by copying the same behavior tree across many agents.
@@ -84,13 +93,13 @@ This simple example shows an example of using the Race behavior to time out a lo
 
 ## WebSocket visualizer (live tree inspector)
 
-A live web-based visualizer for a running behavior tree. The example builds a 27-node tree, enabling the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.
+A live web-based visualizer for a running behavior tree. The example builds a 30-node tree (one memoryless `Sequence` and one memoryless `Select` included — `memory = false`, both drawn with a dashed circle), enables the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.
 
 To see it in example, run the following command:
 
 `cargo run --bin visualizer_smoke`
 
-Then open <http://127.0.0.1:8910/> in a browser. The tree renders within ~1 s and the status bar reads `connected` / `27 nodes`. `Ctrl-C` and restart — the page reconnects within ≤ 1 s. See the module-level doc comment at [src/visualizer_smoke/main.rs](src/visualizer_smoke/main.rs) for the full DFS tree layout and the per-leaf status-cycle rationale.
+Then open <http://127.0.0.1:8910/> in a browser. The tree renders within ~1 s and the status bar reads `connected` / `30 nodes`. `Ctrl-C` and restart — the page reconnects within ≤ 1 s. See the module-level doc comment at [src/visualizer_smoke/main.rs](src/visualizer_smoke/main.rs) for the full DFS tree layout and the per-leaf status-cycle rationale.
 
 <p align="center">
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/gifs/live_visualizer_example.gif" width="1000" ">
