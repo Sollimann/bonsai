@@ -16,7 +16,7 @@ impl<A: Clone, B> BT<A, B> {
     }
 
     /// Tick the tree once and return both the standard tick result and a
-    /// [`TickTrace`](crate::telemetry::TickTrace) recording every node visited
+    /// [`TickTrace`] recording every node visited
     /// this frame. Used by the in-process telemetry channel and by integration
     /// tests.
     ///
@@ -72,7 +72,7 @@ impl<A: Clone, B> BT<A, B> {
     ///
     /// Builder method: consumes and returns `Self` for chaining off [`BT::new`].
     /// Spawns a listener thread and a broadcaster thread. Telemetry is
-    /// **best-effort** — [`TickTrace`](crate::telemetry::TickTrace)s are dropped
+    /// **best-effort** — [`TickTrace`]s are dropped
     /// silently when the channel is full; the count is surfaced via
     /// [`dropped_traces`](Self::dropped_traces).
     ///
@@ -107,7 +107,7 @@ impl<A: Clone, B> BT<A, B> {
     /// so hostnames and IPv6 literals (e.g. `"::1"`) also work.
     ///
     /// Spawns a listener thread and a broadcaster thread. Telemetry is
-    /// **best-effort** — [`TickTrace`](crate::telemetry::TickTrace)s are dropped
+    /// **best-effort** — [`TickTrace`]s are dropped
     /// silently when the channel is full; the count is surfaced via
     /// [`dropped_traces`](Self::dropped_traces).
     ///
