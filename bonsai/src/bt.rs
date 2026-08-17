@@ -166,7 +166,7 @@ impl<A: Clone, B> BT<A, B> {
     /// that the behavior has concluded and ticking the BT won't progress any further - then it could
     /// be desirable to return the BT to it's initial state at t=0.0 before it was ever ticked.
     ///
-    /// PS! invoking reset_bt does not reset the Blackboard.
+    /// <div class="warning">Invoking <code>reset_bt()</code> does not reset the Blackboard.</div>
     pub fn reset_bt(&mut self) {
         let initial_behavior = self.initial_behavior.to_owned();
         self.state = State::new(initial_behavior);
