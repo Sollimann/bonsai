@@ -1,6 +1,6 @@
-//! Visualize-only telemetry types. The whole module is gated on the
-//! `visualize` feature in [`lib.rs`](crate); per-item `#[cfg]` gates are
-//! therefore unnecessary inside this file.
+//! Visualize-only telemetry types.
+// The whole module is gated on the `visualize` feature in [`lib.rs`](crate);
+// per-item `#[cfg]` gates are therefore unnecessary inside this file.
 
 use std::collections::HashMap;
 
