@@ -157,8 +157,16 @@ mod visualizer_server;
 #[doc(hidden)]
 pub use visualizer_server::spawn_server;
 
+/// Float type used in [`BT::tick()`] and everywhere in the crate.
+///
+/// - If feature `f32` is active => [`f32`]
+/// - Else => [`f64`]
 #[cfg(feature = "f32")]
 pub type Float = f32;
 
+/// Float type used in [`BT::tick()`] and everywhere in the crate.
+///
+/// - If feature `f32` is active => [`f32`]
+/// - Else => [`f64`]
 #[cfg(not(feature = "f32"))]
 pub type Float = f64;

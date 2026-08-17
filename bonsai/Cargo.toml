@@ -12,7 +12,7 @@ name = "bonsai-bt"
 readme = "../README.md"
 repository = "https://github.com/sollimann/bonsai.git"
 rust-version = "1.80.0"
-version = "0.13.0"
+version = "0.13.1"
 
 [lib]
 name = "bonsai_bt"
@@ -31,6 +31,9 @@ f32 = []
 [dev-dependencies]
 serde_json = { version = "1.0.81" }
 tungstenite = { version = "0.21" }
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--generate-link-to-definition"]
 
 [[test]]
 name = "tests"
