@@ -6,10 +6,10 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-/// `NodeMeta` lives in the always-on [`crate::tracer`] module because
-/// `State::tick`'s signature depends on it regardless of the `visualize`
-/// feature. Re-exported here so the public path `bonsai_bt::telemetry::NodeMeta`
-/// stays valid for downstream code.
+// `NodeMeta` lives in the always-on `crate::tracer` module because
+// `State::tick`'s signature depends on it regardless of the `visualize`
+// feature. Re-exported here so the public path `bonsai_bt::telemetry::NodeMeta`
+// stays valid for downstream code.
 pub use crate::tracer::NodeMeta;
 
 use crate::tracer::Tracer;
