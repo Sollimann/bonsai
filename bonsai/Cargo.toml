@@ -32,5 +32,8 @@ f32 = []
 serde_json = { version = "1.0.81" }
 tungstenite = { version = "0.21" }
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--generate-link-to-definition"]
+
 [[test]]
 name = "tests"
