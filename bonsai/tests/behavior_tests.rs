@@ -1,7 +1,7 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
     Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Select, Sequence,
-    Status::Running, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
+    Status::Running, Success, Timeout, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
 };
 
 /// Some test actions.
@@ -375,6 +375,35 @@ fn test_always_succeed() {
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 3);
     assert_eq!(s, Running);
+}
+
+#[test]
+fn test_timeout_halts_running_child() {
+    // A child that keeps Running until it succeeds; the Timeout should cut it
+    // off and return Failure once the limit is exceeded.
+    let behavior = Timeout(1.0, Box::new(Wait(5.0)));
+    let mut state = BT::new(behavior, ());
+
+    let (_, s, _) = tick(0, 0.5, &mut state);
+    assert_eq!(s, Running);
+    let (_, s, _) = tick(0, 0.4, &mut state);
+    assert_eq!(s, Running);
+    // 0.5 + 0.4 = 0.9 < 1.0, still running.
+    let (_, s, _) = tick(0, 0.2, &mut state);
+    // 0.9 + 0.2 = 1.1 >= 1.0 -> Failure.
+    assert_eq!(s, Failure);
+}
+
+#[test]
+fn test_timeout_passes_through_completed_child() {
+    // Child finishes (Success) before the limit, so Timeout returns Success.
+    let behavior = Timeout(10.0, Box::new(Wait(0.5)));
+    let mut state = BT::new(behavior, ());
+
+    let (_, s, _) = tick(0, 0.2, &mut state);
+    assert_eq!(s, Running);
+    let (_, s, _) = tick(0, 0.4, &mut state);
+    assert_eq!(s, Success);
 }
 
 #[test]
