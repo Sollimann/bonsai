@@ -1,0 +1,35 @@
+name: Rust release
+
+on:
+  push:
+    tags: ["rs-v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    environment:
+      name: crates-io
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Tag/version guard
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag#rs-v}"
+          cargo_version=$(grep -m1 '^version' bonsai/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ "$version" != "$cargo_version" ]; then
+            echo "::error::Tag version '$version' does not match Cargo.toml version '$cargo_version'."
+            exit 1
+          fi
+
+      - name: Verify package (dry run)
+        run: cargo publish --package bonsai-bt --dry-run
+
+      - name: Publish crate
+        run: cargo publish --package bonsai-bt --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"
