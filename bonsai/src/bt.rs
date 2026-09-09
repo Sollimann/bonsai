@@ -156,6 +156,15 @@ impl<A: Clone, B> BT<A, B> {
         &mut self.bb
     }
 
+    /// Consume the Behavior Tree and retrieve the owned blackboard object.
+    ///
+    /// Useful once the tree has finished running and you want to take back the
+    /// blackboard without paying for a `clone()`. Mirrors the `blackboard()` /
+    /// `blackboard_mut()` accessors, but transfers ownership instead of borrowing.
+    pub fn into_inner(self) -> B {
+        self.bb
+    }
+
     /// The behavior tree is a stateful data structure in which the immediate
     /// state of the BT is allocated and updated in heap memory through the lifetime
     /// of the BT. The state of the BT is said to be `transient` meaning upon entering
