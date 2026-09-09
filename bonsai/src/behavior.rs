@@ -30,6 +30,11 @@ pub enum Behavior<A> {
     Invert(Box<Behavior<A>>),
     /// Ignores failures and returns `Success`.
     AlwaysSucceed(Box<Behavior<A>>),
+    /// Ignores the child's outcome and returns `Failure` once it completes.
+    ///
+    /// Passes through `Running` so the child is allowed to finish. The mirror
+    /// of [`AlwaysSucceed`](Behavior::AlwaysSucceed).
+    AlwaysFail(Box<Behavior<A>>),
     /// Runs behaviors one by one until one succeeds.
     ///
     /// Tries the next behavior if one fails. Fails if the last fails.
