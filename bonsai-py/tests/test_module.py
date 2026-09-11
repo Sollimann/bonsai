@@ -16,11 +16,11 @@ def test_docstring_present() -> None:
 
 
 def test_all_contents() -> None:
-    """__all__ contains exactly the 4 types + 14 factories + RUNNING = 19 names."""
+    """__all__ contains exactly the 4 types + 15 factories + RUNNING = 20 names."""
     expected = {
         "Status", "ActionArgs", "Behavior", "BT",
         "Action", "Wait", "WaitForever",
-        "Invert", "AlwaysSucceed",
+        "Invert", "AlwaysSucceed", "AlwaysFail",
         "Sequence", "Select",
         "WhenAll", "WhenAny", "After", "Race",
         "If", "While", "WhileAll",

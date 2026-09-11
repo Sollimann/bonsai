@@ -8,6 +8,7 @@ __all__ = [
     "Action",
     "ActionArgs",
     "After",
+    "AlwaysFail",
     "AlwaysSucceed",
     "BT",
     "Behavior",
@@ -98,6 +99,8 @@ class Status(enum.Enum):
 def Action(action: typing.Any) -> Behavior: ...
 
 def After(children: typing.Sequence[Behavior]) -> Behavior: ...
+
+def AlwaysFail(child: Behavior) -> Behavior: ...
 
 def AlwaysSucceed(child: Behavior) -> Behavior: ...
 
