@@ -68,6 +68,8 @@ For example, if you have a state `A` and a state `B`:
 - Try `A` first and then try `B` if `A` fails: `Select([A, B])`
 - If `condition` succeedes do `A`, else do `B` : `If(condition, A, B)`
 - If `A` succeeds, return failure (and vice-versa): `Invert(A)`
+- Force a child to succeed regardless of its result: `AlwaysSucceed(A)`
+- Force a child to fail regardless of its result: `AlwaysFail(A)`
 - Do `A`, `B` repeatedly while `LoopCondition` runs: `While(LoopCondition, [A, B])`. Checks condition node between nodes `A`, `B`.
 - Do `A`, `B` forever: `While(WaitForever, [A, B])`
 - Do `A`, `B` repeatedly while `LoopCondition` runs: `WhileAll(LoopCondition, [A, B])`. After *All* nodes `A`, `B` are completed successfully, check the condition node.
