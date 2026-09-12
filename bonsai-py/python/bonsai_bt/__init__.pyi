@@ -17,6 +17,7 @@ __all__ = [
     "Select",
     "Sequence",
     "Status",
+    "Timeout",
     "Wait",
     "WaitForever",
     "WhenAll",
@@ -122,6 +123,8 @@ def Sequence(children: typing.Sequence[Behavior], memory: builtins.bool = True) 
     `memory=True` (default) resumes the running child across ticks.
     `memory=False` restarts from the first child every tick.
     """
+
+def Timeout(seconds: builtins.float, child: Behavior) -> Behavior: ...
 
 def Wait(seconds: builtins.float) -> Behavior: ...
 
