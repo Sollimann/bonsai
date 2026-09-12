@@ -36,6 +36,13 @@ pub(crate) enum State<A> {
     Invert(Box<State<A>>),
     /// Ignores failures and always return `Success`.
     AlwaysSucceed(Box<State<A>>),
+    /// Keeps track of a `Timeout` decorator: the child plus the accumulated
+    /// running time.
+    Timeout {
+        time_limit: Float,
+        elapsed_time: Float,
+        child: Box<State<A>>,
+    },
     /// Keeps track of waiting for a period of time before continuing.
     Wait { time_to_wait: Float, elapsed_time: Float },
     /// Waits forever.
@@ -144,6 +151,11 @@ impl<A: Clone> State<A> {
             Behavior::Action(action) => State::Action(action),
             Behavior::Invert(ev) => State::Invert(Box::new(State::new(*ev))),
             Behavior::AlwaysSucceed(ev) => State::AlwaysSucceed(Box::new(State::new(*ev))),
+            Behavior::Timeout(time_limit, ev) => State::Timeout {
+                time_limit,
+                elapsed_time: 0.0,
+                child: Box::new(State::new(*ev)),
+            },
             Behavior::Wait(dt) => State::Wait {
                 time_to_wait: dt,
                 elapsed_time: 0.0,
@@ -277,6 +289,32 @@ impl<A: Clone> State<A> {
                 };
                 tracer.record(self_id, result.0);
                 result
+            }
+            (
+                _,
+                &mut Timeout {
+                    time_limit,
+                    ref mut elapsed_time,
+                    ref mut child,
+                },
+            ) => {
+                let child_id = first_child_id::<T>(self_id);
+                match child.tick(child_id, metas, e, blackboard, f, tracer) {
+                    (Running, _) => {
+                        *elapsed_time += upd.unwrap_or(0.0);
+                        let result = if *elapsed_time >= time_limit {
+                            (Failure, 0.0)
+                        } else {
+                            RUNNING
+                        };
+                        tracer.record(self_id, result.0);
+                        result
+                    }
+                    (status, dt) => {
+                        tracer.record(self_id, status);
+                        (status, dt)
+                    }
+                }
             }
             (
                 Some(dt),

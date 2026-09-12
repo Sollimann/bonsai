@@ -81,7 +81,7 @@ pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
     use Behavior::*;
     match b {
         Action(_) | Wait(_) | WaitForever => vec![],
-        Invert(c) | AlwaysSucceed(c) => vec![c.as_ref()],
+        Invert(c) | AlwaysSucceed(c) | Timeout(_, c) => vec![c.as_ref()],
         // [condition, on_success, on_failure] — must match skip_subtree logic.
         If(cond, ok, ko) => vec![cond.as_ref(), ok.as_ref(), ko.as_ref()],
         While(cond, body) | WhileAll(cond, body) => {
@@ -112,6 +112,7 @@ fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String
         WaitForever => ("WaitForever", None),
         Invert(_) => ("Inverter", None),
         AlwaysSucceed(_) => ("AlwaysSucceed", None),
+        Timeout(t, _) => ("Timeout", Some(format!("Timeout({t:.2}s)"))),
         Select(_) => ("Selector", None),
         MemorylessSelector(_) => ("MemorylessSelector", None),
         Sequence(_) => ("Sequence", None),

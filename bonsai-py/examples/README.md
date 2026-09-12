@@ -21,7 +21,7 @@ cd bonsai-py && maturin develop --release && cd ..
 
 After that, just `source .venv/bin/activate` + `python bonsai-py/examples/<name>.py` in any new shell.
 
-## Examples (8)
+## Examples (9)
 
 ### [simple_npc_ai.py](simple_npc_ai.py) — console NPC
 NPC runs and shoots until action points are exhausted, then rests and dies. Demonstrates `WhileAll`, blackboard mutation via `@dataclass`, structural-`match` callback.
@@ -35,6 +35,13 @@ Two short demos in one script. A memoryless `Sequence([...], memory=False)` chas
 
 ```bash
 python bonsai-py/examples/memoryless_chase.py
+```
+
+### [timeout.py](timeout.py) — `Timeout` decorator
+`Timeout(limit, child)` cuts off a still-`Running` child once the accumulated time reaches `limit` (returning `Failure`), and passes a finished child's status through unchanged.
+
+```bash
+python bonsai-py/examples/timeout.py
 ```
 
 ### [race_timeout.py](race_timeout.py) — `Race` between work and timeout

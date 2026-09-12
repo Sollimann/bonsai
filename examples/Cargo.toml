@@ -33,6 +33,10 @@ name = "async_drone"
 path = "src/async_drone/main.rs"
 
 [[bin]]
+name = "timeout"
+path = "src/timeout/main.rs"
+
+[[bin]]
 name = "3d"
 path = "src/3d/main.rs"
 
