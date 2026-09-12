@@ -91,6 +91,12 @@ This simple example shows an example of using the Race behavior to time out a lo
   <img src="https://github.com/Sollimann/bonsai/blob/main/docs/resources/images/race_timeout.png" width="700">
 </p>
 
+## Timeout decorator
+
+Demonstrates the `Timeout(limit, child)` decorator: if `child` stays `Running` past the accumulated time limit, it is abandoned and `Failure` is returned; if `child` finishes first, its status passes through unchanged.
+
+`cargo run --bin timeout`
+
 ## WebSocket visualizer (live tree inspector)
 
 A live web-based visualizer for a running behavior tree. The example builds a 30-node tree (one memoryless `Sequence` and one memoryless `Select` included — `memory = false`, both drawn with a dashed circle), enables the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.
