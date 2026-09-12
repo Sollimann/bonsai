@@ -59,3 +59,7 @@ path = "src/visualizer_smoke/main.rs"
 [[bin]]
 name = "memoryless_chase"
 path = "src/memoryless_chase/main.rs"
+
+[[bin]]
+name = "force_result"
+path = "src/force_result/main.rs"

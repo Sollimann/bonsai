@@ -1,6 +1,6 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Select, Sequence,
+    Action, ActionArgs, After, AlwaysFail, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Select, Sequence,
     Status::Running, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
 };
 
@@ -345,6 +345,29 @@ fn test_select_and_invert() {
     state.reset_bt();
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 0);
+    assert_eq!(s, Failure);
+}
+
+#[test]
+fn test_always_fail() {
+    // Child succeeds; AlwaysFail must still report Failure once it completes.
+    let behavior = AlwaysFail(Box::new(Action(Inc)));
+    let mut state = BT::new(behavior, ());
+
+    let (a, s, _) = tick(0, 0.1, &mut state);
+    assert_eq!(a, 1);
+    assert_eq!(s, Failure);
+}
+
+#[test]
+fn test_always_fail_passes_through_running() {
+    // A Running child (Wait) must be reported as Running, not Failure.
+    let behavior = AlwaysFail(Box::new(Wait(0.5)));
+    let mut state = BT::new(behavior, ());
+
+    let (_, s, _) = tick(0, 0.1, &mut state);
+    assert_eq!(s, Running);
+    let (_, s, _) = tick(0, 0.5, &mut state);
     assert_eq!(s, Failure);
 }
 

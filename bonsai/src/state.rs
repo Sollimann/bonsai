@@ -36,6 +36,8 @@ pub(crate) enum State<A> {
     Invert(Box<State<A>>),
     /// Ignores failures and always return `Success`.
     AlwaysSucceed(Box<State<A>>),
+    /// Ignores the child's outcome and always return `Failure`.
+    AlwaysFail(Box<State<A>>),
     /// Keeps track of waiting for a period of time before continuing.
     Wait { time_to_wait: Float, elapsed_time: Float },
     /// Waits forever.
@@ -144,6 +146,7 @@ impl<A: Clone> State<A> {
             Behavior::Action(action) => State::Action(action),
             Behavior::Invert(ev) => State::Invert(Box::new(State::new(*ev))),
             Behavior::AlwaysSucceed(ev) => State::AlwaysSucceed(Box::new(State::new(*ev))),
+            Behavior::AlwaysFail(ev) => State::AlwaysFail(Box::new(State::new(*ev))),
             Behavior::Wait(dt) => State::Wait {
                 time_to_wait: dt,
                 elapsed_time: 0.0,
@@ -274,6 +277,15 @@ impl<A: Clone> State<A> {
                 let result = match cur.tick(child_id, metas, e, blackboard, f, tracer) {
                     (Running, dt) => (Running, dt),
                     (_, dt) => (Success, dt),
+                };
+                tracer.record(self_id, result.0);
+                result
+            }
+            (_, &mut AlwaysFail(ref mut cur)) => {
+                let child_id = first_child_id::<T>(self_id);
+                let result = match cur.tick(child_id, metas, e, blackboard, f, tracer) {
+                    (Running, dt) => (Running, dt),
+                    (_, dt) => (Failure, dt),
                 };
                 tracer.record(self_id, result.0);
                 result

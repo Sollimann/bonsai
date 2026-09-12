@@ -1,4 +1,4 @@
-"""Behavior class + 14 factory functions + ports of Rust behavior_tests."""
+"""Behavior class + 15 factory functions + ports of Rust behavior_tests."""
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -9,7 +9,7 @@ import bonsai_bt as bt
 
 FACTORY_NAMES = (
     "Action", "Wait", "WaitForever",
-    "Invert", "AlwaysSucceed",
+    "Invert", "AlwaysSucceed", "AlwaysFail",
     "Sequence", "Select",
     "WhenAll", "WhenAny", "After", "Race",
     "If", "While", "WhileAll",
@@ -19,13 +19,13 @@ FACTORY_NAMES = (
 class TestFactoriesPresent:
     @pytest.mark.parametrize("name", FACTORY_NAMES)
     def test_factory_exported(self, name: str) -> None:
-        """Each of the 16 factory names is importable and callable."""
+        """Each of the 15 factory names is importable and callable."""
         assert hasattr(bt, name), f"missing factory {name}"
         assert callable(getattr(bt, name)), f"{name} not callable"
 
     def test_factory_count(self) -> None:
-        """Exactly 14 factory names tracked — guards against silent additions."""
-        assert len(FACTORY_NAMES) == 14
+        """Exactly 15 factory names tracked — guards against silent additions."""
+        assert len(FACTORY_NAMES) == 15
 
 
 def _trivial(label: str) -> bt.Behavior:
@@ -41,6 +41,7 @@ class TestFactoryConstruction:
             (lambda: bt.WaitForever(), "WaitForever"),
             (lambda: bt.Invert(_trivial("c")), "Invert(...)"),
             (lambda: bt.AlwaysSucceed(_trivial("c")), "AlwaysSucceed(...)"),
+            (lambda: bt.AlwaysFail(_trivial("c")), "AlwaysFail(...)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")]), "Sequence(2)"),
             (lambda: bt.Select([_trivial("a")]), "Select(1)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")], memory=False), "Sequence(2, memory=False)"),
@@ -332,6 +333,26 @@ class TestBehaviorRustParity:
         r = b.tick(0.0, yields_failure)
         assert r is not None
         assert r[0] == bt.Status.Success
+
+    def test_always_fail_coerces_success(self) -> None:
+        """AlwaysFail coerces a child's Success into Failure."""
+        def yields_success(_a: Any, _b: Any) -> tuple[bt.Status, float]:
+            return (bt.Status.Success, 0.0)
+
+        b = bt.BT(bt.AlwaysFail(bt.Action("x")), None)
+        r = b.tick(0.0, yields_success)
+        assert r is not None
+        assert r[0] == bt.Status.Failure
+
+    def test_always_fail_passes_through_running(self) -> None:
+        """AlwaysFail lets a Running child keep Running (it doesn't force Failure early)."""
+        def yields_running(_a: Any, _b: Any) -> tuple[bt.Status, float]:
+            return (bt.Status.Running, 0.0)
+
+        b = bt.BT(bt.AlwaysFail(bt.Action("x")), None)
+        r = b.tick(0.0, yields_running)
+        assert r is not None
+        assert r[0] == bt.Status.Running
 
     def test_when_all_waits_for_all(self) -> None:
         """WhenAll blocks the parent Sequence until both parallel children finish."""

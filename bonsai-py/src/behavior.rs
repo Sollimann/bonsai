@@ -57,6 +57,7 @@ impl PyBehavior {
             Behavior::Action(_) => "Action(...)".to_string(),
             Behavior::Invert(_) => "Invert(...)".to_string(),
             Behavior::AlwaysSucceed(_) => "AlwaysSucceed(...)".to_string(),
+            Behavior::AlwaysFail(_) => "AlwaysFail(...)".to_string(),
             Behavior::Select(v) => format!("Select({})", v.len()),
             Behavior::MemorylessSelector(v) => format!("Select({}, memory=False)", v.len()),
             Behavior::If(_, _, _) => "If(...)".to_string(),
@@ -116,6 +117,13 @@ pub fn invert_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
 #[pyo3(name = "AlwaysSucceed")]
 pub fn always_succeed_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
     PyBehavior::wrap(Behavior::AlwaysSucceed(Box::new(child.inner.clone())))
+}
+
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "AlwaysFail")]
+pub fn always_fail_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
+    PyBehavior::wrap(Behavior::AlwaysFail(Box::new(child.inner.clone())))
 }
 
 // ----- Composites (Vec<children>) -----------------------------------------
