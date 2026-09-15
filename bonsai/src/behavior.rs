@@ -34,9 +34,12 @@ pub enum Behavior<A> {
     /// than the given time limit.
     ///
     /// Accumulates the elapsed time across ticks while the child is
-    /// `Running`. Once the accumulated time reaches the limit, the child is
-    /// abandoned and `Failure` is returned. If the child finishes (succeeds
-    /// or fails) before the limit, its status is returned unchanged.
+    /// `Running` (only update events advance the timer). Once the accumulated
+    /// time reaches the limit, the child is abandoned and `Failure` is
+    /// returned together with the leftover time (`elapsed - limit`), so a
+    /// fallback sibling in a `Select`/`Sequence` can consume it. If the child
+    /// finishes (succeeds or fails) before the limit, its status is returned
+    /// unchanged.
     Timeout(Float, Box<Behavior<A>>),
     /// Runs behaviors one by one until one succeeds.
     ///

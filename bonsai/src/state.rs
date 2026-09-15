@@ -303,7 +303,10 @@ impl<A: Clone> State<A> {
                     (Running, _) => {
                         *elapsed_time += upd.unwrap_or(0.0);
                         let result = if *elapsed_time >= time_limit {
-                            (Failure, 0.0)
+                            // Pass the leftover time to the parent so a
+                            // fallback sibling (e.g. in `Select`) can use it,
+                            // mirroring how `Wait` returns `elapsed - limit`.
+                            (Failure, *elapsed_time - time_limit)
                         } else {
                             RUNNING
                         };

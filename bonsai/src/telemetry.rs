@@ -159,7 +159,10 @@ pub const VISUALIZER_HTML: &str = include_str!("index.html");
 #[cfg(test)]
 mod tests {
     use super::children_of;
-    use crate::Behavior::{self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, While};
+    use super::classify;
+    use crate::Behavior::{
+        self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Timeout, Wait, WaitForever, While,
+    };
 
     #[derive(Clone, Debug)]
     enum Act {
@@ -212,6 +215,24 @@ mod tests {
         let ip2 = &*inner2 as *const _;
         let b2 = AlwaysSucceed(inner2);
         assert_eq!(ptrs(&children_of(&b2)), vec![ip2]);
+
+        let inner3 = Box::new(Action(Act::A));
+        let ip3 = &*inner3 as *const _;
+        let b3 = Timeout(2.0, inner3);
+        assert_eq!(ptrs(&children_of(&b3)), vec![ip3]);
+    }
+
+    #[test]
+    fn classify_timeout_includes_duration() {
+        let b = Timeout(1.5, Box::new(Action(Act::A)));
+        assert_eq!(classify(&b), ("Timeout", Some("Timeout(1.50s)".to_string())));
+
+        // Decorators with no runtime label fall back to their node type.
+        assert_eq!(classify(&Invert(Box::new(Action(Act::A)))), ("Inverter", None));
+        assert_eq!(
+            classify(&AlwaysSucceed(Box::new(Action(Act::A)))),
+            ("AlwaysSucceed", None)
+        );
     }
 
     #[test]
