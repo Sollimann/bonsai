@@ -41,6 +41,13 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.check.outputs.skip == 'false'
+
+      - name: Verify package (dry run)
+        if: steps.check.outputs.skip == 'false'
+        run: cargo publish --package bonsai-bt --dry-run
+
       - name: Configure git
         if: steps.check.outputs.skip == 'false'
         run: |

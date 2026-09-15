@@ -28,8 +28,5 @@ jobs:
             exit 1
           fi
 
-      - name: Verify package (dry run)
-        run: cargo publish --package bonsai-bt --dry-run
-
       - name: Publish crate
         run: cargo publish --package bonsai-bt --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"
