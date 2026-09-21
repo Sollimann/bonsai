@@ -68,3 +68,18 @@ fn test_crate_bt() {
     let count = bb.get("count").unwrap();
     assert_eq!(*count, 1);
 }
+
+#[test]
+fn test_into_inner_returns_owned_blackboard() {
+    let seq = Sequence(vec![Action(Inc)]);
+    let mut h: HashMap<String, i32> = HashMap::new();
+    h.insert("count".to_string(), 0);
+    let mut bt = BT::new(seq, h);
+
+    // Mutate through the reference accessor...
+    bt.blackboard_mut().insert("count".to_string(), 7);
+
+    // ...then take ownership of the blackboard without cloning.
+    let owned = bt.into_inner();
+    assert_eq!(owned.get("count"), Some(&7));
+}
