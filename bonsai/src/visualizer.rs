@@ -12,6 +12,8 @@ pub(crate) enum NodeType<A> {
     Invert,
     AlwaysSucceed,
     Timeout(Float),
+    Retry(usize),
+    Repeat(usize),
     Select,
     If,
     Sequence,
@@ -48,6 +50,16 @@ impl<A: Clone + Debug, K: Debug> BT<A, K> {
             }
             Behavior::Timeout(seconds, ev) => {
                 let node_id = graph.add_node(NodeType::Timeout(seconds));
+                graph.add_edge(parent_node, node_id, 1);
+                Self::dfs_recursive(graph, *ev, node_id)
+            }
+            Behavior::Retry(n, ev) => {
+                let node_id = graph.add_node(NodeType::Retry(n));
+                graph.add_edge(parent_node, node_id, 1);
+                Self::dfs_recursive(graph, *ev, node_id)
+            }
+            Behavior::Repeat(n, ev) => {
+                let node_id = graph.add_node(NodeType::Repeat(n));
                 graph.add_edge(parent_node, node_id, 1);
                 Self::dfs_recursive(graph, *ev, node_id)
             }

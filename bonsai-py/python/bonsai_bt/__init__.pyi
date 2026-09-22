@@ -14,6 +14,8 @@ __all__ = [
     "If",
     "Invert",
     "Race",
+    "Repeat",
+    "Retry",
     "Select",
     "Sequence",
     "Status",
@@ -24,14 +26,13 @@ __all__ = [
     "WhenAny",
     "While",
     "WhileAll",
-    "RUNNING",
 ]
 
 @typing.final
 class ActionArgs:
     r"""
     Action callback arguments.
-
+    
     Constructed by the tick bridge and passed to the user's callback.
     The Rust `ActionArgs::event` field is intentionally not exposed —
     Python users only see `dt` and `action`.
@@ -53,7 +54,7 @@ class ActionArgs:
 class BT:
     r"""
     A behavior-tree executor wrapping `bonsai_bt::BT<PyObject, PyObject>`.
-
+    
     Construct from a tree and a blackboard, then drive with `.tick(dt, callback)`.
     The callback receives `(args, blackboard)` and must return `(Status, float)`.
     """
@@ -70,7 +71,7 @@ class BT:
 class Behavior:
     r"""
     An opaque behavior-tree node.
-
+    
     Construct via the factory functions (`Sequence`, `Action`, `Wait`, ...)
     at the module level. Subtrees are reusable - the same `Behavior`
     can appear as a child of multiple parents.
@@ -81,7 +82,7 @@ class Behavior:
 class Status(enum.Enum):
     r"""
     Behavior-tree node result.
-
+    
     Mirrors `bonsai_bt::Status`. Comparable to `int`
     (`Status.Success == 0`, `Failure == 1`, `Running == 2`) and usable
     as a `dict` key or `set` member.
@@ -108,10 +109,14 @@ def Invert(child: Behavior) -> Behavior: ...
 
 def Race(children: typing.Sequence[Behavior]) -> Behavior: ...
 
+def Repeat(repeats: builtins.int, child: Behavior) -> Behavior: ...
+
+def Retry(attempts: builtins.int, child: Behavior) -> Behavior: ...
+
 def Select(children: typing.Sequence[Behavior], memory: builtins.bool = True) -> Behavior:
     r"""
     `Select(children, memory=True)`.
-
+    
     `memory=True` (default) resumes the running child across ticks.
     `memory=False` restarts from the first child every tick.
     """
@@ -119,7 +124,7 @@ def Select(children: typing.Sequence[Behavior], memory: builtins.bool = True) ->
 def Sequence(children: typing.Sequence[Behavior], memory: builtins.bool = True) -> Behavior:
     r"""
     `Sequence(children, memory=True)`.
-
+    
     `memory=True` (default) resumes the running child across ticks.
     `memory=False` restarts from the first child every tick.
     """
@@ -138,6 +143,3 @@ def While(cond: Behavior, body: typing.Sequence[Behavior]) -> Behavior: ...
 
 def WhileAll(cond: Behavior, body: typing.Sequence[Behavior]) -> Behavior: ...
 
-
-RUNNING: typing.Final[tuple[Status, builtins.float]]
-r"""Convenience constant: ``(Status.Running, 0.0)`` - return from a tick callback to keep the action running."""

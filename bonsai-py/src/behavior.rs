@@ -58,6 +58,8 @@ impl PyBehavior {
             Behavior::Invert(_) => "Invert(...)".to_string(),
             Behavior::AlwaysSucceed(_) => "AlwaysSucceed(...)".to_string(),
             Behavior::Timeout(t, _) => format!("Timeout({t})"),
+            Behavior::Retry(n, _) => format!("Retry({n})"),
+            Behavior::Repeat(n, _) => format!("Repeat({n})"),
             Behavior::Select(v) => format!("Select({})", v.len()),
             Behavior::MemorylessSelector(v) => format!("Select({}, memory=False)", v.len()),
             Behavior::If(_, _, _) => "If(...)".to_string(),
@@ -128,6 +130,32 @@ pub fn timeout_fn(seconds: f64, child: PyRef<'_, PyBehavior>) -> PyResult<PyBeha
     }
     Ok(PyBehavior::wrap(Behavior::Timeout(
         seconds as bonsai_bt::Float,
+        Box::new(child.inner.clone()),
+    )))
+}
+
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "Retry")]
+pub fn retry_fn(attempts: usize, child: PyRef<'_, PyBehavior>) -> PyResult<PyBehavior> {
+    if attempts == 0 {
+        return Err(PyValueError::new_err("Retry: attempts must be >= 1"));
+    }
+    Ok(PyBehavior::wrap(Behavior::Retry(
+        attempts,
+        Box::new(child.inner.clone()),
+    )))
+}
+
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "Repeat")]
+pub fn repeat_fn(repeats: usize, child: PyRef<'_, PyBehavior>) -> PyResult<PyBehavior> {
+    if repeats == 0 {
+        return Err(PyValueError::new_err("Repeat: repeats must be >= 1"));
+    }
+    Ok(PyBehavior::wrap(Behavior::Repeat(
+        repeats,
         Box::new(child.inner.clone()),
     )))
 }

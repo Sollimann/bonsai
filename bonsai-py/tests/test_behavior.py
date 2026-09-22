@@ -9,7 +9,7 @@ import bonsai_bt as bt
 
 FACTORY_NAMES = (
     "Action", "Wait", "WaitForever",
-    "Invert", "AlwaysSucceed", "Timeout",
+    "Invert", "AlwaysSucceed", "Timeout", "Retry", "Repeat",
     "Sequence", "Select",
     "WhenAll", "WhenAny", "After", "Race",
     "If", "While", "WhileAll",
@@ -24,8 +24,8 @@ class TestFactoriesPresent:
         assert callable(getattr(bt, name)), f"{name} not callable"
 
     def test_factory_count(self) -> None:
-        """Exactly 15 factory names tracked — guards against silent additions."""
-        assert len(FACTORY_NAMES) == 15
+        """Exactly 17 factory names tracked — guards against silent additions."""
+        assert len(FACTORY_NAMES) == 17
 
 
 def _trivial(label: str) -> bt.Behavior:
@@ -42,6 +42,8 @@ class TestFactoryConstruction:
             (lambda: bt.Invert(_trivial("c")), "Invert(...)"),
             (lambda: bt.AlwaysSucceed(_trivial("c")), "AlwaysSucceed(...)"),
             (lambda: bt.Timeout(1.0, _trivial("c")), "Timeout(1)"),
+            (lambda: bt.Retry(3, _trivial("c")), "Retry(3)"),
+            (lambda: bt.Repeat(3, _trivial("c")), "Repeat(3)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")]), "Sequence(2)"),
             (lambda: bt.Select([_trivial("a")]), "Select(1)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")], memory=False), "Sequence(2, memory=False)"),
