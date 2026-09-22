@@ -57,6 +57,7 @@ impl PyBehavior {
             Behavior::Action(_) => "Action(...)".to_string(),
             Behavior::Invert(_) => "Invert(...)".to_string(),
             Behavior::AlwaysSucceed(_) => "AlwaysSucceed(...)".to_string(),
+            Behavior::Timeout(t, _) => format!("Timeout({t})"),
             Behavior::Select(v) => format!("Select({})", v.len()),
             Behavior::MemorylessSelector(v) => format!("Select({}, memory=False)", v.len()),
             Behavior::If(_, _, _) => "If(...)".to_string(),
@@ -116,6 +117,19 @@ pub fn invert_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
 #[pyo3(name = "AlwaysSucceed")]
 pub fn always_succeed_fn(child: PyRef<'_, PyBehavior>) -> PyBehavior {
     PyBehavior::wrap(Behavior::AlwaysSucceed(Box::new(child.inner.clone())))
+}
+
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "Timeout")]
+pub fn timeout_fn(seconds: f64, child: PyRef<'_, PyBehavior>) -> PyResult<PyBehavior> {
+    if seconds.is_nan() {
+        return Err(PyValueError::new_err("Timeout: seconds must not be NaN"));
+    }
+    Ok(PyBehavior::wrap(Behavior::Timeout(
+        seconds as bonsai_bt::Float,
+        Box::new(child.inner.clone()),
+    )))
 }
 
 // ----- Composites (Vec<children>) -----------------------------------------

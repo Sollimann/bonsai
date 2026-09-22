@@ -9,7 +9,7 @@ import bonsai_bt as bt
 
 FACTORY_NAMES = (
     "Action", "Wait", "WaitForever",
-    "Invert", "AlwaysSucceed",
+    "Invert", "AlwaysSucceed", "Timeout",
     "Sequence", "Select",
     "WhenAll", "WhenAny", "After", "Race",
     "If", "While", "WhileAll",
@@ -19,13 +19,13 @@ FACTORY_NAMES = (
 class TestFactoriesPresent:
     @pytest.mark.parametrize("name", FACTORY_NAMES)
     def test_factory_exported(self, name: str) -> None:
-        """Each of the 16 factory names is importable and callable."""
+        """Each of the 15 factory names is importable and callable."""
         assert hasattr(bt, name), f"missing factory {name}"
         assert callable(getattr(bt, name)), f"{name} not callable"
 
     def test_factory_count(self) -> None:
-        """Exactly 14 factory names tracked — guards against silent additions."""
-        assert len(FACTORY_NAMES) == 14
+        """Exactly 15 factory names tracked — guards against silent additions."""
+        assert len(FACTORY_NAMES) == 15
 
 
 def _trivial(label: str) -> bt.Behavior:
@@ -41,6 +41,7 @@ class TestFactoryConstruction:
             (lambda: bt.WaitForever(), "WaitForever"),
             (lambda: bt.Invert(_trivial("c")), "Invert(...)"),
             (lambda: bt.AlwaysSucceed(_trivial("c")), "AlwaysSucceed(...)"),
+            (lambda: bt.Timeout(1.0, _trivial("c")), "Timeout(1)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")]), "Sequence(2)"),
             (lambda: bt.Select([_trivial("a")]), "Select(1)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")], memory=False), "Sequence(2, memory=False)"),
@@ -166,6 +167,7 @@ class TestIdentityEquality:
             lambda: bt.WaitForever(),
             lambda: bt.Invert(bt.Action("x")),
             lambda: bt.AlwaysSucceed(bt.Action("x")),
+            lambda: bt.Timeout(1.0, bt.Action("x")),
             lambda: bt.Sequence([bt.Action("x")]),
             lambda: bt.Select([bt.Action("x")]),
             lambda: bt.WhenAll([bt.Action("x")]),
@@ -332,6 +334,20 @@ class TestBehaviorRustParity:
         r = b.tick(0.0, yields_failure)
         assert r is not None
         assert r[0] == bt.Status.Success
+
+    def test_timeout_halts_running_child(self) -> None:
+        """Timeout cuts off a still-Running child once the limit is exceeded."""
+        b = bt.BT(bt.Timeout(1.0, bt.Wait(5.0)), None)
+        assert b.tick(0.5, None)[0] == bt.Status.Running
+        assert b.tick(0.4, None)[0] == bt.Status.Running
+        # 0.5 + 0.4 + 0.2 = 1.1 >= 1.0 -> Failure.
+        assert b.tick(0.2, None)[0] == bt.Status.Failure
+
+    def test_timeout_passes_through_completed_child(self) -> None:
+        """Child finishes (Success) before the limit, so Timeout passes it through."""
+        b = bt.BT(bt.Timeout(10.0, bt.Wait(0.5)), None)
+        assert b.tick(0.2, None)[0] == bt.Status.Running
+        assert b.tick(0.4, None)[0] == bt.Status.Success
 
     def test_when_all_waits_for_all(self) -> None:
         """WhenAll blocks the parent Sequence until both parallel children finish."""

@@ -1,7 +1,8 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
     Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Select, Sequence,
-    Status::Running, Success, UpdateArgs, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll, BT,
+    Status::Running, Success, Timeout, UpdateArgs, UpdateEvent, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll,
+    BT,
 };
 
 /// Some test actions.
@@ -15,6 +16,30 @@ enum TestActions {
     LessThan(i32),
     /// Check if less than and return [Running]. If more or equal return [Success].
     LessThanRunningSuccess(i32),
+}
+
+/// A test event type with both update and non-update variants, used to verify
+/// that dt-less events don't advance time-keeping nodes like `Timeout`.
+#[derive(Clone, Copy)]
+enum MixedEvent {
+    Update(Float),
+    NotUpdate,
+}
+
+impl UpdateEvent for MixedEvent {
+    fn from_update_args(args: &UpdateArgs, _old_event: &Self) -> Option<Self> {
+        Some(MixedEvent::Update(args.dt))
+    }
+
+    fn update<U, F>(&self, mut f: F) -> Option<U>
+    where
+        F: FnMut(&UpdateArgs) -> U,
+    {
+        match *self {
+            MixedEvent::Update(dt) => Some(f(&UpdateArgs { dt })),
+            MixedEvent::NotUpdate => None,
+        }
+    }
 }
 
 // A test state machine that can increment and decrement.
@@ -375,6 +400,87 @@ fn test_always_succeed() {
     let (a, s, _) = tick(a, 0.1, &mut state);
     assert_eq!(a, 3);
     assert_eq!(s, Running);
+}
+
+#[test]
+fn test_timeout_halts_running_child() {
+    // A child that keeps Running until it succeeds; the Timeout should cut it
+    // off and return Failure once the limit is exceeded.
+    let behavior = Timeout(1.0, Box::new(Wait(5.0)));
+    let mut state = BT::new(behavior, ());
+
+    let (_, s, _) = tick(0, 0.5, &mut state);
+    assert_eq!(s, Running);
+    let (_, s, _) = tick(0, 0.4, &mut state);
+    assert_eq!(s, Running);
+    // 0.5 + 0.4 = 0.9 < 1.0, still running.
+    let (_, s, _) = tick(0, 0.2, &mut state);
+    // 0.9 + 0.2 = 1.1 >= 1.0 -> Failure.
+    assert_eq!(s, Failure);
+}
+
+#[test]
+fn test_timeout_passes_through_completed_child() {
+    // Child finishes (Success) before the limit, so Timeout returns Success.
+    let behavior = Timeout(10.0, Box::new(Wait(0.5)));
+    let mut state = BT::new(behavior, ());
+
+    let (_, s, _) = tick(0, 0.2, &mut state);
+    assert_eq!(s, Running);
+    let (_, s, _) = tick(0, 0.4, &mut state);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn test_timeout_passes_through_failure() {
+    // Child fails immediately (before the limit), so Timeout returns Failure
+    // unchanged (the timeout does not swallow the child's own failure).
+    let behavior = Timeout(10.0, Box::new(Action(LessThan(5))));
+    let mut state = BT::new(behavior, ());
+
+    // acc starts at 10, so LessThan(5) fails on the first tick.
+    let (_, s, _) = tick(10, 0.1, &mut state);
+    assert_eq!(s, Failure);
+}
+
+#[test]
+fn test_timeout_leftover_time_in_select() {
+    // When the timeout fires mid-tick, the leftover time must be passed to the
+    // fallback sibling in a `Select`, mirroring `Wait`'s `elapsed - limit`.
+    //
+    // On a single 1.5s tick:
+    //   Timeout(1.0, Wait(5.0)) -> Failure with 0.5 leftover
+    //   Wait(0.3)              -> Success with 0.5 - 0.3 = 0.2 leftover
+    let behavior = Select(vec![Timeout(1.0, Box::new(Wait(5.0))), Wait(0.3)]);
+    let mut state = BT::new(behavior, ());
+
+    let (_, s, dt) = tick(0, 1.5, &mut state);
+    assert_eq!(s, Success);
+    assert!((dt - 0.2).abs() < 1e-6, "expected 0.2 leftover, got {dt}");
+}
+
+#[test]
+fn test_timeout_ignores_non_update_events() {
+    // Events that aren't updates (dt-less) must not advance the timeout timer.
+    let behavior = Timeout(1.0, Box::new(Wait(5.0)));
+    let mut state = BT::new(behavior, ());
+
+    let mut f = |_: ActionArgs<MixedEvent, TestActions>, _: &mut ()| (Success, 0.0);
+
+    // Non-update events don't move the timer.
+    for _ in 0..3 {
+        let (s, _) = state.tick(&MixedEvent::NotUpdate, &mut f).unwrap();
+        assert_eq!(s, Running);
+    }
+    // 0.5 + 0.4 = 0.9 < 1.0 -> still running (timer only advanced 0.9).
+    let (s, _) = state.tick(&MixedEvent::Update(0.5), &mut f).unwrap();
+    assert_eq!(s, Running);
+    let (s, _) = state.tick(&MixedEvent::Update(0.4), &mut f).unwrap();
+    assert_eq!(s, Running);
+    // 0.9 + 0.2 = 1.1 >= 1.0 -> Failure, leftover 0.1.
+    let (s, dt) = state.tick(&MixedEvent::Update(0.2), &mut f).unwrap();
+    assert_eq!(s, Failure);
+    assert!((dt - 0.1).abs() < 1e-6, "expected 0.1 leftover, got {dt}");
 }
 
 #[test]

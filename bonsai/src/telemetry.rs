@@ -81,7 +81,7 @@ pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
     use Behavior::*;
     match b {
         Action(_) | Wait(_) | WaitForever => vec![],
-        Invert(c) | AlwaysSucceed(c) => vec![c.as_ref()],
+        Invert(c) | AlwaysSucceed(c) | Timeout(_, c) => vec![c.as_ref()],
         // [condition, on_success, on_failure] — must match skip_subtree logic.
         If(cond, ok, ko) => vec![cond.as_ref(), ok.as_ref(), ko.as_ref()],
         While(cond, body) | WhileAll(cond, body) => {
@@ -112,6 +112,7 @@ fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String
         WaitForever => ("WaitForever", None),
         Invert(_) => ("Inverter", None),
         AlwaysSucceed(_) => ("AlwaysSucceed", None),
+        Timeout(t, _) => ("Timeout", Some(format!("Timeout({t:.2}s)"))),
         Select(_) => ("Selector", None),
         MemorylessSelector(_) => ("MemorylessSelector", None),
         Sequence(_) => ("Sequence", None),
@@ -158,7 +159,10 @@ pub const VISUALIZER_HTML: &str = include_str!("index.html");
 #[cfg(test)]
 mod tests {
     use super::children_of;
-    use crate::Behavior::{self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, While};
+    use super::classify;
+    use crate::Behavior::{
+        self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Timeout, Wait, WaitForever, While,
+    };
 
     #[derive(Clone, Debug)]
     enum Act {
@@ -211,6 +215,24 @@ mod tests {
         let ip2 = &*inner2 as *const _;
         let b2 = AlwaysSucceed(inner2);
         assert_eq!(ptrs(&children_of(&b2)), vec![ip2]);
+
+        let inner3 = Box::new(Action(Act::A));
+        let ip3 = &*inner3 as *const _;
+        let b3 = Timeout(2.0, inner3);
+        assert_eq!(ptrs(&children_of(&b3)), vec![ip3]);
+    }
+
+    #[test]
+    fn classify_timeout_includes_duration() {
+        let b = Timeout(1.5, Box::new(Action(Act::A)));
+        assert_eq!(classify(&b), ("Timeout", Some("Timeout(1.50s)".to_string())));
+
+        // Decorators with no runtime label fall back to their node type.
+        assert_eq!(classify(&Invert(Box::new(Action(Act::A)))), ("Inverter", None));
+        assert_eq!(
+            classify(&AlwaysSucceed(Box::new(Action(Act::A)))),
+            ("AlwaysSucceed", None)
+        );
     }
 
     #[test]

@@ -30,6 +30,17 @@ pub enum Behavior<A> {
     Invert(Box<Behavior<A>>),
     /// Ignores failures and returns `Success`.
     AlwaysSucceed(Box<Behavior<A>>),
+    /// Halts the child and returns `Failure` if it stays `Running` longer
+    /// than the given time limit.
+    ///
+    /// Accumulates the elapsed time across ticks while the child is
+    /// `Running` (only update events advance the timer). Once the accumulated
+    /// time reaches the limit, the child is abandoned and `Failure` is
+    /// returned together with the leftover time (`elapsed - limit`), so a
+    /// fallback sibling in a `Select`/`Sequence` can consume it. If the child
+    /// finishes (succeeds or fails) before the limit, its status is returned
+    /// unchanged.
+    Timeout(Float, Box<Behavior<A>>),
     /// Runs behaviors one by one until one succeeds.
     ///
     /// Tries the next behavior if one fails. Fails if the last fails.
