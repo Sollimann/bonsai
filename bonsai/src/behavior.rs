@@ -41,6 +41,20 @@ pub enum Behavior<A> {
     /// finishes (succeeds or fails) before the limit, its status is returned
     /// unchanged.
     Timeout(Float, Box<Behavior<A>>),
+    /// Re-runs the child up to `N` times if it fails.
+    ///
+    /// On `Failure` the child is reset and re-ticked (within the same tick)
+    /// until it succeeds or `N` attempts have been made, in which case
+    /// `Failure` is returned. A `Running` child passes through unchanged.
+    /// `N` must be at least 1.
+    Retry(usize, Box<Behavior<A>>),
+    /// Re-runs the child `N` times while it succeeds.
+    ///
+    /// On `Success` the child is reset and re-ticked (within the same tick)
+    /// until it has succeeded `N` times, returning `Success`, or it fails,
+    /// returning `Failure`. A `Running` child passes through unchanged.
+    /// `N` must be at least 1.
+    Repeat(usize, Box<Behavior<A>>),
     /// Runs behaviors one by one until one succeeds.
     ///
     /// Tries the next behavior if one fails. Fails if the last fails.

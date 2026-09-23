@@ -14,6 +14,8 @@ __all__ = [
     "If",
     "Invert",
     "Race",
+    "Repeat",
+    "Retry",
     "Select",
     "Sequence",
     "Status",
@@ -107,6 +109,10 @@ def If(cond: Behavior, on_success: Behavior, on_failure: Behavior) -> Behavior: 
 def Invert(child: Behavior) -> Behavior: ...
 
 def Race(children: typing.Sequence[Behavior]) -> Behavior: ...
+
+def Repeat(repeats: builtins.int, child: Behavior) -> Behavior: ...
+
+def Retry(attempts: builtins.int, child: Behavior) -> Behavior: ...
 
 def Select(children: typing.Sequence[Behavior], memory: builtins.bool = True) -> Behavior:
     r"""

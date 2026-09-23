@@ -1,6 +1,6 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Select, Sequence,
+    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Repeat, Retry, Select, Sequence,
     Status::Running, Success, Timeout, UpdateArgs, UpdateEvent, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll,
     BT,
 };
@@ -429,6 +429,47 @@ fn test_timeout_passes_through_completed_child() {
     assert_eq!(s, Running);
     let (_, s, _) = tick(0, 0.4, &mut state);
     assert_eq!(s, Success);
+}
+
+#[test]
+fn test_retry_retries_failing_child() {
+    // A child that always fails: Retry(3) makes exactly 3 attempts then returns Failure.
+    // LessThan(0): acc(0) < 0 is false -> Failure, every attempt.
+    let behavior = Retry(3, Box::new(Action(LessThan(0))));
+    let mut state = BT::new(behavior, ());
+    let (_, s, _) = tick(0, 0.0, &mut state);
+    assert_eq!(s, Failure);
+}
+
+#[test]
+fn test_retry_passes_through_success() {
+    // A child that succeeds immediately: Retry returns Success on the first attempt.
+    // acc(0) < 1 -> Success immediately.
+    let behavior = Retry(3, Box::new(Action(LessThan(1))));
+    let mut state = BT::new(behavior, ());
+    let (_, s, _) = tick(0, 0.0, &mut state);
+    assert_eq!(s, Success);
+}
+
+#[test]
+fn test_repeat_runs_child_n_times() {
+    // Repeat re-runs a succeeding child until it has succeeded N times.
+    // Each Inc succeeds and increments acc; after 3 successes Repeat returns Success.
+    let behavior = Repeat(3, Box::new(Action(Inc)));
+    let mut state = BT::new(behavior, ());
+    let (acc, s, _) = tick(0, 0.0, &mut state);
+    assert_eq!(s, Success);
+    assert_eq!(acc, 3);
+}
+
+#[test]
+fn test_repeat_passes_through_failure() {
+    // A child that fails immediately: Repeat returns Failure on the first attempt.
+    let behavior = Repeat(3, Box::new(Action(LessThan(0))));
+    let mut state = BT::new(behavior, ());
+
+    let (_, s, _) = tick(0, 0.0, &mut state);
+    assert_eq!(s, Failure);
 }
 
 #[test]

@@ -14,7 +14,7 @@ __all__ = [
     "Status", "ActionArgs", "Behavior", "BT",
     # factories (leaves, decorators, composites, control flow)
     "Action", "Wait", "WaitForever",
-    "Invert", "AlwaysSucceed", "Timeout",
+    "Invert", "AlwaysSucceed", "Timeout", "Retry", "Repeat",
     "Sequence", "Select",
     "WhenAll", "WhenAny", "After", "Race",
     "If", "While", "WhileAll",

@@ -43,6 +43,22 @@ pub(crate) enum State<A> {
         elapsed_time: Float,
         child: Box<State<A>>,
     },
+    /// Keeps track of a `Retry` decorator: the child template, the running
+    /// child state, and the number of attempts made so far.
+    Retry {
+        max_attempts: usize,
+        attempts: usize,
+        child: Box<Behavior<A>>,
+        child_state: Box<State<A>>,
+    },
+    /// Keeps track of a `Repeat` decorator: the child template, the running
+    /// child state, and the number of successful repetitions so far.
+    Repeat {
+        max_repeats: usize,
+        repeats: usize,
+        child: Box<Behavior<A>>,
+        child_state: Box<State<A>>,
+    },
     /// Keeps track of waiting for a period of time before continuing.
     Wait { time_to_wait: Float, elapsed_time: Float },
     /// Waits forever.
@@ -155,6 +171,18 @@ impl<A: Clone> State<A> {
                 time_limit,
                 elapsed_time: 0.0,
                 child: Box::new(State::new(*ev)),
+            },
+            Behavior::Retry(max_attempts, ev) => State::Retry {
+                max_attempts,
+                attempts: 0,
+                child: Box::new(*ev.clone()),
+                child_state: Box::new(State::new(*ev)),
+            },
+            Behavior::Repeat(max_repeats, ev) => State::Repeat {
+                max_repeats,
+                repeats: 0,
+                child: Box::new(*ev.clone()),
+                child_state: Box::new(State::new(*ev)),
             },
             Behavior::Wait(dt) => State::Wait {
                 time_to_wait: dt,
@@ -318,6 +346,90 @@ impl<A: Clone> State<A> {
                         (status, dt)
                     }
                 }
+            }
+            (
+                _,
+                &mut Retry {
+                    max_attempts,
+                    ref mut attempts,
+                    ref child,
+                    ref mut child_state,
+                },
+            ) => {
+                let child_id = first_child_id::<T>(self_id);
+                let mut remaining_dt = upd.unwrap_or(0.0);
+                let mut remaining_e;
+                let result = loop {
+                    match child_state.tick(
+                        child_id,
+                        metas,
+                        match upd {
+                            Some(_) => {
+                                remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                                &remaining_e
+                            }
+                            _ => e,
+                        },
+                        blackboard,
+                        f,
+                        tracer,
+                    ) {
+                        (Running, dt) => break (Running, dt),
+                        (Success, dt) => break (Success, dt),
+                        (Failure, dt) => {
+                            *attempts += 1;
+                            remaining_dt = dt;
+                            if *attempts >= max_attempts {
+                                break (Failure, remaining_dt);
+                            }
+                            **child_state = State::new((**child).clone());
+                        }
+                    }
+                };
+                tracer.record(self_id, result.0);
+                result
+            }
+            (
+                _,
+                &mut Repeat {
+                    max_repeats,
+                    ref mut repeats,
+                    ref child,
+                    ref mut child_state,
+                },
+            ) => {
+                let child_id = first_child_id::<T>(self_id);
+                let mut remaining_dt = upd.unwrap_or(0.0);
+                let mut remaining_e;
+                let result = loop {
+                    match child_state.tick(
+                        child_id,
+                        metas,
+                        match upd {
+                            Some(_) => {
+                                remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                                &remaining_e
+                            }
+                            _ => e,
+                        },
+                        blackboard,
+                        f,
+                        tracer,
+                    ) {
+                        (Running, dt) => break (Running, dt),
+                        (Failure, dt) => break (Failure, dt),
+                        (Success, dt) => {
+                            *repeats += 1;
+                            remaining_dt = dt;
+                            if *repeats >= max_repeats {
+                                break (Success, remaining_dt);
+                            }
+                            **child_state = State::new((**child).clone());
+                        }
+                    }
+                };
+                tracer.record(self_id, result.0);
+                result
             }
             (
                 Some(dt),
