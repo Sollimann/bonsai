@@ -81,7 +81,7 @@ pub(crate) fn children_of<A>(b: &Behavior<A>) -> Vec<&Behavior<A>> {
     use Behavior::*;
     match b {
         Action(_) | Wait(_) | WaitForever => vec![],
-        Invert(c) | AlwaysSucceed(c) | Timeout(_, c) => vec![c.as_ref()],
+        Invert(c) | AlwaysSucceed(c) | Timeout(_, c) | Retry(_, c) | Repeat(_, c) => vec![c.as_ref()],
         // [condition, on_success, on_failure] — must match skip_subtree logic.
         If(cond, ok, ko) => vec![cond.as_ref(), ok.as_ref(), ko.as_ref()],
         While(cond, body) | WhileAll(cond, body) => {
@@ -113,6 +113,8 @@ fn classify<A: std::fmt::Debug>(b: &Behavior<A>) -> (&'static str, Option<String
         Invert(_) => ("Inverter", None),
         AlwaysSucceed(_) => ("AlwaysSucceed", None),
         Timeout(t, _) => ("Timeout", Some(format!("Timeout({t:.2}s)"))),
+        Retry(n, _) => ("Retry", Some(format!("Retry({n})"))),
+        Repeat(n, _) => ("Repeat", Some(format!("Repeat({n})"))),
         Select(_) => ("Selector", None),
         MemorylessSelector(_) => ("MemorylessSelector", None),
         Sequence(_) => ("Sequence", None),
@@ -161,7 +163,7 @@ mod tests {
     use super::children_of;
     use super::classify;
     use crate::Behavior::{
-        self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Timeout, Wait, WaitForever, While,
+        self, Action, AlwaysSucceed, If, Invert, Repeat, Retry, Select, Sequence, Timeout, Wait, WaitForever, While,
     };
 
     #[derive(Clone, Debug)]
@@ -220,6 +222,16 @@ mod tests {
         let ip3 = &*inner3 as *const _;
         let b3 = Timeout(2.0, inner3);
         assert_eq!(ptrs(&children_of(&b3)), vec![ip3]);
+
+        let inner4 = Box::new(Action(Act::A));
+        let ip4 = &*inner4 as *const _;
+        let b4 = Retry(3, inner4);
+        assert_eq!(ptrs(&children_of(&b4)), vec![ip4]);
+
+        let inner5 = Box::new(Action(Act::A));
+        let ip5 = &*inner5 as *const _;
+        let b5 = Repeat(2, inner5);
+        assert_eq!(ptrs(&children_of(&b5)), vec![ip5]);
     }
 
     #[test]
@@ -232,6 +244,18 @@ mod tests {
         assert_eq!(
             classify(&AlwaysSucceed(Box::new(Action(Act::A)))),
             ("AlwaysSucceed", None)
+        );
+    }
+
+    #[test]
+    fn classify_retry_and_repeat_include_count() {
+        assert_eq!(
+            classify(&Retry(3, Box::new(Action(Act::A)))),
+            ("Retry", Some("Retry(3)".to_string()))
+        );
+        assert_eq!(
+            classify(&Repeat(2, Box::new(Action(Act::A)))),
+            ("Repeat", Some("Repeat(2)".to_string()))
         );
     }
 

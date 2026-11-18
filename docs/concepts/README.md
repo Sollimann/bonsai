@@ -6,6 +6,7 @@
     - [BT vs FSM:](#bt-vs-fsm)
   - [How to use a Behavior tree?](#how-to-use-a-behavior-tree)
 - [Parallel semantics](#parallel-semantics)
+- [Decorators](#decorators)
 - [Behavior vs State](#behavior-vs-state)
 - [Events](#events)
 - [Instant Actions](#instant-actions)
@@ -58,8 +59,31 @@ For example, if you have a state `A` and a state `B`:
 - Run `A` and `B` in parallel and wait for any to succeed: `WhenAny([A, B])`
 - Run `A` and `B` in parallell and wait for any to complete regardless of success or failure: `Race([A, B])`
 - Run `A` and `B` in parallel, but `A` has to succeed before `B`: `After([A, B])`
+- Force a child to succeed regardless of its result: `AlwaysSucceed(A)`
+- Run a child, but fail it if it stays `Running` longer than a limit: `Timeout(seconds, A)`
+- Retry a failing child up to `n` attempts: `Retry(n, A)`
+- Repeat a succeeding child up to `n` times: `Repeat(n, A)`
 
 See the `Behavior` enum for more information.
+
+## Decorators
+
+A decorator wraps a single child and rewrites the status it returns:
+`Invert(A)`, `AlwaysSucceed(A)`, `Timeout(seconds, A)`, `Retry(n, A)` and
+`Repeat(n, A)`. `Retry` and `Repeat` restart their child from its initial state
+on every attempt, so a `Wait` inside them waits the full duration each time.
+
+Some decorator names from other behavior-tree libraries are intentionally not
+separate nodes, because the existing primitives already express them:
+
+- `ForceSuccess(A)` is `AlwaysSucceed(A)`
+- `ForceFailure(A)` is `Invert(AlwaysSucceed(A))`
+- `KeepRunningUntilFailure(A)` is `While(WaitForever, [A])`
+
+`While(WaitForever, [A])` re-runs `A` for as long as it succeeds: the condition
+never terminates, a `Running` child keeps the loop `Running`, and a `Failure`
+stops the loop and fails the `While`. For unbounded retries, use
+`While(WaitForever, [AlwaysSucceed(A)])`.
 
 ## Parallel semantics
 Parallel semantics has two important properties:

@@ -1,5 +1,6 @@
 //! Proves that ticking a memoryless `Sequence` (`memory = false`) with leaf
-//! `Copy` children does zero heap allocations after a warmup tick.
+//! `Copy` children does zero heap allocations after a warmup tick, and that
+//! `Retry`/`Repeat` forward `Running` without allocating.
 //!
 //! # Why counting is per-thread
 //!
@@ -11,7 +12,7 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use bonsai_bt::{Action, ActionArgs, Event, Sequence, Status, UpdateArgs, BT};
+use bonsai_bt::{Action, ActionArgs, Event, Repeat, Retry, Sequence, Status, UpdateArgs, BT};
 
 /// Fast process-wide check: when false, skip the per-thread lookup entirely.
 /// One relaxed atomic load per allocation.
@@ -88,5 +89,42 @@ fn memoryless_sequence_steady_state_is_zero_alloc() {
         allocs, 0,
         "memoryless composite tick path must not allocate with leaf Copy children; \
          observed {allocs} allocations across 100 ticks"
+    );
+}
+
+#[test]
+fn retry_and_repeat_running_steady_state_is_zero_alloc() {
+    // While the child is `Running`, both decorators only forward the status, so
+    // no child state is rebuilt and nothing is allocated. (Restarting the child
+    // after a completed attempt intentionally allocates a fresh State tree.)
+    //
+    // Action code 1 always returns Running, so neither decorator ever completes.
+    let mut retry_bt = BT::new(Retry(5, Box::new(Action(1_u32))), ());
+    let mut repeat_bt = BT::new(Repeat(5, Box::new(Action(1_u32))), ());
+
+    let e: Event = UpdateArgs { dt: 0.016 }.into();
+    let mut step = |args: ActionArgs<Event, u32>, _bb: &mut ()| (Status::Running, args.dt);
+
+    // Warmup tick — the first run may allocate (e.g. telemetry setup).
+    let _ = retry_bt.tick(&e, &mut step);
+    let _ = repeat_bt.tick(&e, &mut step);
+
+    THIS_THREAD_COUNT.with(|c| c.set(0));
+    THIS_THREAD_MEASURING.with(|c| c.set(true));
+    ANY_THREAD_MEASURING.store(true, Ordering::Relaxed);
+
+    for _ in 0..100 {
+        let _ = retry_bt.tick(&e, &mut step);
+        let _ = repeat_bt.tick(&e, &mut step);
+    }
+
+    ANY_THREAD_MEASURING.store(false, Ordering::Relaxed);
+    THIS_THREAD_MEASURING.with(|c| c.set(false));
+
+    let allocs = THIS_THREAD_COUNT.with(|c| c.get());
+    assert_eq!(
+        allocs, 0,
+        "Retry/Repeat must not allocate while their child is Running; \
+         observed {allocs} allocations across 200 ticks"
     );
 }

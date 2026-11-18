@@ -5,8 +5,8 @@ import bonsai_bt as bt
 
 
 def test_version_present() -> None:
-    """bt.__version__ pins the wheel version (0.14.0); bump per release."""
-    assert bt.__version__ == "0.14.0"
+    """bt.__version__ pins the wheel version (0.15.0); bump per release."""
+    assert bt.__version__ == "0.15.0"
 
 
 def test_docstring_present() -> None:
@@ -16,11 +16,11 @@ def test_docstring_present() -> None:
 
 
 def test_all_contents() -> None:
-    """__all__ contains exactly the 4 types + 15 factories + RUNNING = 20 names."""
+    """__all__ contains exactly the 4 types + 17 factories + RUNNING = 22 names."""
     expected = {
         "Status", "ActionArgs", "Behavior", "BT",
         "Action", "Wait", "WaitForever",
-        "Invert", "AlwaysSucceed", "Timeout",
+        "Invert", "AlwaysSucceed", "Timeout", "Retry", "Repeat",
         "Sequence", "Select",
         "WhenAll", "WhenAny", "After", "Race",
         "If", "While", "WhileAll",

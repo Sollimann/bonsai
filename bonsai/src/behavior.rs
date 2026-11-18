@@ -41,6 +41,58 @@ pub enum Behavior<A> {
     /// finishes (succeeds or fails) before the limit, its status is returned
     /// unchanged.
     Timeout(Float, Box<Behavior<A>>),
+    /// Retries the child until it succeeds, up to `n` attempts in total.
+    ///
+    /// Each attempt restarts the child from its initial state. Attempts run in
+    /// the same updating tick, and each retry receives the delta time the
+    /// previous attempt left over, so a child that fails immediately is retried
+    /// immediately. A dt-less event runs at most one attempt and keeps the
+    /// remaining budget for later ticks. `n == 0` fails without ticking the
+    /// child.
+    ///
+    /// Returns `Success` as soon as an attempt succeeds, `Running` while an
+    /// attempt is in progress or the budget waits for the next tick, and
+    /// `Failure` once all attempts have failed. A very large `n` can block a
+    /// tick if the child fails without consuming time; use
+    /// `While(WaitForever, [AlwaysSucceed(child)])` to retry forever.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bonsai_bt::{ActionArgs, Action, Behavior::Retry, BT, Event, Status, UpdateArgs};
+    ///
+    /// let mut bt: BT<(), ()> = BT::new(Retry(3, Box::new(Action(()))), ());
+    /// let e: Event = UpdateArgs { dt: 1.0 }.into();
+    ///
+    /// let mut attempts = 0;
+    /// let (status, _) = bt
+    ///     .tick(&e, &mut |_: ActionArgs<Event, ()>, _: &mut ()| {
+    ///         attempts += 1;
+    ///         if attempts < 3 {
+    ///             (Status::Failure, 0.0)
+    ///         } else {
+    ///             (Status::Success, 0.0)
+    ///         }
+    ///     })
+    ///     .unwrap();
+    ///
+    /// assert_eq!(status, Status::Success);
+    /// assert_eq!(attempts, 3);
+    /// ```
+    Retry(usize, Box<Behavior<A>>),
+    /// Repeats the child up to `n` times as long as it keeps succeeding.
+    ///
+    /// Each repetition restarts the child from its initial state. Repetitions
+    /// run in the same updating tick, and each one receives the delta time the
+    /// previous one left over, so a child that succeeds immediately is repeated
+    /// immediately. A dt-less event runs at most one repetition and keeps the
+    /// rest for later ticks. The first `Failure` stops the loop and is returned
+    /// immediately. `n == 0` succeeds without ticking the child.
+    ///
+    /// Returns `Success` once all `n` repetitions have completed. It is the
+    /// bounded counterpart of `While(WaitForever, [child])`, which repeats
+    /// forever.
+    Repeat(usize, Box<Behavior<A>>),
     /// Runs behaviors one by one until one succeeds.
     ///
     /// Tries the next behavior if one fails. Fails if the last fails.
@@ -180,7 +232,7 @@ impl<A> Behavior<A> {
 #[cfg(feature = "serde")]
 mod tests {
     use crate::{
-        Behavior::{self, Action, Select, Sequence, Wait, WaitForever, WhenAny, While},
+        Behavior::{self, Action, Repeat, Retry, Select, Sequence, Wait, WaitForever, WhenAny, While},
         Float,
     };
 
@@ -310,5 +362,24 @@ mod tests {
         let json = r#"{ "Sequence": [{ "Action": "Circling" }] }"#;
         let back: Behavior<EnemyAction> = serde_json::from_str(json).unwrap();
         assert_eq!(back, Sequence(vec![Action(EnemyAction::Circling)]));
+    }
+
+    #[test]
+    fn serde_roundtrip_retry() {
+        let rs: Behavior<EnemyAction> = Retry(3, Box::new(Action(EnemyAction::Circling)));
+        let json = serde_json::to_string(&rs).unwrap();
+        // Tuple-variant shape: `[attempts, child]`.
+        assert_eq!(json, r#"{"Retry":[3,{"Action":"Circling"}]}"#);
+        let back: Behavior<EnemyAction> = serde_json::from_str(&json).unwrap();
+        assert_eq!(rs, back);
+    }
+
+    #[test]
+    fn serde_roundtrip_repeat() {
+        let rs: Behavior<EnemyAction> = Repeat(2, Box::new(Action(EnemyAction::Circling)));
+        let json = serde_json::to_string(&rs).unwrap();
+        assert_eq!(json, r#"{"Repeat":[2,{"Action":"Circling"}]}"#);
+        let back: Behavior<EnemyAction> = serde_json::from_str(&json).unwrap();
+        assert_eq!(rs, back);
     }
 }

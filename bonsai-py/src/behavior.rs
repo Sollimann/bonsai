@@ -58,6 +58,8 @@ impl PyBehavior {
             Behavior::Invert(_) => "Invert(...)".to_string(),
             Behavior::AlwaysSucceed(_) => "AlwaysSucceed(...)".to_string(),
             Behavior::Timeout(t, _) => format!("Timeout({t})"),
+            Behavior::Retry(n, _) => format!("Retry({n})"),
+            Behavior::Repeat(n, _) => format!("Repeat({n})"),
             Behavior::Select(v) => format!("Select({})", v.len()),
             Behavior::MemorylessSelector(v) => format!("Select({}, memory=False)", v.len()),
             Behavior::If(_, _, _) => "If(...)".to_string(),
@@ -130,6 +132,28 @@ pub fn timeout_fn(seconds: f64, child: PyRef<'_, PyBehavior>) -> PyResult<PyBeha
         seconds as bonsai_bt::Float,
         Box::new(child.inner.clone()),
     )))
+}
+
+/// `Retry(attempts, child)`.
+///
+/// Retries `child` until it succeeds, up to `attempts` attempts in total.
+/// Every attempt restarts the child from its initial state.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "Retry")]
+pub fn retry_fn(attempts: usize, child: PyRef<'_, PyBehavior>) -> PyBehavior {
+    PyBehavior::wrap(Behavior::Retry(attempts, Box::new(child.inner.clone())))
+}
+
+/// `Repeat(repetitions, child)`.
+///
+/// Repeats `child` up to `repetitions` times as long as it keeps succeeding.
+/// The first `Failure` stops the loop and is returned.
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(name = "Repeat")]
+pub fn repeat_fn(repetitions: usize, child: PyRef<'_, PyBehavior>) -> PyBehavior {
+    PyBehavior::wrap(Behavior::Repeat(repetitions, Box::new(child.inner.clone())))
 }
 
 // ----- Composites (Vec<children>) -----------------------------------------

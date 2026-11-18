@@ -1,4 +1,4 @@
-"""Behavior class + 14 factory functions + ports of Rust behavior_tests."""
+"""Behavior class + 17 factory functions + ports of Rust behavior_tests."""
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -9,7 +9,7 @@ import bonsai_bt as bt
 
 FACTORY_NAMES = (
     "Action", "Wait", "WaitForever",
-    "Invert", "AlwaysSucceed", "Timeout",
+    "Invert", "AlwaysSucceed", "Timeout", "Retry", "Repeat",
     "Sequence", "Select",
     "WhenAll", "WhenAny", "After", "Race",
     "If", "While", "WhileAll",
@@ -19,13 +19,13 @@ FACTORY_NAMES = (
 class TestFactoriesPresent:
     @pytest.mark.parametrize("name", FACTORY_NAMES)
     def test_factory_exported(self, name: str) -> None:
-        """Each of the 15 factory names is importable and callable."""
+        """Each of the 17 factory names is importable and callable."""
         assert hasattr(bt, name), f"missing factory {name}"
         assert callable(getattr(bt, name)), f"{name} not callable"
 
     def test_factory_count(self) -> None:
-        """Exactly 15 factory names tracked — guards against silent additions."""
-        assert len(FACTORY_NAMES) == 15
+        """Exactly 17 factory names tracked — guards against silent additions."""
+        assert len(FACTORY_NAMES) == 17
 
 
 def _trivial(label: str) -> bt.Behavior:
@@ -42,6 +42,8 @@ class TestFactoryConstruction:
             (lambda: bt.Invert(_trivial("c")), "Invert(...)"),
             (lambda: bt.AlwaysSucceed(_trivial("c")), "AlwaysSucceed(...)"),
             (lambda: bt.Timeout(1.0, _trivial("c")), "Timeout(1)"),
+            (lambda: bt.Retry(3, _trivial("c")), "Retry(3)"),
+            (lambda: bt.Repeat(2, _trivial("c")), "Repeat(2)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")]), "Sequence(2)"),
             (lambda: bt.Select([_trivial("a")]), "Select(1)"),
             (lambda: bt.Sequence([_trivial("a"), _trivial("b")], memory=False), "Sequence(2, memory=False)"),
@@ -348,6 +350,56 @@ class TestBehaviorRustParity:
         b = bt.BT(bt.Timeout(10.0, bt.Wait(0.5)), None)
         assert b.tick(0.2, None)[0] == bt.Status.Running
         assert b.tick(0.4, None)[0] == bt.Status.Success
+
+    def test_retry_succeeds_after_failures(self) -> None:
+        """Retry stops as soon as an attempt succeeds."""
+        calls = 0
+
+        def flaky(_args: Any, _bb: Any) -> tuple[bt.Status, float]:
+            nonlocal calls
+            calls += 1
+            if calls < 3:
+                return (bt.Status.Failure, 0.0)
+            return (bt.Status.Success, 0.0)
+
+        b = bt.BT(bt.Retry(5, bt.Action("flaky")), None)
+        assert b.tick(1.0, flaky)[0] == bt.Status.Success
+        assert calls == 3
+
+    def test_retry_exhausts_attempts(self) -> None:
+        """Retry returns Failure after exactly n failed attempts."""
+        calls = 0
+
+        def always_fails(_args: Any, _bb: Any) -> tuple[bt.Status, float]:
+            nonlocal calls
+            calls += 1
+            return (bt.Status.Failure, 0.0)
+
+        b = bt.BT(bt.Retry(3, bt.Action("x")), None)
+        assert b.tick(1.0, always_fails)[0] == bt.Status.Failure
+        assert calls == 3
+
+    def test_repeat_restarts_child_each_iteration(self) -> None:
+        """Repeat(2, Wait(1.0)) takes two full seconds: the child restarts each round."""
+        b = bt.BT(bt.Repeat(2, bt.Wait(1.0)), None)
+        assert b.tick(0.5, None)[0] == bt.Status.Running
+        # First repetition completes here, but the second one just started.
+        assert b.tick(0.5, None)[0] == bt.Status.Running
+        assert b.tick(0.5, None)[0] == bt.Status.Running
+        assert b.tick(0.5, None)[0] == bt.Status.Success
+
+    def test_repeat_stops_on_failure(self) -> None:
+        """A single failure stops the repeat loop and is returned."""
+        calls = 0
+
+        def always_fails(_args: Any, _bb: Any) -> tuple[bt.Status, float]:
+            nonlocal calls
+            calls += 1
+            return (bt.Status.Failure, 0.0)
+
+        b = bt.BT(bt.Repeat(3, bt.Action("x")), None)
+        assert b.tick(1.0, always_fails)[0] == bt.Status.Failure
+        assert calls == 1
 
     def test_when_all_waits_for_all(self) -> None:
         """WhenAll blocks the parent Sequence until both parallel children finish."""
