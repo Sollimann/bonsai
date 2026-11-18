@@ -37,6 +37,10 @@ name = "timeout"
 path = "src/timeout/main.rs"
 
 [[bin]]
+name = "retry_repeat"
+path = "src/retry_repeat/main.rs"
+
+[[bin]]
 name = "3d"
 path = "src/3d/main.rs"
 

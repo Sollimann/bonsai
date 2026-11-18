@@ -43,6 +43,22 @@ pub(crate) enum State<A> {
         elapsed_time: Float,
         child: Box<State<A>>,
     },
+    /// Keeps track of a `Retry` decorator: the remaining attempts, the child
+    /// being retried, and the declarative child behavior used to restart it
+    /// from scratch on every attempt.
+    Retry {
+        attempts_left: usize,
+        child: Box<State<A>>,
+        child_behavior: Box<Behavior<A>>,
+    },
+    /// Keeps track of a `Repeat` decorator: the remaining repetitions, the child
+    /// being repeated, and the declarative child behavior used to restart it
+    /// from scratch on every repetition.
+    Repeat {
+        remaining: usize,
+        child: Box<State<A>>,
+        child_behavior: Box<Behavior<A>>,
+    },
     /// Keeps track of waiting for a period of time before continuing.
     Wait { time_to_wait: Float, elapsed_time: Float },
     /// Waits forever.
@@ -155,6 +171,16 @@ impl<A: Clone> State<A> {
                 time_limit,
                 elapsed_time: 0.0,
                 child: Box::new(State::new(*ev)),
+            },
+            Behavior::Retry(attempts, child_behavior) => State::Retry {
+                attempts_left: attempts,
+                child: Box::new(State::new((*child_behavior).clone())),
+                child_behavior,
+            },
+            Behavior::Repeat(remaining, child_behavior) => State::Repeat {
+                remaining,
+                child: Box::new(State::new((*child_behavior).clone())),
+                child_behavior,
             },
             Behavior::Wait(dt) => State::Wait {
                 time_to_wait: dt,
@@ -318,6 +344,103 @@ impl<A: Clone> State<A> {
                         (status, dt)
                     }
                 }
+            }
+            (
+                _,
+                &mut Retry {
+                    ref mut attempts_left,
+                    ref mut child,
+                    ref child_behavior,
+                },
+            ) => {
+                let child_id = first_child_id::<T>(self_id);
+                let mut remaining_dt = upd.unwrap_or(0.0);
+                let mut remaining_e;
+                let result = loop {
+                    if *attempts_left == 0 {
+                        break (Failure, remaining_dt);
+                    }
+                    let ev = match upd {
+                        Some(_) => {
+                            remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                            &remaining_e
+                        }
+                        _ => e,
+                    };
+                    match child.tick(child_id, metas, ev, blackboard, f, tracer) {
+                        (Running, dt) => break (Running, dt),
+                        (Success, dt) => break (Success, dt),
+                        (Failure, dt) => {
+                            *attempts_left -= 1;
+                            if *attempts_left == 0 {
+                                break (Failure, dt);
+                            }
+                            // A dt-less event cannot drive a second attempt in
+                            // the same tick, but the remaining budget is kept
+                            // for the next tick.
+                            match upd {
+                                Some(_) => {
+                                    remaining_dt = dt;
+                                    **child = State::new((**child_behavior).clone());
+                                }
+                                _ => {
+                                    **child = State::new((**child_behavior).clone());
+                                    break (Running, dt);
+                                }
+                            }
+                        }
+                    }
+                };
+                tracer.record(self_id, result.0);
+                result
+            }
+            (
+                _,
+                &mut Repeat {
+                    ref mut remaining,
+                    ref mut child,
+                    ref child_behavior,
+                },
+            ) => {
+                let child_id = first_child_id::<T>(self_id);
+                let mut remaining_dt = upd.unwrap_or(0.0);
+                let mut remaining_e;
+                let result = loop {
+                    if *remaining == 0 {
+                        break (Success, remaining_dt);
+                    }
+                    let ev = match upd {
+                        Some(_) => {
+                            remaining_e = UpdateEvent::from_dt(remaining_dt, e).unwrap();
+                            &remaining_e
+                        }
+                        _ => e,
+                    };
+                    match child.tick(child_id, metas, ev, blackboard, f, tracer) {
+                        (Running, dt) => break (Running, dt),
+                        (Failure, dt) => break (Failure, dt),
+                        (Success, dt) => {
+                            *remaining -= 1;
+                            if *remaining == 0 {
+                                break (Success, dt);
+                            }
+                            // A dt-less event only starts one repetition; the
+                            // rest continue on subsequent updating ticks.
+                            match upd {
+                                Some(_) => {
+                                    remaining_dt = dt;
+                                    **child = State::new((**child_behavior).clone());
+                                }
+                                _ => {
+                                    **child = State::new((**child_behavior).clone());
+                                    break (Running, dt);
+                                }
+                            }
+                        }
+                    }
+                };
+                tracer.record(self_id, result.0);
+                result
             }
             (
                 Some(dt),

@@ -21,7 +21,7 @@ cd bonsai-py && maturin develop --release && cd ..
 
 After that, just `source .venv/bin/activate` + `python bonsai-py/examples/<name>.py` in any new shell.
 
-## Examples (9)
+## Examples (10)
 
 ### [simple_npc_ai.py](simple_npc_ai.py) — console NPC
 NPC runs and shoots until action points are exhausted, then rests and dies. Demonstrates `WhileAll`, blackboard mutation via `@dataclass`, structural-`match` callback.
@@ -44,7 +44,14 @@ python bonsai-py/examples/memoryless_chase.py
 python bonsai-py/examples/timeout.py
 ```
 
-### [race_timeout.py](race_timeout.py) — `Race` between work and timeout
+### [retry_repeat.py](retry_repeat.py) - `Retry` / `Repeat` decorators
+`Retry(n, child)` re-runs a failing child until it succeeds, `Repeat(n, child)` re-runs a succeeding child up to `n` times and stops on the first `Failure`. Both restart the child from its initial state, so `Repeat(2, Wait(1.0))` takes two full seconds.
+
+```bash
+python bonsai-py/examples/retry_repeat.py
+```
+
+### [race_timeout.py](race_timeout.py) - `Race` between work and timeout
 A simulated long-running job (random 200–1200 ms on a `threading.Thread`) races a 600 ms timeout. The callback polls the work's `queue.Queue` non-blockingly. Demonstrates `Race`, asyncio main loop + threading worker, the unsendable-BT constraint.
 
 ```bash

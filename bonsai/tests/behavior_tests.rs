@@ -1,6 +1,6 @@
 use crate::behavior_tests::TestActions::{Dec, Inc, LessThan, LessThanRunningSuccess};
 use bonsai_bt::{
-    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Select, Sequence,
+    Action, ActionArgs, After, AlwaysSucceed, Event, Failure, Float, If, Invert, Race, Repeat, Retry, Select, Sequence,
     Status::Running, Success, Timeout, UpdateArgs, UpdateEvent, Wait, WaitForever, WhenAll, WhenAny, While, WhileAll,
     BT,
 };
@@ -480,6 +480,195 @@ fn test_timeout_ignores_non_update_events() {
     // 0.9 + 0.2 = 1.1 >= 1.0 -> Failure, leftover 0.1.
     let (s, dt) = state.tick(&MixedEvent::Update(0.2), &mut f).unwrap();
     assert_eq!(s, Failure);
+    assert!((dt - 0.1).abs() < 1e-6, "expected 0.1 leftover, got {dt}");
+}
+
+#[test]
+fn test_retry_stops_after_success() {
+    // Fails twice, succeeds on the third attempt: the remaining budget must
+    // not be burned once an attempt succeeds.
+    let mut bt: BT<(), ()> = BT::new(Retry(5, Box::new(Action(()))), ());
+    let e: Event = UpdateArgs { dt: 1.0 }.into();
+
+    let mut calls = 0;
+    let (s, _) = bt
+        .tick(&e, &mut |_, _| {
+            calls += 1;
+            if calls < 3 {
+                (Failure, 0.0)
+            } else {
+                (Success, 0.0)
+            }
+        })
+        .unwrap();
+
+    assert_eq!(s, Success);
+    assert_eq!(calls, 3);
+}
+
+#[test]
+fn test_retry_exhausts_attempts_and_fails() {
+    let mut bt: BT<(), ()> = BT::new(Retry(3, Box::new(Action(()))), ());
+    let e: Event = UpdateArgs { dt: 1.0 }.into();
+
+    let mut calls = 0;
+    let (s, _) = bt
+        .tick(&e, &mut |_, _| {
+            calls += 1;
+            (Failure, 0.0)
+        })
+        .unwrap();
+
+    assert_eq!(s, Failure);
+    assert_eq!(calls, 3);
+}
+
+#[test]
+fn test_retry_zero_attempts_fails_without_ticking() {
+    let mut bt: BT<(), ()> = BT::new(Retry(0, Box::new(Action(()))), ());
+    let e: Event = UpdateArgs { dt: 1.0 }.into();
+
+    let mut calls = 0;
+    let (s, _) = bt
+        .tick(&e, &mut |_, _| {
+            calls += 1;
+            (Success, 0.0)
+        })
+        .unwrap();
+
+    assert_eq!(s, Failure);
+    assert_eq!(calls, 0);
+}
+
+#[test]
+fn test_retry_does_not_retry_without_update_event() {
+    // Without delta time a second attempt would be immediate, so only one
+    // attempt runs and the remaining budget waits for the next tick.
+    let mut bt: BT<(), ()> = BT::new(Retry(3, Box::new(Action(()))), ());
+
+    let calls = std::cell::Cell::new(0);
+    let mut f = |_: ActionArgs<MixedEvent, ()>, _: &mut ()| {
+        calls.set(calls.get() + 1);
+        (Failure, 0.0)
+    };
+
+    let (s, _) = bt.tick(&MixedEvent::NotUpdate, &mut f).unwrap();
+    assert_eq!(s, Running);
+    assert_eq!(calls.get(), 1);
+
+    let (s, _) = bt.tick(&MixedEvent::Update(1.0), &mut f).unwrap();
+    assert_eq!(s, Failure);
+    assert_eq!(calls.get(), 3);
+}
+
+#[test]
+fn test_reset_bt_restores_retry_budget() {
+    // `reset_bt` rebuilds the State tree, so the attempt counter starts over.
+    let mut bt: BT<(), ()> = BT::new(Retry(2, Box::new(Action(()))), ());
+    let e: Event = UpdateArgs { dt: 1.0 }.into();
+
+    let calls = std::cell::Cell::new(0);
+    let mut f = |_: ActionArgs<Event, ()>, _: &mut ()| {
+        calls.set(calls.get() + 1);
+        (Failure, 0.0)
+    };
+
+    assert_eq!(bt.tick(&e, &mut f).unwrap().0, Failure);
+    assert_eq!(calls.get(), 2);
+    assert!(bt.is_finished());
+
+    bt.reset_bt();
+    assert!(!bt.is_finished());
+
+    assert_eq!(bt.tick(&e, &mut f).unwrap().0, Failure);
+    assert_eq!(calls.get(), 4);
+}
+
+#[test]
+fn test_repeat_restarts_child_each_iteration() {
+    // `Repeat(2, Wait(1.0))` takes two full seconds: the child is reset after
+    // every `Success`, so the second iteration waits a fresh second.
+    let mut bt: BT<(), ()> = BT::new(Repeat(2, Box::new(Wait(1.0))), ());
+    let mut f = |_: ActionArgs<Event, ()>, _: &mut ()| (Success, 0.0);
+
+    let mut tick = |dt: Float, bt: &mut BT<(), ()>| {
+        let e: Event = UpdateArgs { dt }.into();
+        bt.tick(&e, &mut f).unwrap().0
+    };
+
+    assert_eq!(tick(0.5, &mut bt), Running);
+    // The first repetition completed here; the second just started.
+    assert_eq!(tick(0.5, &mut bt), Running);
+    assert_eq!(tick(0.5, &mut bt), Running);
+    assert_eq!(tick(0.5, &mut bt), Success);
+}
+
+#[test]
+fn test_repeat_restarts_child_after_dtless_event() {
+    // Two actions: a dt-less tick advances the sequence by one child at most,
+    // and the next repetition must start over from the first child.
+    let mut bt: BT<(), ()> = BT::new(Repeat(2, Box::new(Sequence(vec![Action(()), Action(())]))), ());
+
+    let calls = std::cell::Cell::new(0);
+    let mut f = |_: ActionArgs<MixedEvent, ()>, _: &mut ()| {
+        calls.set(calls.get() + 1);
+        (Success, 0.0)
+    };
+
+    assert_eq!(bt.tick(&MixedEvent::NotUpdate, &mut f).unwrap().0, Running);
+    assert_eq!(calls.get(), 1);
+
+    assert_eq!(bt.tick(&MixedEvent::NotUpdate, &mut f).unwrap().0, Running);
+    assert_eq!(calls.get(), 2);
+
+    assert_eq!(bt.tick(&MixedEvent::Update(1.0), &mut f).unwrap().0, Success);
+    assert_eq!(calls.get(), 4);
+}
+
+#[test]
+fn test_repeat_stops_on_failure() {
+    let mut bt: BT<(), ()> = BT::new(Repeat(3, Box::new(Action(()))), ());
+    let e: Event = UpdateArgs { dt: 1.0 }.into();
+
+    let mut calls = 0;
+    let (s, _) = bt
+        .tick(&e, &mut |_, _| {
+            calls += 1;
+            (Failure, 0.0)
+        })
+        .unwrap();
+
+    assert_eq!(s, Failure);
+    assert_eq!(calls, 1);
+}
+
+#[test]
+fn test_repeat_zero_repetitions_succeeds_without_ticking() {
+    let mut bt: BT<(), ()> = BT::new(Repeat(0, Box::new(Action(()))), ());
+    let e: Event = UpdateArgs { dt: 1.0 }.into();
+
+    let mut calls = 0;
+    let (s, _) = bt
+        .tick(&e, &mut |_, _| {
+            calls += 1;
+            (Success, 0.0)
+        })
+        .unwrap();
+
+    assert_eq!(s, Success);
+    assert_eq!(calls, 0);
+}
+
+#[test]
+fn test_repeat_passes_leftover_time_to_sibling() {
+    // The 0.3s wait completes with 0.2s of the 0.5s tick left, which the next
+    // `Sequence` sibling must receive.
+    let mut bt: BT<(), ()> = BT::new(Sequence(vec![Repeat(1, Box::new(Wait(0.3))), Wait(0.1)]), ());
+    let mut f = |_: ActionArgs<Event, ()>, _: &mut ()| (Success, 0.0);
+    let e: Event = UpdateArgs { dt: 0.5 }.into();
+
+    let (s, dt) = bt.tick(&e, &mut f).unwrap();
+    assert_eq!(s, Success);
     assert!((dt - 0.1).abs() < 1e-6, "expected 0.1 leftover, got {dt}");
 }
 

@@ -97,6 +97,12 @@ Demonstrates the `Timeout(limit, child)` decorator: if `child` stays `Running` p
 
 `cargo run --bin timeout`
 
+## Retry / Repeat decorators
+
+Demonstrates the bounded decorators: `Retry(n, child)` re-runs `child` until it succeeds (up to `n` attempts, then `Failure`), and `Repeat(n, child)` re-runs it up to `n` times while it succeeds, stopping on the first `Failure`. Both restart the child from its initial state on every attempt, so `Repeat(2, Wait(1.0))` takes two full seconds.
+
+`cargo run --bin retry_repeat`
+
 ## WebSocket visualizer (live tree inspector)
 
 A live web-based visualizer for a running behavior tree. The example builds a 30-node tree (one memoryless `Sequence` and one memoryless `Select` included — `memory = false`, both drawn with a dashed circle), enables the visualizer via a single API call `BT::with_telemetry(8910)`, and re-ticks every ~400 ms so leaf statuses (green / yellow / red) and the running-path highlight animate continuously.

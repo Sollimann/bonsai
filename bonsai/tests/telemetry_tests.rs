@@ -1,5 +1,6 @@
 use bonsai_bt::Behavior::{
-    self, Action, AlwaysSucceed, If, Invert, Select, Sequence, Wait, WaitForever, While, WhileAll,
+    self, Action, AlwaysSucceed, If, Invert, Repeat, Retry, Select, Sequence, Timeout, Wait, WaitForever, While,
+    WhileAll,
 };
 
 #[derive(Clone, Debug)]
@@ -92,6 +93,10 @@ fn node_metas_subtree_sizes_all_variants() {
         (Invert(Box::new(Action(A))), vec![2, 1]),
         // AlwaysSucceed(A): same shape
         (AlwaysSucceed(Box::new(Action(A))), vec![2, 1]),
+        // Timeout, Retry and Repeat are single-child decorators too.
+        (Timeout(1.0, Box::new(Action(A))), vec![2, 1]),
+        (Retry(3, Box::new(Action(A))), vec![2, 1]),
+        (Repeat(2, Box::new(Action(A))), vec![2, 1]),
         // --- If: [condition, on_success, on_failure] ---
         // If(A, B, C): root(4) + cond(1) + ok(1) + ko(1)
         (
