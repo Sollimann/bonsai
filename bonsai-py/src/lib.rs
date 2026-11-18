@@ -4,6 +4,10 @@ use pyo3_stub_gen::define_stub_info_gatherer;
 mod action_args;
 mod behavior;
 mod bt;
+// `#[pyclass(from_py_object)]` expands to a `clone()` on this `Copy` enum,
+// which `clippy::clone_on_copy` rejects. Keep the allow scoped to the module
+// that needs it instead of silencing the lint crate-wide.
+#[allow(clippy::clone_on_copy)]
 mod status;
 
 use action_args::PyActionArgs;
